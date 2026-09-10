@@ -17786,3 +17786,326 @@
   </voice>
 </phrase>
 <phrase>
+  id: LANG_STICK_SETTINGS
+  desc: in Settings -> General -> Display -> Touchscreen Settings
+  user: core
+  <source>
+    *: none
+    touchscreen: "Rockpocket Stick"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Rockpocket Stick"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Rockpocket Stick"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TOUCH_NAV_MODE
+  desc: in Settings -> General -> Display -> Touchscreen Settings
+  user: core
+  <source>
+    *: none
+    touchscreen: "Touch Navigation"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Touch Navigation"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Touch Navigation"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TOUCH_NAV_CLASSIC
+  desc: touch navigation scheme
+  user: core
+  <source>
+    *: none
+    touchscreen: "Classic"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Classic"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Classic"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TOUCH_NAV_STICK
+  desc: touch navigation scheme
+  user: core
+  <source>
+    *: none
+    touchscreen: "Stick"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Stick"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Stick"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TOUCH_NAV_BOTH
+  desc: touch navigation scheme
+  user: core
+  <source>
+    *: none
+    touchscreen: "Both"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Both"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Both"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_PRESET
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Binding Table"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Binding Table"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Binding Table"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_PRESET_4WAY
+  desc: stick binding table
+  user: core
+  <source>
+    *: none
+    touchscreen: "4-way"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "4-way"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "4-way"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_PRESET_8WAY
+  desc: stick binding table
+  user: core
+  <source>
+    *: none
+    touchscreen: "8-way"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "8-way"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "8-way"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_PRESET_CUSTOM
+  desc: stick binding table
+  user: core
+  <source>
+    *: none
+    touchscreen: "Custom (stick.cfg)"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Custom (stick.cfg)"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Custom (stick.cfg)"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_ZONE
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Arm Zone"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Arm Zone"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Arm Zone"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_ZONE_FULLSCREEN
+  desc: stick arm zone
+  user: core
+  <source>
+    *: none
+    touchscreen: "Whole Screen"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Whole Screen"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Whole Screen"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_ZONE_BOTTOM_HALF
+  desc: stick arm zone
+  user: core
+  <source>
+    *: none
+    touchscreen: "Bottom Half"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Bottom Half"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Bottom Half"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_ZONE_PLATE
+  desc: stick arm zone
+  user: core
+  <source>
+    *: none
+    touchscreen: "Thumb Plate"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Thumb Plate"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Thumb Plate"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_SECTORS
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Sectors"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Sectors"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Sectors"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_ROTATION
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Rose Rotation"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Rose Rotation"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Rose Rotation"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_ARM_MS
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Arming Window"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Arming Window"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Arming Window"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_DETENT
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Degrees Per Detent"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Degrees Per Detent"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Degrees Per Detent"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_DIAL_WPS
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Volume Dial in WPS"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Volume Dial in WPS"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Volume Dial in WPS"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_DIAL_LISTS
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Scroll Dial in Lists"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Scroll Dial in Lists"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Scroll Dial in Lists"
+  </voice>
+</phrase>
+<phrase>

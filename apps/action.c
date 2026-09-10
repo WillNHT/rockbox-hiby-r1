@@ -38,6 +38,7 @@
 #include "core_alloc.h"
 
 #include "splash.h"
+#include "stick_glue.h"
 #include "settings.h"
 #include "misc.h"
 
@@ -522,6 +523,36 @@ static inline bool get_action_touchscreen(action_last_t *last, action_cur_t *cur
         last->touchevent.x = (last->ts_data >> 16) & 0xffff;
         last->touchevent.y = last->ts_data & 0xffff;
         last->touchevent.tick = last->tick;
+
+        /* Give the Rockpocket stick first refusal on the event. When it
+         * takes ownership the screen underneath must not also see the drag,
+         * or a list would kinetically scroll under a stick gesture. */
+        if (stick_enabled())
+        {
+            int synth = BUTTON_NONE, pre = BUTTON_NONE;
+            int r = stick_handle_touch(&last->touchevent, cur->context,
+                                       &synth, &pre);
+
+            if (r != STICK_RESULT_PASS)
+            {
+                last->touchevent.type = TOUCHEVENT_NONE;
+                gesture_reset(&last->gesture);
+
+                if (r == STICK_RESULT_BUTTON)
+                {
+                    /* Hand the keymap the same button a physical key would
+                     * have produced, prerequisite and all, and let the
+                     * ordinary lookup below decide what it means here. */
+                    last->button = pre;
+                    cur->button = synth;
+                    return false;
+                }
+
+                cur->button = BUTTON_NONE;
+                cur->action = ACTION_NONE;
+                return true;
+            }
+        }
 
         /* Update gesture state */
         gesture_process(&last->gesture, &last->touchevent);
@@ -1170,6 +1201,12 @@ static int get_action_worker(action_last_t *last, action_cur_t *cur)
     }
 
     update_screen_has_lock(last, cur);
+
+#ifdef HAVE_TOUCHSCREEN
+    /* Hardware-only escape hatch, checked before anything the touchscreen
+     * could interfere with. */
+    stick_check_killswitch(cur->button);
+#endif
 
     if (get_action_touchscreen(last, cur))
     {

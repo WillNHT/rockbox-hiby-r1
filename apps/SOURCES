@@ -13,6 +13,9 @@ filetypes.c
 fileop.c
 #ifdef HAVE_TOUCHSCREEN
 gesture.c
+stick.c
+stick_config.c
+stick_glue.c
 #endif
 language.c
 main.c

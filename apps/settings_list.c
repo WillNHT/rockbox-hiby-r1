@@ -60,6 +60,7 @@
 #include "statusbar.h"
 #ifdef HAVE_TOUCHSCREEN
 #include "touchscreen.h"
+#include "stick.h"
 #include "ctype.h" /* For isspace() */
 #endif
 #ifdef HAVE_HOTKEY
@@ -2458,6 +2459,34 @@ const struct settings_list settings[] = {
                    "off,wps,lists,wps and lists", NULL, 4,
                    ID2P(LANG_OFF), ID2P(LANG_WPS_ACRONYM), ID2P(LANG_LISTS), 
                    ID2P(LANG_WPS_AND_LISTS)),
+    /* Rockpocket stick. Defaults keep the engine entirely out of the
+       input path, so an untouched config behaves exactly as before. */
+    CHOICE_SETTING(0, touch_nav_mode, LANG_TOUCH_NAV_MODE, TOUCH_NAV_CLASSIC,
+                   "touch navigation", "classic,stick,both", NULL, 3,
+                   ID2P(LANG_TOUCH_NAV_CLASSIC), ID2P(LANG_TOUCH_NAV_STICK),
+                   ID2P(LANG_TOUCH_NAV_BOTH)),
+    CHOICE_SETTING(0, stick_preset, LANG_STICK_PRESET, STICK_PRESET_4WAY,
+                   "stick preset", "4-way,8-way,custom", NULL, 3,
+                   ID2P(LANG_STICK_PRESET_4WAY), ID2P(LANG_STICK_PRESET_8WAY),
+                   ID2P(LANG_STICK_PRESET_CUSTOM)),
+    CHOICE_SETTING(0, stick_zone, LANG_STICK_ZONE, STICK_ZONE_FULLSCREEN,
+                   "stick zone", "fullscreen,bottom half,plate", NULL, 3,
+                   ID2P(LANG_STICK_ZONE_FULLSCREEN),
+                   ID2P(LANG_STICK_ZONE_BOTTOM_HALF),
+                   ID2P(LANG_STICK_ZONE_PLATE)),
+    INT_SETTING(0, stick_sectors, LANG_STICK_SECTORS, 4, "stick sectors",
+                UNIT_INT, 1, 8, 1, NULL, NULL, NULL),
+    INT_SETTING(0, stick_rotation, LANG_STICK_ROTATION, 0, "stick rotation",
+                UNIT_INT, 0, 345, 15, NULL, NULL, NULL),
+    INT_SETTING(0, stick_arm_ms, LANG_STICK_ARM_MS, STICK_DEF_ARM_MS,
+                "stick arm window", UNIT_MS, 0, 400, 10, NULL, NULL, NULL),
+    INT_SETTING(0, stick_deg_per_detent, LANG_STICK_DETENT,
+                STICK_DEF_DEG_PER_DETENT, "stick degrees per detent",
+                UNIT_INT, 8, 30, 1, NULL, NULL, NULL),
+    OFFON_SETTING(0, stick_dial_wps, LANG_STICK_DIAL_WPS, false,
+                  "stick dial wps", NULL),
+    OFFON_SETTING(0, stick_dial_lists, LANG_STICK_DIAL_LISTS, false,
+                  "stick dial lists", NULL),
     CUSTOM_SETTING(0, ts_calibration_data, -1,
                     &default_calibration_parameters, "touchscreen calibration",
                     tsc_load_from_cfg, tsc_write_to_cfg,

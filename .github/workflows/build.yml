@@ -11,6 +11,33 @@ on:
   pull_request:
 
 jobs:
+  # The stick engine has no Rockbox dependencies, so its tests need no
+  # toolchain and gate every change in seconds.
+  stick-tests:
+    runs-on: ubuntu-latest
+    name: Rockpocket Stick engine tests
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+    - name: Run the engine test suite
+      run: make -C tools/stick_test test
+    - name: Assert the input floor is untouched
+      env:
+        BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
+      run: |
+        # Spec 10.1: physical keys and the boot path are provably out of
+        # scope for this feature, so a diff touching them is a build error.
+        FLOOR="bootloader firmware/target/hosted/hiby apps/keymaps/keymap-hibyr1.c"
+        git fetch --quiet origin "$BASE_REF" || exit 0
+        CHANGED=$(git diff --name-only "origin/$BASE_REF"...HEAD -- $FLOOR)
+        if [ -n "$CHANGED" ]; then
+          echo "The stick may not touch the keymap, the HiBy target tree or the bootloader:"
+          echo "$CHANGED"
+          exit 1
+        fi
+        echo "Input floor intact."
+
   build:
     strategy:
       fail-fast: false

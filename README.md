@@ -30,6 +30,7 @@ Available in the [Development Build](#development-builds):
 *These features are specifically designed and mapped for HiBy R1 and x1600 hardware.*
 
 *   **[HiBy R1 Touchless Navigation](docs/mods/hibyr1-keymap.md):** A custom keymap that enables full Rockbox navigation without needing the touchscreen, including a dedicated **Prev/Rewind** button.
+*   **[Rockpocket Stick](docs/mods/rockpocket-stick.md):** A relative virtual stick for the touchscreen - press anywhere, push in a direction, release. 1-8 independently bindable sectors, an optional volume/scroll dial, and a hardware-only kill switch. Off by default; with *Touch Navigation* set to *Classic* the device behaves exactly as before.
 *   **[Bluetooth Integration](docs/mods/bluetooth-hiby-x1600.md):** Built upon bidhata's [HiBy R1 patches](https://github.com/bidhata/hiby-r1-rockbox-bt) with major features and stability improvements:
     *   Reliable connection and discovery handling by replacing the glitchy proprietary HiBy `sys_server` with `bluetoothctl`
     *   Added support for Bluetooth headset media buttons.

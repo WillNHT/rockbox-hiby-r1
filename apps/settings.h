@@ -105,6 +105,29 @@ enum {
     TOUCHSCREEN_EXEMPTIONS_LISTS,
     TOUCHSCREEN_EXEMPTIONS_WPS_AND_LISTS,
 };
+
+/* Which touch navigation scheme owns the screen. Classic keeps the engine
+ * entirely out of the input path, so the default build behaves exactly as
+ * it did before the stick existed. */
+enum {
+    TOUCH_NAV_CLASSIC = 0,  /* edge swipes, kinetic scroll, header taps  */
+    TOUCH_NAV_STICK,        /* the Rockpocket stick owns the arm zone    */
+    TOUCH_NAV_BOTH,         /* stick arms only clear of the edge regions */
+};
+
+/* Arm zone presets. The stick is relative, so these only decide where a
+ * press is allowed to start a gesture. */
+enum {
+    STICK_ZONE_FULLSCREEN = 0,
+    STICK_ZONE_BOTTOM_HALF,
+    STICK_ZONE_PLATE,       /* a circle low enough to reach one-handed  */
+};
+
+enum {
+    STICK_PRESET_4WAY = 0,
+    STICK_PRESET_8WAY,
+    STICK_PRESET_CUSTOM,    /* read from /.rockbox/stick.cfg            */
+};
 #endif
 
 enum {
@@ -832,6 +855,15 @@ struct user_settings
 #ifdef HAVE_TOUCHSCREEN
     int touch_mode;
     int touchscreen_exemptions;
+    int touch_nav_mode;        /* TOUCH_NAV_*                           */
+    int stick_preset;          /* STICK_PRESET_*                        */
+    int stick_zone;            /* STICK_ZONE_*                          */
+    int stick_sectors;         /* 1..8                                  */
+    int stick_rotation;        /* degrees, 0..345                       */
+    int stick_arm_ms;          /* arming window, 0..400 ms              */
+    int stick_dial_wps;        /* volume dial in the WPS                */
+    int stick_dial_lists;      /* scroll dial in lists and menus        */
+    int stick_deg_per_detent;  /* dial detent size, 8..30 degrees       */
     struct touchscreen_parameter ts_calibration_data;
     struct list_kinetic_scroll_settings kinetic_scroll_accel;
     struct list_kinetic_scroll_settings kinetic_scroll_brake;

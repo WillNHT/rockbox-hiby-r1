@@ -42,6 +42,7 @@
 #endif
 #ifdef HAVE_TOUCHSCREEN
 #include "screens.h"
+#include "stick_glue.h"
 #endif
 #include "viewport.h"
 #include "statusbar.h" /* statusbar_vals enum*/
@@ -583,8 +584,48 @@ MENUITEM_FUNCTION(touchscreen_menu_reset_calibration, 0,
 	              reset_mapping, NULL, Icon_NOICON);
 MENUITEM_SETTING(list_line_padding, &global_settings.list_line_padding, line_padding_callback);
 
+/* Rockpocket stick. Any change here invalidates the cached engine config,
+ * so the next gesture picks up the new geometry. */
+static int stick_setting_callback(int action,
+                                  const struct menu_item_ex *this_item,
+                                  struct gui_synclist *this_list)
+{
+    (void)this_item;
+    (void)this_list;
+    if (action == ACTION_EXIT_MENUITEM)
+        stick_settings_apply();
+    return action;
+}
+
+MENUITEM_SETTING(touch_nav_mode, &global_settings.touch_nav_mode,
+                 stick_setting_callback);
+MENUITEM_SETTING(stick_zone, &global_settings.stick_zone,
+                 stick_setting_callback);
+MENUITEM_SETTING(stick_sectors, &global_settings.stick_sectors,
+                 stick_setting_callback);
+MENUITEM_SETTING(stick_rotation, &global_settings.stick_rotation,
+                 stick_setting_callback);
+MENUITEM_SETTING(stick_arm_ms, &global_settings.stick_arm_ms,
+                 stick_setting_callback);
+/* The dial toggles sit next to the binding table on purpose: turning one on
+ * retires the sector table for that screen entirely (spec 6), and that
+ * trade should be visible at the moment of choosing. */
+MENUITEM_SETTING(stick_preset, &global_settings.stick_preset,
+                 stick_setting_callback);
+MENUITEM_SETTING(stick_dial_wps, &global_settings.stick_dial_wps,
+                 stick_setting_callback);
+MENUITEM_SETTING(stick_dial_lists, &global_settings.stick_dial_lists,
+                 stick_setting_callback);
+MENUITEM_SETTING(stick_deg_per_detent, &global_settings.stick_deg_per_detent,
+                 stick_setting_callback);
+
+MAKE_MENU(stick_menu, ID2P(LANG_STICK_SETTINGS), NULL, Icon_NOICON,
+            &touch_nav_mode, &stick_zone, &stick_sectors, &stick_rotation,
+            &stick_arm_ms, &stick_preset,
+            &stick_dial_wps, &stick_dial_lists, &stick_deg_per_detent);
+
 MAKE_MENU(touchscreen_menu, ID2P(LANG_TOUCHSCREEN_SETTINGS), NULL, Icon_NOICON, &list_line_padding, &touch_mode,
-            &touchscreen_exemptions,
+            &touchscreen_exemptions, &stick_menu,
             &touchscreen_menu_calibrate, &touchscreen_menu_reset_calibration);
 #endif
 
