@@ -92,6 +92,11 @@ static const struct binding_button binding_buttons[STICK_BIND_COUNT] =
      * rule that the stick can only reach what a finger can reach holds. */
     [STICK_BIND_MENU]        = { BUTTON_POWER | BUTTON_LEFT,  BUTTON_NONE   },
     [STICK_BIND_QUICKSCREEN] = { BUTTON_POWER | BUTTON_DOWN,  BUTTON_NONE   },
+    /* A held Next key, which is what the standard context maps
+     * ACTION_STD_CONTEXT to. The prebutton matters: the keymap entry lists
+     * BUTTON_RIGHT as the prerequisite, so the repeat alone does not
+     * match. */
+    [STICK_BIND_CONTEXT]     = { BUTTON_RIGHT | BUTTON_REPEAT, BUTTON_RIGHT },
     [STICK_BIND_STOP]        = { BUTTON_PLAY | BUTTON_REPEAT, BUTTON_PLAY   },
     /* A seek is the one thing Rockbox runs in a loop of its own until it is
      * told to stop, so these carry the code that stops them. */

@@ -68,6 +68,12 @@ enum stick_binding
     STICK_BIND_STOP,
     STICK_BIND_SEEK_FWD,      /* seeks until the gesture ends            */
     STICK_BIND_SEEK_BACK,
+    /* The long-press-on-select that opens a context menu. On this keypad
+     * that is what holding the Next key would produce, so it is inside the
+     * output rule; it needs a binding of its own only because rpkeys takes
+     * the physical Next key for seeking before any keymap sees it. Not in
+     * any preset - assign it to a hold, or to a sector, in stick.cfg. */
+    STICK_BIND_CONTEXT,
     STICK_BIND_COUNT
 };
 

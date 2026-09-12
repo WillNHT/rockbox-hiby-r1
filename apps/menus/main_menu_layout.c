@@ -21,11 +21,18 @@
  * The interaction is one list rather than a list plus a menu of verbs,
  * because the thing being edited is the order and the order is the list:
  *
- *   select        pick the item up. Scroll, and it comes with you.
- *                 Select again to drop it.
- *   context       the things that are not moving: show / hide, rename,
- *                 reset the name.
+ *   select        the verbs for this row: move, show/hide, rename, reset
+ *                 the name. Choosing Move picks the item up.
+ *   scroll        while something is in hand, it comes with you.
+ *   select again  put it down.
  *   back          done - the arrangement is applied and settings saved.
+ *
+ * Move lives in the menu rather than on a long press because this keypad
+ * has no long press left to give: ACTION_STD_CONTEXT is a held Next key
+ * here, and rpkeys takes that key for seeking before any keymap sees it.
+ * The stick can reach it - bind `context` in stick.cfg - but the default
+ * four-way preset does not, and a screen whose main verb needs a
+ * non-default binding is a screen that does not work.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -66,15 +73,25 @@ static struct
     int  last_sel;      /* where the cursor was, to know which way it went */
 } layout;
 
-/* The verbs that are not "move". Two lists rather than one, because the
- * first entry is the only one that changes and a menu that says "Show" over
- * something already showing is worse than two tables. */
+/* The verbs. Two lists rather than one, because the show/hide entry is the
+ * only one that changes and a menu offering "Show" over something already
+ * showing is worse than two tables.
+ *
+ * Move is in here rather than on a long press because there is no long
+ * press to put it on. With the stick's default four-way preset the only
+ * actions this screen can receive are select, back and the two scrolls: a
+ * context menu is ACTION_STD_CONTEXT, which on this keypad means a held
+ * Next key, and rpkeys takes that key for seeking before any keymap sees
+ * it. A screen whose main verb needs an input the default configuration
+ * cannot produce is a screen that does not work. */
 MENUITEM_STRINGLIST(ctx_visible, ID2P(LANG_MAIN_MENU_LAYOUT), NULL,
+                    ID2P(LANG_MAIN_MENU_MOVE),
                     ID2P(LANG_MAIN_MENU_HIDE),
                     ID2P(LANG_MAIN_MENU_RENAME),
                     ID2P(LANG_MAIN_MENU_RESET_NAME));
 
 MENUITEM_STRINGLIST(ctx_hidden, ID2P(LANG_MAIN_MENU_LAYOUT), NULL,
+                    ID2P(LANG_MAIN_MENU_MOVE),
                     ID2P(LANG_MAIN_MENU_SHOW),
                     ID2P(LANG_MAIN_MENU_RENAME),
                     ID2P(LANG_MAIN_MENU_RESET_NAME));
@@ -163,7 +180,7 @@ static void rename_row(int row)
     root_menu_set_name(t, buf);
 }
 
-static void context_menu(int row)
+static void item_menu(int row)
 {
     bool hidden = row >= layout.visible;
     int sel = do_menu(hidden ? &ctx_hidden : &ctx_visible, NULL, NULL, false);
@@ -171,12 +188,15 @@ static void context_menu(int row)
     switch (sel)
     {
         case 0:
-            toggle_hidden(row);
+            layout.grabbed = row;
             break;
         case 1:
-            rename_row(row);
+            toggle_hidden(row);
             break;
         case 2:
+            rename_row(row);
+            break;
+        case 3:
             root_menu_set_name(layout.order[row], NULL);
             break;
         default:
@@ -217,12 +237,21 @@ static int layout_action_callback(int action, struct gui_synclist *lists)
     switch (action)
     {
         case ACTION_STD_OK:
-            layout.grabbed = (layout.grabbed >= 0) ? -1 : sel;
+            /* While something is in hand, select is the only thing it can
+             * mean: put it down. Otherwise it opens the verbs for this
+             * row. */
+            if (layout.grabbed >= 0)
+                layout.grabbed = -1;
+            else
+                item_menu(sel);
             return ACTION_REDRAW;
 
+        /* For anyone who has bound `context` in stick.cfg, or who is on a
+         * keypad where the physical key survives to the keymap: the same
+         * menu, one press earlier. */
         case ACTION_STD_CONTEXT:
             if (layout.grabbed < 0)
-                context_menu(sel);
+                item_menu(sel);
             return ACTION_REDRAW;
 
         case ACTION_STD_CANCEL:

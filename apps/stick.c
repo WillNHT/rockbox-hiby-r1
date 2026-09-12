@@ -192,6 +192,7 @@ static const char * const binding_names[STICK_BIND_COUNT] =
     "none", "scrollUp", "scrollDown", "select", "back", "playPause",
     "next", "prev", "volUp", "volDown",
     "menu", "quickScreen", "stop", "seekFwd", "seekBack",
+    "context",
 };
 
 const char *stick_binding_name(int binding)
