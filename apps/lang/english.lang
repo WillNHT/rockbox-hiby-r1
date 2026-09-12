@@ -18211,3 +18211,129 @@
   </voice>
 </phrase>
 <phrase>
+  id: LANG_MAIN_MENU_LAYOUT
+  desc: in Settings -> General Settings
+  user: core
+  <source>
+    *: "Main Menu"
+  </source>
+  <dest>
+    *: "Main Menu"
+  </dest>
+  <voice>
+    *: "Main Menu"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_MAIN_MENU_MOVE
+  desc: in Settings -> General Settings -> Main Menu
+  user: core
+  <source>
+    *: "Move"
+  </source>
+  <dest>
+    *: "Move"
+  </dest>
+  <voice>
+    *: "Move"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_MAIN_MENU_DROP
+  desc: in Settings -> General Settings -> Main Menu
+  user: core
+  <source>
+    *: "Drop"
+  </source>
+  <dest>
+    *: "Drop"
+  </dest>
+  <voice>
+    *: "Drop"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_MAIN_MENU_HIDDEN
+  desc: in Settings -> General Settings -> Main Menu
+  user: core
+  <source>
+    *: "hidden"
+  </source>
+  <dest>
+    *: "hidden"
+  </dest>
+  <voice>
+    *: "hidden"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_MAIN_MENU_SHOW
+  desc: in Settings -> General Settings -> Main Menu
+  user: core
+  <source>
+    *: "Show"
+  </source>
+  <dest>
+    *: "Show"
+  </dest>
+  <voice>
+    *: "Show"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_MAIN_MENU_HIDE
+  desc: in Settings -> General Settings -> Main Menu
+  user: core
+  <source>
+    *: "Hide"
+  </source>
+  <dest>
+    *: "Hide"
+  </dest>
+  <voice>
+    *: "Hide"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_MAIN_MENU_RENAME
+  desc: in Settings -> General Settings -> Main Menu
+  user: core
+  <source>
+    *: "Rename"
+  </source>
+  <dest>
+    *: "Rename"
+  </dest>
+  <voice>
+    *: "Rename"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_MAIN_MENU_RESET_NAME
+  desc: in Settings -> General Settings -> Main Menu
+  user: core
+  <source>
+    *: "Reset Name"
+  </source>
+  <dest>
+    *: "Reset Name"
+  </dest>
+  <voice>
+    *: "Reset Name"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_MAIN_MENU_KEEP_SETTINGS
+  desc: in Settings -> General Settings -> Main Menu
+  user: core
+  <source>
+    *: "Settings cannot be hidden"
+  </source>
+  <dest>
+    *: "Settings cannot be hidden"
+  </dest>
+  <voice>
+    *: "Settings cannot be hidden"
+  </voice>
+</phrase>
+<phrase>

@@ -73,6 +73,35 @@ void root_menu_load_from_cfg(void* setting, char *value);
 char* root_menu_write_to_cfg(void* setting, char*buf, int buf_len);
 void root_menu_set_default(void* setting, void* defaultval);
 bool root_menu_is_changed(void* setting, void* defaultval);
+
+/* The custom names the user has given main menu items. Display only: the
+ * item, its icon, its action and the string written to config.cfg are all
+ * unchanged, so renaming "Files" to something else does not make it a
+ * different menu entry or break a theme that names it. */
+void root_menu_names_load_from_cfg(void* setting, char *value);
+char* root_menu_names_write_to_cfg(void* setting, char*buf, int buf_len);
+void root_menu_names_set_default(void* setting, void* defaultval);
+bool root_menu_names_are_changed(void* setting, void* defaultval);
+
+/* The name to show for one item, or NULL for "use the built-in one". Takes
+ * the menu item because that is what the list callback has to hand. */
+const char *root_menu_custom_name(const struct menu_item_ex *item);
+
+/* Reading and writing the arrangement, for the settings screen that edits
+ * it. `order` is ROOT_MENU_MAX_ITEMS table indices: the first
+ * *visible_count of them are the menu, in order, and the rest are the
+ * items currently hidden. */
+#define ROOT_MENU_MAX_ITEMS   16
+#define ROOT_MENU_NAME_MAX    24
+int  root_menu_item_count(void);
+void root_menu_get_layout(unsigned char *order, int *visible_count);
+void root_menu_set_layout(const unsigned char *order, int visible_count);
+/* The built-in name of item n of the table, for the editor's own list. */
+const char *root_menu_default_name(int table_index);
+bool root_menu_has_custom_name(int table_index);
+bool root_menu_is_settings(int table_index);
+const char *root_menu_name_of(int table_index);
+void root_menu_set_name(int table_index, const char *name);
 #endif
 
 

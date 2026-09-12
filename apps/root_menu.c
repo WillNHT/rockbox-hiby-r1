@@ -664,6 +664,246 @@ bool root_menu_is_changed(void* setting, void* defaultval)
     return *(bool*)setting;
 }
 
+/* ------------------------------------------------- renaming, and arranging
+ *
+ * Two separate things that look like one. The *order* was always editable -
+ * "root menu order" in config.cfg, and a plugin to write it - but only from
+ * outside the menus it rearranges. The *names* were not editable at all.
+ *
+ * Both are display-layer only. The order is a permutation of menu_table and
+ * the names are a string per table entry; the items themselves, their
+ * GO_TO_ return values, their icons and the keys config.cfg stores them
+ * under are all untouched. So a renamed "Files" is still `files` on disk,
+ * still opens the file browser, and still survives a theme or a firmware
+ * update that knows nothing about the rename. */
+
+static char root_menu_names[MAX_MENU_ITEMS][ROOT_MENU_NAME_MAX];
+
+int root_menu_item_count(void)
+{
+    return MAX_MENU_ITEMS;
+}
+
+static int table_index_of(const struct menu_item_ex *item)
+{
+    unsigned i;
+    for (i = 0; i < MAX_MENU_ITEMS; i++)
+        if (menu_table[i].item == item)
+            return (int)i;
+    return -1;
+}
+
+const char *root_menu_default_name(int table_index)
+{
+    const struct menu_item_ex *item;
+
+    if (table_index < 0 || table_index >= (int)MAX_MENU_ITEMS)
+        return "";
+
+    item = menu_table[table_index].item;
+
+    /* The Now Playing entry names itself - it says "Resume Playback" when
+     * nothing is playing - so it has no static description to read. */
+    if (item->flags & MENU_DYNAMIC_DESC)
+        return menu_table[table_index].string;
+
+    return P2STR(item->callback_and_desc->desc);
+}
+
+const char *root_menu_name_of(int table_index)
+{
+    if (table_index < 0 || table_index >= (int)MAX_MENU_ITEMS)
+        return "";
+    if (root_menu_names[table_index][0])
+        return root_menu_names[table_index];
+    return root_menu_default_name(table_index);
+}
+
+void root_menu_set_name(int table_index, const char *name)
+{
+    if (table_index < 0 || table_index >= (int)MAX_MENU_ITEMS)
+        return;
+
+    if (!name || !*name)
+    {
+        root_menu_names[table_index][0] = '\0';
+        return;
+    }
+
+    strlcpy(root_menu_names[table_index], name, ROOT_MENU_NAME_MAX);
+
+    /* The config file is one line of comma-separated key=value pairs, so a
+     * comma in a name would split it into two names. Cheaper to refuse the
+     * character than to invent a quoting rule for it. */
+    for (char *p = root_menu_names[table_index]; *p; p++)
+    {
+        if (*p == ',' || *p == '\n' || *p == '\r')
+            *p = ' ';
+    }
+}
+
+bool root_menu_has_custom_name(int table_index)
+{
+    if (table_index < 0 || table_index >= (int)MAX_MENU_ITEMS)
+        return false;
+    return root_menu_names[table_index][0] != '\0';
+}
+
+/* The one item that may not be hidden. Asked by table index rather than by
+ * comparing labels, because the label is exactly the thing the user is
+ * allowed to change. */
+bool root_menu_is_settings(int table_index)
+{
+    if (table_index < 0 || table_index >= (int)MAX_MENU_ITEMS)
+        return false;
+    return menu_table[table_index].item == &menu_;
+}
+
+const char *root_menu_custom_name(const struct menu_item_ex *item)
+{
+    int i = table_index_of(item);
+
+    if (i < 0 || !root_menu_names[i][0])
+        return NULL;
+    return root_menu_names[i];
+}
+
+void root_menu_names_load_from_cfg(void* setting, char *value)
+{
+    char *next = value;
+    bool any = false;
+
+    memset(root_menu_names, 0, sizeof(root_menu_names));
+
+    if (*value == '-')
+    {
+        *(bool*)setting = false;
+        return;
+    }
+
+    while (next)
+    {
+        char *start = next, *eq;
+        unsigned i;
+
+        next = strchr(next, ',');
+        if (next)
+        {
+            *next = '\0';
+            next++;
+        }
+        start = skip_whitespace(start);
+        eq = strchr(start, '=');
+        if (!eq)
+            continue;
+        *eq = '\0';
+
+        for (i = 0; i < MAX_MENU_ITEMS; i++)
+        {
+            if (*start && !strcmp(start, menu_table[i].string))
+            {
+                root_menu_set_name((int)i, skip_whitespace(eq + 1));
+                any = true;
+                break;
+            }
+        }
+    }
+
+    *(bool*)setting = any;
+}
+
+char* root_menu_names_write_to_cfg(void* setting, char*buf, int buf_len)
+{
+    unsigned i;
+    (void)setting;
+
+    for (i = 0; i < MAX_MENU_ITEMS; i++)
+    {
+        int written;
+
+        if (!root_menu_names[i][0])
+            continue;
+
+        written = snprintf(buf, buf_len, "%s=%s, ",
+                           menu_table[i].string, root_menu_names[i]);
+        if (written < 0 || written >= buf_len)
+            break;
+        buf_len -= written;
+        buf += written;
+    }
+    return buf;
+}
+
+void root_menu_names_set_default(void* setting, void* defaultval)
+{
+    (void)defaultval;
+    memset(root_menu_names, 0, sizeof(root_menu_names));
+    *(bool*)setting = false;
+}
+
+bool root_menu_names_are_changed(void* setting, void* defaultval)
+{
+    (void)defaultval;
+    return *(bool*)setting;
+}
+
+void root_menu_get_layout(unsigned char *order, int *visible_count)
+{
+    unsigned i, j, n = 0;
+    bool placed[MAX_MENU_ITEMS];
+    int shown = (int)MENU_GET_COUNT(root_menu_.flags);
+
+    memset(placed, 0, sizeof(placed));
+
+    /* The menu as it stands, then everything the menu is not showing. */
+    for (i = 0; i < (unsigned)shown && i < MAX_MENU_ITEMS; i++)
+    {
+        int t = table_index_of(root_menu__[i]);
+        if (t >= 0 && !placed[t])
+        {
+            order[n++] = (unsigned char)t;
+            placed[t] = true;
+        }
+    }
+
+    *visible_count = (int)n;
+
+    for (j = 0; j < MAX_MENU_ITEMS; j++)
+        if (!placed[j])
+            order[n++] = (unsigned char)j;
+}
+
+void root_menu_set_layout(const unsigned char *order, int visible_count)
+{
+    int i;
+    bool settings_shown = false;
+
+    if (visible_count < 1)
+        visible_count = 1;
+    if (visible_count > (int)MAX_MENU_ITEMS)
+        visible_count = (int)MAX_MENU_ITEMS;
+
+    root_menu_.flags = MENU_HAS_DESC | MT_MENU;
+    root_menu_.submenus = (const struct menu_item_ex **)&root_menu__;
+    root_menu_.callback_and_desc = &root_menu_desc;
+
+    for (i = 0; i < visible_count; i++)
+    {
+        root_menu__[i] = (struct menu_item_ex *)menu_table[order[i]].item;
+        if (menu_table[order[i]].item == &menu_)
+            settings_shown = true;
+    }
+
+    /* Settings is not optional, the same way it is not optional in
+     * root_menu_load_from_cfg(): hiding the only way back into the settings
+     * is a door that locks from the outside. The editor refuses it too;
+     * this is the backstop for a hand-edited config.cfg. */
+    if (!settings_shown && visible_count < (int)MAX_MENU_ITEMS)
+        root_menu__[visible_count++] = (struct menu_item_ex *)&menu_;
+
+    root_menu_.flags |= MENU_ITEM_COUNT(visible_count);
+}
+
 static int item_callback(int action,
                          const struct menu_item_ex *this_item,
                          struct gui_synclist *this_list)

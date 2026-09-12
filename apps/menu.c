@@ -153,6 +153,18 @@ static const char* get_menu_item_name(int selected_item,
     if (type == MT_MENU)
         menu = menu->submenus[selected_item];
 
+    /* A main menu item the user has renamed. Only the root menu asks, and
+     * only for the label: the item still returns the same GO_TO_ value,
+     * keeps its icon, and is still written to config.cfg under its own key.
+     * Checked here rather than by rewriting the item because the items are
+     * const and shared - the same &menu_ appears in more than one place. */
+    if ((const struct menu_item_ex *)data == &root_menu_)
+    {
+        const char *custom = root_menu_custom_name(menu);
+        if (custom)
+            return custom;
+    }
+
     if ((menu->flags&MENU_DYNAMIC_DESC) && (type != MT_SETTING_W_TEXT))
         return menu->menu_get_name_and_icon->list_get_name(selected_item,
             menu->menu_get_name_and_icon->list_get_name_data, buffer, buffer_len);

@@ -976,6 +976,10 @@ struct user_settings
     char start_directory[MAX_PATHNAME+1];
     /* Has the root been customized from the .cfg file? false = no, true = loaded from cfg */
     bool root_menu_customized;
+    /* True once any main menu item carries a name the user gave it. The
+     * names themselves live in root_menu.c; this is the flag the custom
+     * setting machinery needs to know whether to write the line. */
+    bool root_menu_renamed;
 #ifdef HAVE_QUICKSCREEN
     bool shortcuts_replaces_qs;
 #endif

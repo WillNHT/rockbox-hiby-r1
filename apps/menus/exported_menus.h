@@ -46,6 +46,7 @@ extern const struct menu_item_ex
 #if defined(HIBY_LINUX) && !defined(SIMULATOR)
         hiby_bluetooth_root_item,   /* hiby_bluetooth_menu.c */
 #endif
+        main_menu_layout_item,      /* main_menu_layout.c */
         theme_menu;                 /* theme_menu.c     */
 
 struct browse_folder_info {

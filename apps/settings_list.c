@@ -2613,6 +2613,15 @@ const struct settings_list settings[] = {
                   NULL, "root menu order",
                   root_menu_load_from_cfg, root_menu_write_to_cfg,
                   root_menu_is_changed, root_menu_set_default),
+   /* Display names for main menu items. A separate line from the order
+    * because they are separate decisions - a user who rearranges the menu
+    * has not asked to rename anything, and a config.cfg carrying one and
+    * not the other has to keep working. */
+   CUSTOM_SETTING(0, root_menu_renamed,
+                  LANG_ROCKBOX_TITLE, /* lang string here is never actually used */
+                  NULL, "root menu names",
+                  root_menu_names_load_from_cfg, root_menu_names_write_to_cfg,
+                  root_menu_names_are_changed, root_menu_names_set_default),
 
 #if defined(DX50) || defined(DX90)
     CHOICE_SETTING(0,

@@ -1,0 +1,155 @@
+#
+#  ____ _  _ ____ ___  ___  _   _   _  _ ____
+#  [__  |\ | |__| |__] |__]  \_/    |  |  __]
+#  ___] | \| |  | |    |      |      \/  |___
+#
+#  Snappy V2 - Chris Soffke's Snappy (CC-BY-SA), relaid for a device whose
+#  transport lives on the physical keys and whose panel belongs to the
+#  stick.
+#
+#  What changed, and why:
+#
+#  * The prev / play-pause / next badges and their touch band are gone.
+#    Under the stick those regions never fire - the stick owns the panel -
+#    so they were decoration occupying 88 px of the middle of the screen.
+#    The physical keys do that job on every screen.
+#
+#  * The progress bar and its seek region are gone for the same reason: a
+#    seek you cannot touch is a picture of a seek. The elapsed / total and
+#    the playlist position stay as text, because those are information
+#    rather than a control.
+#
+#  * The album art takes the freed space: the full width between the
+#    theme's 30 px margins, 420 x 400, so the picture is the screen.
+#
+#  * Everything the art displaced - the peak meter, the codec, the bit rate
+#    and sample rate - moves into one 60 px band directly under it, with
+#    the meter on the left and the file's numbers right-aligned beside it.
+#
+#  Coordinates are absolute for a 480x800 panel, as in Snappy 1.3.
+#
+#  Based on Snappy v1.3 2026 by Chris Soffke, CC-BY-SA, itself a remix of
+#  Simon Andén's SNARTY and the SPAZZ / SNAZZ / SNAZZY / Adwaitapod line.
+#
+%wd
+%Fl(2,24-GeistMono-SemiBold.fnt)
+%Fl(3,31-GeistMono-SemiBold.fnt)
+%Fl(4,44-GeistMono-SemiBold.fnt)
+%Fl(5,58-GeistMono-SemiBold.fnt)
+%xl(B,batt_wps.bmp,2,0,2)
+%xl(O,off_on.bmp,48,0,2)
+%xl(vb,vb.bmp)
+%xl(bb,bb.bmp)
+%xl(vb_backdrop,vb_backdrop.bmp)
+%xl(vb_too_loud,vb_too_loud.bmp)
+%xl(bb_backdrop,bb_backdrop.bmp)
+%?C<%Vd(aa)>
+%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>|%Vd(paused)|%Vd(ff)|%Vd(rew)|>
+%?mh<%Vd(locked)|%Vd(volbar)>
+%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>
+#
+# Header
+# ======
+# Sleep timer
+%Vl(sleep,30,30,110,62,2)
+%Vs(invert)%ac%bs
+%aczzz...
+#
+# Volume (percent of the -70..-10 dB scale)
+%Vl(voldb,30,30,110,62,4)
+%Vs(invert)%ac%pv
+#
+# Shuffle
+%V(174,28,94,22,2)
+SHF%xd(O,%ps)
+#
+# Repeat
+%V(174,58,94,22,2)
+%?mm<RPT%xd(Ob)|RPT%xd(O)|RP1%xd(O)|RND%xd(O)|A-B%xd(O)>
+#
+# Battery bar
+%V(-168,26,-30,18,-)
+%bl(0,0,138,18,bb,backdrop,bb_backdrop)
+#
+# Battery percentage
+%V(-168,48,-30,34,3)
+%Vs(invert)%ac%?bp<%xd(Bb)|%xd(Ba)> %bl%%
+#
+# Volume bar
+%Vl(volbar,30,110,-30,36,-)
+%pv(0,0,-,-,vb,backdrop,vb_backdrop)
+%?if(%pv, >, 0)<%pv(0,0,-,-,vb_too_loud,backdrop,vb_backdrop)>
+#
+# Locked. %mh is true for the POWER-hold lock as well as the softlock now,
+# so this indicator finally means something on this device.
+%Vl(locked,30,106,-30,44,4)
+%acLOCKED%Vs(invert)
+#
+# Main
+# ====
+# The art, full width. The frame is drawn as four rules rather than a
+# bitmap so it costs nothing and inherits the theme's foreground colour.
+# %Cl is viewport-relative, so the inset is 2,2 and not 32,162.
+%Vl(aa,30,160,420,400,-)
+%Cl(2,2,416,396,c,c)
+%dr(0,0,420,2)
+%dr(0,398,-,-)
+%dr(0,2,2,396)
+%dr(418,2,-,396)
+%Cd
+#
+# ---------
+# The band under the art
+# ---------
+# Peak meter on the left, the file's own numbers on the right. This is
+# where the transport badges used to be; nothing here is touchable, which
+# is the point - it is all readout.
+#
+# pm_short shares the band with the codec column; pm_long is the no-art
+# case and takes the full width, because there is nothing to sit beside.
+%Vl(pm_short,30,568,240,60,2)
+%pm
+#
+%Vl(pm_long,30,568,-30,60,2)
+%pm
+#
+%Vl(paused,30,568,240,60,2)
+%dr(86,6,28,48)
+%dr(128,6,28,48)
+#
+%Vl(rew,30,568,240,60,4)
+%al%<%< REW
+#
+%Vl(ff,30,568,240,60,4)
+%al%>%> FF
+#
+# Codec, bit rate, sample rate. Two lines at font 2 rather than one big
+# %fc - the space is 170 px wide and a 44 px face fits four characters in
+# it.
+%V(280,568,-30,30,2)
+%ar%fc %fb
+#
+%V(280,598,-30,30,2)
+%ar%?if(%St(party mode),!=,off)<party|%?if(%St(single mode),!=,off)<%St(single mode)|%fk kHz>>
+#
+# ---------
+# Track
+# ---------
+# Album
+%V(30,632,-30,30,2)
+%s%al%id
+#
+# Artist
+%V(30,664,-30,30,2)
+%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
+#
+# Title
+%V(30,698,-30,46,4)
+%al%s%?it<%it|%fn>
+#
+# Footer
+# ======
+# Elapsed / total, and position in the playlist. Kept from Snappy; the bar
+# they used to sit under is gone.
+%V(30,748,-30,30,2)
+%al%pc/%pt%ar%pp/%pe

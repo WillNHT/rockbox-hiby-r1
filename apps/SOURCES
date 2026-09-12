@@ -40,6 +40,7 @@ buffering.c
 voice_thread.c
 rbcodec_helpers.c
 menus/main_menu.c
+menus/main_menu_layout.c
 #ifdef HIBY_LINUX
 menus/hiby_bluetooth_menu.c
 #endif
