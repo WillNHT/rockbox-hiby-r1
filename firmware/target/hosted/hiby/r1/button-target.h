@@ -51,9 +51,18 @@
 #define BUTTON_BOTTOMMIDDLE 0x00080000
 #define BUTTON_BOTTOMRIGHT  0x00100000
 
-/* Software power-off */
+/* Software power-off.
+ *
+ * This is counted in button-thread repeats, which start at 0.16 s and
+ * accelerate to 0.05 s, so the stock 25 fired at about two and a half
+ * seconds - well before the ten second hold in apps/rpkeys.c, which is
+ * what made a deliberate lock look like a shutdown.
+ *
+ * The driver's path is kept, at roughly fifteen seconds, purely as a
+ * backstop: if the UI thread is wedged, rpkeys never runs, and that is
+ * exactly when a way to power the device off matters most. */
 #define POWEROFF_BUTTON BUTTON_POWER
-#define POWEROFF_COUNT 25
+#define POWEROFF_COUNT 290
 
 int button_map_with_id(int keycode, int id);
 

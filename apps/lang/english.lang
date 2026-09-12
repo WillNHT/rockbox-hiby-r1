@@ -10163,6 +10163,23 @@
   </voice>
 </phrase>
 <phrase>
+  id: LANG_TOUCHSCREEN_STICK
+  desc: touchscreen mode
+  user: core
+  <source>
+    *: none
+    touchscreen: "Joystick"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Joystick"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Joystick"
+  </voice>
+</phrase>
+<phrase>
   id: LANG_TOUCHSCREEN_POINT
   desc: in Settings -> General -> Display -> Touchscreen Settings
   user: core
@@ -17803,71 +17820,156 @@
   </voice>
 </phrase>
 <phrase>
-  id: LANG_TOUCH_NAV_MODE
-  desc: in Settings -> General -> Display -> Touchscreen Settings
+  id: LANG_STICK_OVERLAY
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
   user: core
   <source>
     *: none
-    touchscreen: "Touch Navigation"
+    touchscreen: "Show Gesture"
   </source>
   <dest>
     *: none
-    touchscreen: "Touch Navigation"
+    touchscreen: "Show Gesture"
   </dest>
   <voice>
     *: none
-    touchscreen: "Touch Navigation"
+    touchscreen: "Show Gesture"
   </voice>
 </phrase>
 <phrase>
-  id: LANG_TOUCH_NAV_CLASSIC
-  desc: touch navigation scheme
+  id: LANG_STICK_OVERLAY_STYLE
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
   user: core
   <source>
     *: none
-    touchscreen: "Classic"
+    touchscreen: "Gesture Style"
   </source>
   <dest>
     *: none
-    touchscreen: "Classic"
+    touchscreen: "Gesture Style"
   </dest>
   <voice>
     *: none
-    touchscreen: "Classic"
+    touchscreen: "Gesture Style"
   </voice>
 </phrase>
 <phrase>
-  id: LANG_TOUCH_NAV_STICK
-  desc: touch navigation scheme
+  id: LANG_STICK_OVERLAY_PLATE
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
   user: core
   <source>
     *: none
-    touchscreen: "Stick"
+    touchscreen: "Bottom Plate"
   </source>
   <dest>
     *: none
-    touchscreen: "Stick"
+    touchscreen: "Bottom Plate"
   </dest>
   <voice>
     *: none
-    touchscreen: "Stick"
+    touchscreen: "Bottom Plate"
   </voice>
 </phrase>
 <phrase>
-  id: LANG_TOUCH_NAV_BOTH
-  desc: touch navigation scheme
+  id: LANG_STICK_OVERLAY_READOUT
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
   user: core
   <source>
     *: none
-    touchscreen: "Both"
+    touchscreen: "Rose + Readout"
   </source>
   <dest>
     *: none
-    touchscreen: "Both"
+    touchscreen: "Rose + Readout"
   </dest>
   <voice>
     *: none
-    touchscreen: "Both"
+    touchscreen: "Rose + Readout"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_OVERLAY_EDGES
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Edge Lights"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Edge Lights"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Edge Lights"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_OVERLAY_CANVAS_MIN
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Canvas HUD (minimal)"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Canvas HUD (minimal)"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Canvas HUD minimal"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_OVERLAY_CANVAS
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Canvas HUD"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Canvas HUD"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Canvas HUD"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_EDGE_SWIPE
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Edge Swipes"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Edge Swipes"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Edge Swipes"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_OVERLAY_ROSE
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Compass Rose"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Compass Rose"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Compass Rose"
   </voice>
 </phrase>
 <phrase>

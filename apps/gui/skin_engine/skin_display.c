@@ -70,6 +70,7 @@
 #include "skin_engine.h"
 #include "statusbar-skinned.h"
 #include "skin_display.h"
+#include "rpkeys.h"
 
 void skin_render(struct gui_wps *gwps, unsigned refresh_mode);
 
@@ -81,6 +82,19 @@ void skin_update(enum skinnable_screens skin, enum screen_type screen,
                  unsigned int update_type)
 {
     struct gui_wps *gwps = skin_get_gwps(skin, screen);
+
+    /* The lock countdown is drawn straight at the LCD and owns the whole
+     * screen for the length of a hold. A WPS with a peak meter or a
+     * visualiser repaints on its own timer and knows nothing about it, so
+     * the two cleared each other several times a second and the display
+     * strobed. The skin stands down; a full update is already pending for
+     * the moment the countdown comes off. */
+    if (rpkeys_countdown_active())
+    {
+        skin_request_full_update(skin);
+        return;
+    }
+
     /* This maybe shouldnt be here,
      * This is also safe for skined screen which dont use the id3 */
     struct mp3entry *id3 = get_wps_state()->id3;

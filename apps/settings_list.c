@@ -93,7 +93,12 @@
 #define NODEFAULT INT(0)
 
 #ifdef HAVE_TOUCHSCREEN
-#if defined(APPLICATION) \
+/* Where the stick has a keymap it is the navigation model, not an option
+ * to go looking for: a new R1 boots into it. Point and grid are still one
+ * setting away for anyone who wants them. */
+#if (CONFIG_KEYPAD == HIBY_R1_PAD)
+#define DEFAULT_TOUCHSCREEN_MODE TOUCHSCREEN_STICK
+#elif defined(APPLICATION) \
  || defined(ONDA_VX747)  \
  || defined(ONDA_VX767)  \
  || defined(ONDA_VX747P) \
@@ -1581,8 +1586,12 @@ const struct settings_list settings[] = {
                 "screen scroll step", UNIT_PIXEL, 1, LCD_WIDTH, 1, NULL, NULL, NULL),
     OFFON_SETTING(0,scroll_paginated,LANG_SCROLL_PAGINATED,
                   false,"scroll paginated",NULL),
+    /* Stock Rockbox wraps a list from the end back to the start. On this
+     * build it is off: with a drag-scrolled list it is not a shortcut, it
+     * is a surprise - the thumb keeps going and the selection reappears at
+     * the other end of the library. Still a setting, still switchable. */
     OFFON_SETTING(0,list_wraparound,LANG_LIST_WRAPAROUND,
-                  true,"list wraparound",NULL),
+                  false,"list wraparound",NULL),
     CHOICE_SETTING(0, list_order, LANG_LIST_ORDER,
 #if defined(HAVE_SCROLLWHEEL) && !defined(FIIO_M3K)
                    1,
@@ -2452,30 +2461,28 @@ const struct settings_list settings[] = {
 #endif /* HAVE_SPEAKER */
 #ifdef HAVE_TOUCHSCREEN
     CHOICE_SETTING(0, touch_mode, LANG_TOUCHSCREEN_MODE, DEFAULT_TOUCHSCREEN_MODE,
-                   "touchscreen mode", "point,grid", NULL, 2,
-                   ID2P(LANG_TOUCHSCREEN_POINT), ID2P(LANG_TOUCHSCREEN_GRID)),
+                   "touchscreen mode", "point,grid,stick", NULL, 3,
+                   ID2P(LANG_TOUCHSCREEN_POINT), ID2P(LANG_TOUCHSCREEN_GRID),
+                   ID2P(LANG_TOUCHSCREEN_STICK)),
     CHOICE_SETTING(0, touchscreen_exemptions, LANG_TOUCHSCREEN_EXEMPTIONS,
                    TOUCHSCREEN_EXEMPTIONS_OFF, "touchscreen exemptions",
                    "off,wps,lists,wps and lists", NULL, 4,
                    ID2P(LANG_OFF), ID2P(LANG_WPS_ACRONYM), ID2P(LANG_LISTS), 
                    ID2P(LANG_WPS_AND_LISTS)),
-    /* Rockpocket stick. Defaults keep the engine entirely out of the
-       input path, so an untouched config behaves exactly as before. */
-    CHOICE_SETTING(0, touch_nav_mode, LANG_TOUCH_NAV_MODE, TOUCH_NAV_CLASSIC,
-                   "touch navigation", "classic,stick,both", NULL, 3,
-                   ID2P(LANG_TOUCH_NAV_CLASSIC), ID2P(LANG_TOUCH_NAV_STICK),
-                   ID2P(LANG_TOUCH_NAV_BOTH)),
     CHOICE_SETTING(0, stick_preset, LANG_STICK_PRESET, STICK_PRESET_4WAY,
-                   "stick preset", "4-way,8-way,custom", NULL, 3,
-                   ID2P(LANG_STICK_PRESET_4WAY), ID2P(LANG_STICK_PRESET_8WAY),
+                   "stick preset", "4-way,custom", NULL, 2,
+                   ID2P(LANG_STICK_PRESET_4WAY),
                    ID2P(LANG_STICK_PRESET_CUSTOM)),
     CHOICE_SETTING(0, stick_zone, LANG_STICK_ZONE, STICK_ZONE_FULLSCREEN,
                    "stick zone", "fullscreen,bottom half,plate", NULL, 3,
                    ID2P(LANG_STICK_ZONE_FULLSCREEN),
                    ID2P(LANG_STICK_ZONE_BOTTOM_HALF),
                    ID2P(LANG_STICK_ZONE_PLATE)),
+    /* The engine takes up to STICK_MAX_SECTORS; four is as far as the
+     * bindings have been thought through, so that is as far as the setting
+     * goes. */
     INT_SETTING(0, stick_sectors, LANG_STICK_SECTORS, 4, "stick sectors",
-                UNIT_INT, 1, 8, 1, NULL, NULL, NULL),
+                UNIT_INT, 1, 4, 1, NULL, NULL, NULL),
     INT_SETTING(0, stick_rotation, LANG_STICK_ROTATION, 0, "stick rotation",
                 UNIT_INT, 0, 345, 15, NULL, NULL, NULL),
     INT_SETTING(0, stick_arm_ms, LANG_STICK_ARM_MS, STICK_DEF_ARM_MS,
@@ -2485,6 +2492,20 @@ const struct settings_list settings[] = {
                 UNIT_INT, 8, 30, 1, NULL, NULL, NULL),
     OFFON_SETTING(0, stick_dial_wps, LANG_STICK_DIAL_WPS, false,
                   "stick dial wps", NULL),
+    OFFON_SETTING(0, stick_overlay, LANG_STICK_OVERLAY, true,
+                  "stick overlay", NULL),
+    CHOICE_SETTING(0, stick_overlay_style, LANG_STICK_OVERLAY_STYLE,
+                   STICK_OVERLAY_ROSE, "stick overlay style",
+                   "rose,plate,readout,edges,canvas,canvas min", NULL, 6,
+                   ID2P(LANG_STICK_OVERLAY_ROSE),
+                   ID2P(LANG_STICK_OVERLAY_PLATE),
+                   ID2P(LANG_STICK_OVERLAY_READOUT),
+                   ID2P(LANG_STICK_OVERLAY_EDGES),
+                   ID2P(LANG_STICK_OVERLAY_CANVAS),
+                   ID2P(LANG_STICK_OVERLAY_CANVAS_MIN)),
+
+    OFFON_SETTING(0, stick_edge_swipe, LANG_STICK_EDGE_SWIPE, false,
+                  "stick edge swipe", NULL),
     OFFON_SETTING(0, stick_dial_lists, LANG_STICK_DIAL_LISTS, false,
                   "stick dial lists", NULL),
     CUSTOM_SETTING(0, ts_calibration_data, -1,

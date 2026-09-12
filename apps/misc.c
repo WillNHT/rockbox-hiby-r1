@@ -1242,9 +1242,32 @@ void replaygain_update(void)
 
 void format_sound_value_ex(char *buf, size_t buf_sz, int snd, int val, bool skin_token)
 {
-    int numdec = sound_numdecimals(snd);
-    const char *unit = sound_unit(snd);
-    int physval = sound_val2phys(snd, val);
+    int numdec;
+    const char *unit;
+    int physval;
+
+#if (CONFIG_KEYPAD == HIBY_R1_PAD)
+    /* Volume reads as a percentage here, not as gain. The scale on this
+     * target was cut to the part of the range anyone actually listens in
+     * (-70 to -20 dB), so 0 and 100 are real ends rather than clipped
+     * ones, and the user stops having to translate "forty-two decibels
+     * below full scale" into how loud that is. One place does it for all
+     * three callers: the settings screen, the %pv skin token, and the
+     * splash the volume keys put up. */
+    if (snd == SOUND_VOLUME)
+    {
+        int lo = sound_min(snd);
+        int hi = sound_max(snd);
+        int pct = (hi > lo) ? (val - lo) * 100 / (hi - lo) : 0;
+
+        snprintf(buf, buf_sz, "%d%s", pct, skin_token ? "" : "%");
+        return;
+    }
+#endif
+
+    numdec = sound_numdecimals(snd);
+    unit = sound_unit(snd);
+    physval = sound_val2phys(snd, val);
 
     unsigned int factor = ipow(10, numdec);
     if (factor == 0)

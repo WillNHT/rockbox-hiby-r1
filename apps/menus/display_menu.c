@@ -597,8 +597,6 @@ static int stick_setting_callback(int action,
     return action;
 }
 
-MENUITEM_SETTING(touch_nav_mode, &global_settings.touch_nav_mode,
-                 stick_setting_callback);
 MENUITEM_SETTING(stick_zone, &global_settings.stick_zone,
                  stick_setting_callback);
 MENUITEM_SETTING(stick_sectors, &global_settings.stick_sectors,
@@ -616,13 +614,20 @@ MENUITEM_SETTING(stick_dial_wps, &global_settings.stick_dial_wps,
                  stick_setting_callback);
 MENUITEM_SETTING(stick_dial_lists, &global_settings.stick_dial_lists,
                  stick_setting_callback);
+MENUITEM_SETTING(stick_overlay, &global_settings.stick_overlay,
+                 stick_setting_callback);
+MENUITEM_SETTING(stick_edge_swipe, &global_settings.stick_edge_swipe,
+                 stick_setting_callback);
+MENUITEM_SETTING(stick_overlay_style, &global_settings.stick_overlay_style,
+                 stick_setting_callback);
 MENUITEM_SETTING(stick_deg_per_detent, &global_settings.stick_deg_per_detent,
                  stick_setting_callback);
 
 MAKE_MENU(stick_menu, ID2P(LANG_STICK_SETTINGS), NULL, Icon_NOICON,
-            &touch_nav_mode, &stick_zone, &stick_sectors, &stick_rotation,
+            &stick_zone, &stick_sectors, &stick_rotation,
             &stick_arm_ms, &stick_preset,
-            &stick_dial_wps, &stick_dial_lists, &stick_deg_per_detent);
+            &stick_dial_wps, &stick_dial_lists, &stick_deg_per_detent,
+            &stick_overlay, &stick_overlay_style, &stick_edge_swipe);
 
 MAKE_MENU(touchscreen_menu, ID2P(LANG_TOUCHSCREEN_SETTINGS), NULL, Icon_NOICON, &list_line_padding, &touch_mode,
             &touchscreen_exemptions, &stick_menu,

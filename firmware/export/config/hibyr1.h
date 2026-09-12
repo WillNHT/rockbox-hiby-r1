@@ -20,6 +20,27 @@
 #define HAVE_LCD_SLEEP
 #define LCD_SLEEP_TIMEOUT (2*HZ)
 
+/* Both of these live in lcd-linuxfb.c, which the simulator does not build:
+ * the sim has its own SDL LCD driver and no framebuffer planes at all. */
+#ifndef SIMULATOR
+/* Present through a second framebuffer plane, flipped on a vertical blank.
+ * Removes tearing and the clear-then-draw flash; falls back to the old
+ * single-plane path by itself if the driver will not give us the plane. */
+#define HAVE_FB_DOUBLEBUF
+/* Per-frame timing and damage instrumentation, shown in the debug menu */
+#define HAVE_LCD_PRESENT_STATS
+#endif
+
+/* Surfaces and layers over the framebuffer (apps/canvas.c, canvas_glue.c).
+ * Costs a pool of at most CANVAS_POOL_MAX_KIB and degrades to the plain
+ * direct-to-framebuffer path if it cannot have it. */
+#define HAVE_COMPOSITOR
+
+/* Blend antialiased glyphs and alpha images in linear light rather than in
+ * gamma-encoded RGB565, so a glyph keeps its weight whatever it landed on.
+ * Six table lookups per blended pixel; 2.2 KiB of tables. */
+#define HAVE_GAMMA_AWARE_TEXT
+
 #define LCD_DEPTH  16   /* 65536 colours */
 #define LCD_PIXELFORMAT RGB565 /* rgb565 */
 

@@ -33,6 +33,7 @@
 #include "filetypes.h"
 #include "settings.h"
 #include "skin_engine/skin_engine.h"
+#include "stick_glue.h"
 #include "audio.h"
 #include "usb.h"
 #include "status.h"
@@ -173,7 +174,20 @@ static int skintouch_to_wps(void)
     struct gui_wps *gwps = skin_get_gwps(WPS, SCREEN_MAIN);
 
     struct gesture_event gevent;
-    if (action_gesture_get_event(&gevent))
+
+    /* Flicks are a second scheme on the same glass, and the stick is the
+     * first. They are absolute - four directions with fixed meanings that
+     * no keymap decides and the stick's own bindings contradict: a drag to
+     * the right is "next track" to the stick and "show the playlist" here,
+     * and whichever of the two got the event won. So the flick layer only
+     * exists on a panel the stick is not running on.
+     *
+     * The stick resets the gesture tracker on every event it owns, so in
+     * principle this could not fire anyway; in practice any contact the
+     * stick passes - one that began in a dead zone, say - still reaches
+     * the tracker, and that was enough. This is the honest statement of
+     * the rule rather than a hope that the tracker stays empty. */
+    if (!stick_enabled() && action_gesture_get_event(&gevent))
     {
         switch (gesture_flick_get(&gevent))
         {
@@ -639,7 +653,16 @@ static void gwps_enter_wps(bool theme_enabled)
 #ifdef HAVE_TOUCHSCREEN
     gwps = skin_get_gwps(WPS, SCREEN_MAIN);
     skin_disarm_touchregions(gwps);
-    if (gwps->data->touchregions < 0)
+    /* A skin with no touch regions of its own used to drop the panel into
+     * BUTTON mode. Under the stick that is a silent switch-off: the stick
+     * only runs while the driver is in TOUCHSCREEN_STICK, so entering a
+     * region-less WPS handed the panel back to the absolute flick layer in
+     * skintouch_to_wps() - which is why a drag right in the iPod skin
+     * opened the playlist instead of skipping a track, a drag left brought
+     * up the context menu, and a drag up did nothing at all. The stick
+     * owns the panel on every screen or on none. */
+    if (gwps->data->touchregions < 0 &&
+        global_settings.touch_mode != TOUCHSCREEN_STICK)
         touchscreen_set_mode(TOUCHSCREEN_BUTTON);
 #endif
     /* force statusbar/skin update since we just cleared the whole screen */

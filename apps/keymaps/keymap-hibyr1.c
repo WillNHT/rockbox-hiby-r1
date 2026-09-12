@@ -186,6 +186,20 @@ static const struct button_mapping button_context_yesno[]  = {
 }; /* button_context_settings_yesno */
 
 static const struct button_mapping button_context_quickscreen[]  = {
+    /* A way out. The quickscreen spends all four directions on settings,
+     * so the stick's back gesture is QS_LEFT here and there was nothing
+     * left to leave with - a stick-only user was stuck on this screen.
+     * POWER|LEFT is what the stick's menu binding emits, and the stick's
+     * quickscreen table puts it on the centre tap. */
+    { ACTION_STD_CANCEL, BUTTON_POWER|BUTTON_LEFT,      BUTTON_NONE },
+
+    /* The stick's scroll bindings are bare presses - no REL, no REPEAT, so
+     * that list acceleration can never compound with the stick's own rate.
+     * Every entry below wants one or the other, so up and down did nothing
+     * at all on this screen until these two. */
+    { ACTION_QS_TOP,     BUTTON_UP,                     BUTTON_NONE },
+    { ACTION_QS_DOWN,    BUTTON_DOWN,                   BUTTON_NONE },
+
     // { ACTION_STD_CANCEL, BUTTON_POWER|BUTTON_REL,       BUTTON_POWER },
     // { ACTION_STD_CANCEL, BUTTON_PLAY|BUTTON_REL,       BUTTON_PLAY },
     { ACTION_QS_SHORTCUTS, BUTTON_POWER|BUTTON_REPEAT,       BUTTON_POWER },
@@ -236,7 +250,11 @@ static const struct button_mapping button_context_pitchscreen[]  = {
         { ACTION_PS_NUDGE_RIGHTOFF, BUTTON_RIGHT|BUTTON_REL,        BUTTON_NONE },
         { ACTION_PS_TOGGLE_MODE,    BUTTON_POWER|BUTTON_REPEAT,       BUTTON_POWER },
         { ACTION_PS_RESET,          BUTTON_POWER|BUTTON_DOWN,    BUTTON_NONE },
-        { ACTION_PS_RESET,          BUTTON_POWER|BUTTON_LEFT,    BUTTON_NONE },
+        /* The same trap the quickscreen had: all four directions are spent
+         * on the pitch, and the only way out was POWER on its own, which
+         * the stick has no binding for. POWER|LEFT is what the stick's
+         * centre tap emits, and reset still has POWER|DOWN. */
+        { ACTION_PS_EXIT,           BUTTON_POWER|BUTTON_LEFT,    BUTTON_NONE },
         { ACTION_PS_EXIT,           BUTTON_POWER|BUTTON_REL,         BUTTON_POWER },
         { ACTION_PS_SLOWER,         BUTTON_LEFT|BUTTON_REPEAT,      BUTTON_NONE },
         { ACTION_PS_FASTER,         BUTTON_RIGHT|BUTTON_REPEAT,     BUTTON_NONE },

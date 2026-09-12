@@ -35,6 +35,11 @@ int key_to_touch(int keyboard_button, unsigned int mouse_coords)
             switch (touchscreen_get_mode())
             {
                 case TOUCHSCREEN_POINT:
+                /* The stick reads pixel coordinates like POINT does; the
+                 * apps layer is what turns them into buttons. Without this
+                 * the simulator silently drops every touch in stick mode,
+                 * while the real driver falls through to coordinates. */
+                case TOUCHSCREEN_STICK:
                     new_btn = BUTTON_TOUCHSCREEN;
                     break;
                 case TOUCHSCREEN_BUTTON:

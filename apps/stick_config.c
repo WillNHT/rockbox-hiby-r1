@@ -35,17 +35,12 @@
 #include "settings.h"
 #include "stick.h"
 #include "stick_glue.h"
+#include "gui/list.h"
 
 #define LOGF_ENABLE
 #include "logf.h"
 
 #define STICK_CFG_FILE ROCKBOX_DIR "/stick.cfg"
-
-/* In "Both" mode the stick keeps clear of the regions the classic touch
- * scheme owns: the screen edges, where edge swipes start, and the strip at
- * the top holding the status bar and the list header. */
-#define BOTH_EDGE_INSET   (LCD_WIDTH / 12)
-#define BOTH_TOP_INSET    96
 
 static const uint8_t preset_4way[STICK_MAX_SECTORS] =
 {
@@ -55,6 +50,29 @@ static const uint8_t preset_4way[STICK_MAX_SECTORS] =
     STICK_BIND_BACK,          /* left  */
 };
 
+/* The WPS is the one screen that cannot be left with the stick's ordinary
+ * table: its keymap spends UP and DOWN on browse and hotkey and puts every
+ * way out behind a POWER combination, so a stick-only user was stuck there.
+ * These are the four directions plus a hold on each, which is the whole
+ * transport without a physical button. */
+static const uint8_t wps_bind[STICK_MAX_SECTORS] =
+{
+    STICK_BIND_MENU,          /* up    */
+    STICK_BIND_NEXT,          /* right */
+    STICK_BIND_PLAY_PAUSE,    /* down  */
+    STICK_BIND_PREV,          /* left  */
+};
+
+static const uint8_t wps_hold[STICK_MAX_SECTORS] =
+{
+    STICK_BIND_QUICKSCREEN,   /* up    - shuffle and repeat */
+    STICK_BIND_SEEK_FWD,      /* right */
+    STICK_BIND_STOP,          /* down  */
+    STICK_BIND_SEEK_BACK,     /* left  */
+};
+
+/* Kept because the engine still supports any sector count; nothing in the
+ * settings reaches it while we are only designing for four ways. */
 static const uint8_t preset_8way[STICK_MAX_SECTORS] =
 {
     STICK_BIND_SCROLL_UP,     /* up         */
@@ -107,40 +125,6 @@ static void apply_zone_preset(struct stick_config *cfg, int preset)
         cfg->work = cfg->arm;
         break;
     }
-}
-
-/* Shrink a box arm zone clear of the regions the classic scheme owns. A
- * circular plate is already well inside them, so it is left alone. */
-static void inset_for_both_mode(struct stick_config *cfg)
-{
-    int l, t, r, b;
-
-    if (cfg->arm.shape != STICK_SHAPE_BOX)
-        return;
-
-    l = cfg->arm.a;
-    t = cfg->arm.b;
-    r = cfg->arm.a + cfg->arm.c;
-    b = cfg->arm.b + cfg->arm.d;
-
-    if (l < BOTH_EDGE_INSET)
-        l = BOTH_EDGE_INSET;
-    if (r > LCD_WIDTH - BOTH_EDGE_INSET)
-        r = LCD_WIDTH - BOTH_EDGE_INSET;
-    if (t < BOTH_TOP_INSET)
-        t = BOTH_TOP_INSET;
-    if (b > LCD_HEIGHT - BOTH_EDGE_INSET)
-        b = LCD_HEIGHT - BOTH_EDGE_INSET;
-
-    if (r - l < 40 || b - t < 40)
-        return;                     /* the inset would leave nothing */
-
-    set_box(&cfg->arm, l, t, r - l, b - t);
-
-    /* Work stays generous: leaving the arm zone should not cancel, only
-     * leaving the screen region the gesture belongs to. */
-    if (cfg->work.shape == STICK_SHAPE_BOX)
-        set_box(&cfg->work, 0, 0, LCD_WIDTH, LCD_HEIGHT);
 }
 
 /* ------------------------------------------------------------ config file */
@@ -218,6 +202,27 @@ static bool load_config_file(struct stick_config *cfg)
             cfg->travel_px = atoi(rest);
         else if (!strcmp(key, "dialMinPx"))
             cfg->dial_min_px = atoi(rest);
+        /* The scroll feel, for tuning on the device without a rebuild.
+         * scrollPx is the slow baseline; accelV0 and accelMaxQ8 decide how
+         * hard speed shrinks it. accelMaxQ8 256 means no acceleration. */
+        else if (!strcmp(key, "scrollPx"))
+            cfg->scroll_px = atoi(rest);
+        else if (!strcmp(key, "accelV0"))
+            cfg->accel_v0 = atoi(rest);
+        else if (!strcmp(key, "accelMaxQ8"))
+            cfg->accel_max_q8 = atoi(rest);
+        /* Sustained scrolling: park the thumb and the list keeps going.
+         * sustainMs 0 turns it off. */
+        else if (!strcmp(key, "sustainMs"))
+            cfg->sustain_ms = atoi(rest);
+        else if (!strcmp(key, "sustainEdgePx"))
+            cfg->sustain_edge_px = atoi(rest);
+        else if (!strcmp(key, "sustainV0"))
+            cfg->sustain_v0 = atoi(rest);
+        else if (!strcmp(key, "sustainVmax"))
+            cfg->sustain_vmax = atoi(rest);
+        else if (!strcmp(key, "sustainRampMs"))
+            cfg->sustain_ramp_ms = atoi(rest);
         else if (!strcmp(key, "centre") || !strcmp(key, "center"))
             cfg->centre = parse_binding(strtok_r(NULL, " \t", &rest));
         else if (!strcmp(key, "arm"))
@@ -230,13 +235,21 @@ static bool load_config_file(struct stick_config *cfg)
                 parse_zone(&cfg->dead[cfg->n_dead], rest))
                 cfg->n_dead++;
         }
-        else if (!strcmp(key, "bind"))
+        else if (!strcmp(key, "holdMs"))
+            cfg->hold_ms = atoi(rest);
+        else if (!strcmp(key, "bind") || !strcmp(key, "hold"))
         {
+            bool is_hold = (key[0] == 'h');
             char *idx = strtok_r(NULL, " \t", &rest);
             char *name = strtok_r(NULL, " \t", &rest);
             int i = idx ? atoi(idx) : -1;
             if (i >= 0 && i < STICK_MAX_SECTORS && name)
-                cfg->bind[i] = parse_binding(name);
+            {
+                if (is_hold)
+                    cfg->hold[i] = parse_binding(name);
+                else
+                    cfg->bind[i] = parse_binding(name);
+            }
         }
     }
 
@@ -251,8 +264,12 @@ static int dial_for_context(int context)
     switch (context & 0xff)
     {
     case CONTEXT_WPS:
-        return global_settings.stick_dial_wps ? STICK_DIAL_VOLUME
-                                              : STICK_DIAL_OFF;
+        /* Always available, and it costs the sectors nothing now: the dial
+         * is armed by a slow tap rather than owning every gesture, so the
+         * theme setting that used to turn it on has nothing left to
+         * decide. Circle after the hold and the volume follows, which is
+         * the click wheel the user asked for. */
+        return STICK_DIAL_VOLUME;
     case CONTEXT_LIST:
     case CONTEXT_TREE:
     case CONTEXT_MAINMENU:
@@ -281,22 +298,39 @@ static void build_base(void)
     base_cfg.sectors = global_settings.stick_sectors;
     base_cfg.rotation = global_settings.stick_rotation;
     base_cfg.arm_ms = global_settings.stick_arm_ms;
+    /* Edge swipes coexist with the stick because they are part of it: a
+     * press on the strip never becomes a stick gesture, and a stick gesture
+     * never starts on the strip, so there is nothing to arbitrate. */
+    base_cfg.edge_px = global_settings.stick_edge_swipe
+                           ? STICK_DEF_EDGE_PX : 0;
+
+    /* One scrolling speed for the device, not one per input scheme: the
+     * stick reads Rockbox's own Scroll Speed rather than owning a knob. */
+    base_cfg.scroll_px =
+        stick_scroll_px_for_speed(global_settings.scroll_speed);
+
+    /* And one way of slowing down: the list's kinetic deceleration, so a
+     * coast the stick starts winds down exactly like one a swipe starts. */
+    base_cfg.decel_a0 =
+        global_settings.kinetic_scroll_decel.a0 >> LIST_KINETIC_FRACBITS;
+    base_cfg.decel_a1 = global_settings.kinetic_scroll_decel.a1;
     base_cfg.deg_per_detent = global_settings.stick_deg_per_detent;
 
     preset = (global_settings.stick_preset == STICK_PRESET_8WAY)
                  ? preset_8way : preset_4way;
     for (i = 0; i < STICK_MAX_SECTORS; i++)
         base_cfg.bind[i] = preset[i];
-    base_cfg.centre = STICK_BIND_PLAY_PAUSE;
+    /* A release with no travel is what a tap that overran the arm window
+     * looks like, so the centre has to be the harmless thing the user
+     * meant by tapping. playPause resolved to Resume Playback in the
+     * browser, which jumps to a full screen on what felt like a tap. */
+    base_cfg.centre = STICK_BIND_SELECT;
 
     if (global_settings.stick_preset == STICK_PRESET_CUSTOM)
     {
         if (!load_config_file(&base_cfg))
             logf("stick: no " STICK_CFG_FILE ", keeping the built-in table");
     }
-
-    if (global_settings.touch_nav_mode == TOUCH_NAV_BOTH)
-        inset_for_both_mode(&base_cfg);
 
     if (!stick_config_validate(&base_cfg, LCD_WIDTH, LCD_HEIGHT))
         logf("stick: config had out of range values, defaults used");
@@ -310,7 +344,7 @@ static void build_base(void)
         for (i = 0; i < STICK_MAX_SECTORS; i++)
             base_cfg.bind[i] = preset_4way[i];
         base_cfg.sectors = 4;
-        base_cfg.centre = STICK_BIND_PLAY_PAUSE;
+        base_cfg.centre = STICK_BIND_SELECT;
     }
 
     base_valid = true;
@@ -321,6 +355,23 @@ void stick_config_invalidate(void)
     base_valid = false;
 }
 
+/* The only screen whose table differs. Everywhere else the stick emits the
+ * four ordinary keys and lets the screen decide what they mean, which is
+ * what keeps a remapped keypad working. */
+static void apply_wps_table(struct stick_config *cfg)
+{
+    int i;
+
+    for (i = 0; i < STICK_MAX_SECTORS; i++)
+    {
+        cfg->bind[i] = wps_bind[i];
+        cfg->hold[i] = wps_hold[i];
+    }
+    cfg->sectors = 4;
+    /* A tap on the artwork must not skip the track. */
+    cfg->centre = STICK_BIND_NONE;
+}
+
 void stick_build_config(struct stick_config *cfg, int context)
 {
     if (!base_valid)
@@ -328,6 +379,19 @@ void stick_build_config(struct stick_config *cfg, int context)
 
     *cfg = base_cfg;
     cfg->dial = dial_for_context(context);
+
+    if ((context & 0xff) == CONTEXT_WPS &&
+        global_settings.stick_preset != STICK_PRESET_CUSTOM)
+        apply_wps_table(cfg);
+
+    /* The quickscreen and the pitchscreen both bind all four directions to
+     * their own settings, so the ordinary back gesture means "change the
+     * left-hand one" and there is no way out. The centre tap becomes the
+     * way out on both: it emits POWER|LEFT, which those keymaps now
+     * cancel and exit on. */
+    if ((context & 0xff) == CONTEXT_QUICKSCREEN ||
+        (context & 0xff) == CONTEXT_PITCHSCREEN)
+        cfg->centre = STICK_BIND_MENU;
 }
 
 #endif /* HAVE_TOUCHSCREEN */

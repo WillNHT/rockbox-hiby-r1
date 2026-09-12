@@ -35,10 +35,16 @@ enum stick_result
     STICK_RESULT_BUTTON,     /* a synthetic button is ready to look up */
 };
 
-/* True when the engine is in the input path at all. False under
- * TOUCH_NAV_CLASSIC, after the kill switch, and after a crash-loop
- * fallback - in which case nothing below is ever reached. */
+/* True when the engine is in the input path at all. False unless the
+ * touchscreen mode is TOUCHSCREEN_STICK, and false after the kill switch
+ * or a crash-loop fallback - in which case nothing below is reached. */
 bool stick_enabled(void);
+
+/* True while a stick gesture or its coast is driving the list. Lists read
+ * this to suppress wraparound: a drag is paper under a thumb, and paper
+ * does not jump from the bottom back to the top. Rockbox already makes the
+ * same exception for repeating keys. */
+bool stick_is_scrolling(void);
 
 /* Rebuild the engine config from global_settings. Cheap; call it whenever
  * the settings might have changed. */
@@ -54,6 +60,22 @@ int stick_handle_touch(const struct touchevent *ev, int context,
  * seconds turns the stick off for the rest of the session, so a
  * misconfigured stick can always be escaped without the touchscreen. */
 void stick_check_killswitch(int button);
+
+/* Drives anything that outlives the thumb - today, the kinetic coast after
+ * a flicked scroll. Call it once per action poll; it is a no-op unless a
+ * coast is running. Any buttons it owes go out through the button queue,
+ * because there is no touch event in hand to answer with. */
+void stick_tick(int context);
+
+/* Paints the live gesture, if the overlay is on. Must be called at the top
+ * of the action poll, after whatever the last gesture fired has finished
+ * redrawing the screen - anything drawn earlier than that is painted over
+ * immediately. */
+void stick_draw_overlay(void);
+
+/* Repaints the gesture after a list has redrawn its rows over it. The list
+ * calls this at the end of its own draw; nothing else should. */
+void stick_redraw_overlay(void);
 
 /* Read-only view for the lab plugin and, later, the presentation layer. */
 const struct stick_state *stick_get_state(void);

@@ -38,6 +38,10 @@
 #include "audio.h"
 #include "settings.h"
 #include "list.h"
+#ifdef HAVE_COMPOSITOR
+#include "canvas.h"
+#include "canvas_glue.h"
+#endif
 #include "dir.h"
 #include "panic.h"
 #include "screens.h"
@@ -2873,6 +2877,219 @@ static bool dbg_reset_sysfs_access_log(void)
 #endif
 #endif
 
+#ifdef HAVE_LCD_PRESENT_STATS
+static void addline_avg(const char *what, unsigned long total,
+                        unsigned long max, unsigned long n)
+{
+    if (n == 0)
+        simplelist_addline("%s: -", what);
+    else
+        simplelist_addline("%s: avg %lu us, max %lu us", what, total / n, max);
+}
+
+static bool dbg_display_stats(void)
+{
+    struct lcd_present_stats s;
+    struct simplelist_info info;
+    simplelist_info_init(&info, "Display", 0, NULL);
+
+    lcd_get_present_stats(&s);
+
+    simplelist_reset_lines();
+    simplelist_addline("fb: %lux%lu virt %lu, %lu bpp, stride %lu",
+                       s.fb_xres, s.fb_yres, s.fb_yres_virtual,
+                       s.fb_bpp, s.fb_line_length);
+    simplelist_addline("smem: %lu KiB (frame %lu KiB)",
+                       s.fb_smem_len / 1024,
+                       (unsigned long)(FRAMEBUFFER_SIZE / 1024));
+    simplelist_addline("double buffered: %s   vsync: %s",
+                       s.doublebuf ? "yes" : "no",
+                       s.vsync ? "yes" : "no");
+    simplelist_addline(" ");
+    simplelist_addline("presents: %lu (full %lu, partial %lu)",
+                       s.frames, s.full_frames, s.partial_frames);
+    simplelist_addline("promoted to full: %lu", s.promoted_frames);
+    if (s.frames)
+        simplelist_addline("avg damage: %lu%% of a frame",
+                           (unsigned long)((s.px_copied * 100) /
+                               ((unsigned long long)s.frames * LCD_WIDTH * LCD_HEIGHT)));
+    addline_avg("copy", s.copy_us_total, s.copy_us_max, s.frames);
+    addline_avg("flip", s.present_us_total, s.present_us_max, s.frames);
+    simplelist_addline("vsync waits: %lu", s.vsync_waits);
+
+#ifdef HAVE_COMPOSITOR
+    simplelist_addline(" ");
+    simplelist_addline("compositor pool: %s, %u of %u KiB",
+                       canvas_available() ? "up" : "not allocated",
+                       (unsigned)(canvas_pool_used() / 1024),
+                       (unsigned)(canvas_pool_size() / 1024));
+#endif
+
+    return simplelist_show_list(&info);
+}
+
+static bool dbg_display_bench(void)
+{
+    struct lcd_present_stats s;
+    int i;
+
+    splashf(HZ / 2, "Benchmarking...");
+    lcd_reset_present_stats();
+
+    /* present the screen as it stands, repeatedly: this measures the copy
+       and the flip, not any drawing */
+    for (i = 0; i < 60; i++)
+        lcd_update();
+
+    lcd_get_present_stats(&s);
+    if (s.frames == 0)
+        return false;
+
+    splashf(HZ * 5, "%lu frames: copy %lu us, flip %lu us, %lu fps ceiling",
+            s.frames,
+            s.copy_us_total / s.frames,
+            s.present_us_total / s.frames,
+            1000000ul / ((s.copy_us_total + s.present_us_total) / s.frames + 1));
+
+    lcd_reset_present_stats();
+    return false;
+}
+
+static bool dbg_display_reset(void)
+{
+    lcd_reset_present_stats();
+    splashf(HZ, "Display stats reset");
+    return false;
+}
+
+#ifdef HAVE_COMPOSITOR
+/* Every effect the Canvas engine has, on one screen, drawn at the panel's
+ * own resolution. This is the honest showcase: a theme can only set
+ * settings, so it can point at this but it cannot contain it. */
+/* The colour the full-screen gradient has at row y - so a strip can be
+ * repainted without redrawing the whole thing. */
+static canvas_px demo_grad(canvas_px a, canvas_px b, int y, int h)
+{
+    return canvas_blend_px(a, b, (unsigned)((y * 255) / (h > 0 ? h : 1)));
+}
+
+static bool dbg_canvas_demo(void)
+{
+    extern struct frame_buffer_t lcd_framebuffer_default;
+    struct canvas_surface fb;
+    struct canvas_rect r;
+    canvas_px *scratch;
+    size_t scratch_px = 0;
+    canvas_px ink    = (canvas_px)global_settings.fg_color;
+    canvas_px ground = (canvas_px)global_settings.bg_color;
+    canvas_px accent = (canvas_px)global_settings.lss_color;
+    struct canvas_anim slide;
+    unsigned t0, now;
+    int action;
+
+    canvas_surface_init(&fb, lcd_framebuffer_default.fb_ptr, NULL,
+                        LCD_WIDTH, LCD_HEIGHT,
+                        (int)LCD_NATIVE_STRIDE(lcd_framebuffer_default.stride));
+
+    scratch = canvas_scratch(LCD_WIDTH, 260, &scratch_px);
+
+    /* 1. a dithered gradient, which is the answer to RGB565 banding */
+    r = (struct canvas_rect){ 0, 0, LCD_WIDTH, LCD_HEIGHT };
+    canvas_gradient(&fb, &r, ground, accent, true, true);
+
+    /* 2. hard-edged shapes, to have something worth blurring */
+    r = (struct canvas_rect){ 40, 120, 120, 120 };
+    canvas_fill(&fb, &r, ink);
+    r = (struct canvas_rect){ 300, 180, 140, 90 };
+    canvas_fill(&fb, &r, accent);
+
+    /* 3. blur a band across them: downsampled, so it costs arithmetic
+     *    rather than bandwidth */
+    r = (struct canvas_rect){ 0, 150, LCD_WIDTH, 240 };
+    if (scratch)
+        canvas_blur(&fb, &r, 24, scratch, scratch_px);
+
+    /* 4. a rounded card with a soft shadow, sitting on the blur */
+    r = (struct canvas_rect){ 40, 420, LCD_WIDTH - 80, 150 };
+    canvas_shadow(&fb, &r, 18, 14, 0, 8, 0, 150);
+    canvas_fill_round_rect(&fb, &r, 18, ground, 225);
+    canvas_stroke_round_rect(&fb, &r, 18, 1, ink, 120);
+
+    /* 5. antialiased text, blended in linear light */
+    lcd_setfont(FONT_UI);
+    lcd_set_foreground(ink);
+    lcd_putsxy(64, 444, "Rockpocket Canvas");
+    lcd_setfont(FONT_SYSFIXED);
+    lcd_set_foreground(accent);
+    lcd_putsxy(64, 480, "blur . shadow . rounded . dither");
+    lcd_set_foreground(ink);
+    lcd_putsxy(64, 505, "reflection . 9-slice . easing");
+    lcd_setfont(FONT_UI);
+
+    /* 6. a reflection of the card, fading out underneath it */
+    r = (struct canvas_rect){ 40, 420, LCD_WIDTH - 80, 150 };
+    canvas_reflect(&fb, 40, 572, &fb, &r, 60, 110, 0);
+
+    lcd_update();
+
+    /* 7. the animator: a cap sliding across on an eased curve until a key
+     *    is pressed. Nothing else in the tree drives it yet. */
+    t0 = (unsigned)current_tick * (1000 / HZ);
+    canvas_anim_start(&slide, 60, LCD_WIDTH - 60, 900,
+                      CANVAS_EASE_IN_OUT_CUBIC, t0);
+
+    while (1)
+    {
+        int x;
+
+        now = (unsigned)current_tick * (1000 / HZ);
+        if (canvas_anim_done(&slide, now))
+        {
+            int32_t from = slide.to, to = slide.from;
+            canvas_anim_start(&slide, from, to, 900,
+                              CANVAS_EASE_IN_OUT_CUBIC, now);
+        }
+
+        x = canvas_anim_value(&slide, now);
+
+        /* repaint the strip the cap lives in, from the gradient up */
+        r = (struct canvas_rect){ 0, 640, LCD_WIDTH, 110 };
+        canvas_gradient(&fb, &r, demo_grad(ground, accent, 640, LCD_HEIGHT),
+                        demo_grad(ground, accent, 750, LCD_HEIGHT), true, true);
+
+        r = (struct canvas_rect){ x - 34, 660, 68, 68 };
+        canvas_shadow(&fb, &r, 34, 10, 0, 5, 0, 140);
+        canvas_fill_round_rect(&fb, &r, 34, accent, 255);
+        canvas_stroke_round_rect(&fb, &r, 34, 1, ink, 140);
+
+        lcd_update_rect(0, 640, LCD_WIDTH, 110);
+
+        action = get_action(CONTEXT_STD, HZ / 30);
+        if (action == ACTION_STD_CANCEL || action == ACTION_STD_OK)
+            break;
+        if (action == ACTION_STD_MENU)
+            break;
+    }
+
+    return false;
+}
+#endif /* HAVE_COMPOSITOR */
+
+static bool dbg_display_doublebuf(void)
+{
+    bool on = !lcd_doublebuf_enabled();
+
+    lcd_set_doublebuf(on);
+
+    if (lcd_doublebuf_enabled() != on)
+        splashf(HZ * 2, "Page flipping unavailable on this framebuffer");
+    else
+        splashf(HZ * 2, "Page flipping %s", on ? "on" : "off");
+
+    return false;
+}
+#endif /* HAVE_LCD_PRESENT_STATS */
+
 /****** The menu *********/
 static const struct {
     unsigned char *desc; /* string or ID */
@@ -2926,6 +3143,15 @@ static const struct {
         { "Screendump", dbg_screendump },
 #endif
         { "Skin Engine RAM usage", dbg_skin_engine },
+#ifdef HAVE_LCD_PRESENT_STATS
+        { "Display stats", dbg_display_stats },
+        { "Display present benchmark", dbg_display_bench },
+        { "Reset display stats", dbg_display_reset },
+        { "Toggle page flipping", dbg_display_doublebuf },
+#ifdef HAVE_COMPOSITOR
+        { "Canvas effects demo", dbg_canvas_demo },
+#endif
+#endif
 #if ((CONFIG_PLATFORM & PLATFORM_NATIVE) || defined(SONY_NWZ_LINUX) || (defined(HIBY_LINUX) && !defined(HIBY_R3PROII) && !defined(HIBY_R1)) || defined(FIIO_M3K_LINUX)) && !defined(SIMULATOR)
         { "View HW info", dbg_hw_info },
 #endif

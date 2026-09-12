@@ -106,15 +106,6 @@ enum {
     TOUCHSCREEN_EXEMPTIONS_WPS_AND_LISTS,
 };
 
-/* Which touch navigation scheme owns the screen. Classic keeps the engine
- * entirely out of the input path, so the default build behaves exactly as
- * it did before the stick existed. */
-enum {
-    TOUCH_NAV_CLASSIC = 0,  /* edge swipes, kinetic scroll, header taps  */
-    TOUCH_NAV_STICK,        /* the Rockpocket stick owns the arm zone    */
-    TOUCH_NAV_BOTH,         /* stick arms only clear of the edge regions */
-};
-
 /* Arm zone presets. The stick is relative, so these only decide where a
  * press is allowed to start a gesture. */
 enum {
@@ -125,9 +116,37 @@ enum {
 
 enum {
     STICK_PRESET_4WAY = 0,
-    STICK_PRESET_8WAY,
     STICK_PRESET_CUSTOM,    /* read from /.rockbox/stick.cfg            */
+    /* The engine handles any sector count and the table still exists, but
+     * nothing in the settings offers it while four ways is what we are
+     * actually designing for. Last on purpose: it sits past the end of the
+     * choice list, so it is unreachable from the UI without being deleted
+     * from the code. */
+    STICK_PRESET_8WAY,
 };
+
+/* How the live gesture is drawn. Behaviour is identical for all of them -
+ * this is the whole of a theme's control over the stick's looks, because
+ * the .cfg theme format can only set settings, and nothing in the skin
+ * engine can read stick state or draw on a gesture.
+ *
+ * The four correspond to the openness study's skins. */
+enum {
+    STICK_OVERLAY_ROSE = 0, /* ring, dead spot, sector edges, cap       */
+    STICK_OVERLAY_PLATE,    /* 2a: a plate at the bottom, cap rides it  */
+    STICK_OVERLAY_READOUT,  /* 2b: the rose plus mode and rate in words */
+    STICK_OVERLAY_EDGES,    /* 2c: no widget - the screen edge lights   */
+    /* The openness study's own HUD, drawn through the Canvas engine:
+     * antialiased rings, a cap that carries the word for what the gesture
+     * means and the rate under it, a hold-progress disc, and a readout
+     * pill at the top. Appended, never inserted - the numbers are what a
+     * saved config and every theme .cfg already hold. */
+    STICK_OVERLAY_CANVAS,
+    /* The same HUD with the coaching taken off - no panel behind it and no
+     * labels around the edge, which is the study's middle level. */
+    STICK_OVERLAY_CANVAS_MIN,
+};
+
 #endif
 
 enum {
@@ -855,7 +874,6 @@ struct user_settings
 #ifdef HAVE_TOUCHSCREEN
     int touch_mode;
     int touchscreen_exemptions;
-    int touch_nav_mode;        /* TOUCH_NAV_*                           */
     int stick_preset;          /* STICK_PRESET_*                        */
     int stick_zone;            /* STICK_ZONE_*                          */
     int stick_sectors;         /* 1..8                                  */
@@ -864,6 +882,9 @@ struct user_settings
     int stick_dial_wps;        /* volume dial in the WPS                */
     int stick_dial_lists;      /* scroll dial in lists and menus        */
     int stick_deg_per_detent;  /* dial detent size, 8..30 degrees       */
+    int stick_overlay;         /* draw the live gesture on screen       */
+    int stick_overlay_style;   /* STICK_OVERLAY_*                       */
+    int stick_edge_swipe;      /* edge strips: back and menu            */
     struct touchscreen_parameter ts_calibration_data;
     struct list_kinetic_scroll_settings kinetic_scroll_accel;
     struct list_kinetic_scroll_settings kinetic_scroll_brake;

@@ -516,6 +516,38 @@ extern struct viewport* lcd_current_viewport;
 
 #define FRAMEBUFFER_SIZE (sizeof(fb_data)*LCD_FBWIDTH*LCD_FBHEIGHT)
 
+#ifdef HAVE_LCD_PRESENT_STATS
+/* Presentation instrumentation. Counters are cumulative since boot or since
+ * the last lcd_reset_present_stats(); the fb_* fields are geometry and are
+ * not reset. Timings are microseconds, measured around the copy into the
+ * driver plane and around the flip itself, separately - they answer two
+ * different questions (memory bandwidth, and how long we wait on the panel). */
+struct lcd_present_stats
+{
+    unsigned long frames;           /* presents of any kind */
+    unsigned long full_frames;      /* via lcd_update() */
+    unsigned long partial_frames;   /* via lcd_update_rect() */
+    unsigned long promoted_frames;  /* partial updates widened to full screen */
+    unsigned long long px_copied;   /* pixels copied into a plane */
+    unsigned long copy_us_total;
+    unsigned long copy_us_max;
+    unsigned long present_us_total; /* vsync wait + pan ioctl */
+    unsigned long present_us_max;
+    unsigned long vsync_waits;      /* successful FBIO_WAITFORVSYNC calls */
+    int doublebuf;                  /* two planes in use */
+    int vsync;                      /* driver supports FBIO_WAITFORVSYNC */
+    unsigned long fb_xres, fb_yres, fb_yres_virtual;
+    unsigned long fb_bpp, fb_line_length, fb_smem_len;
+};
+
+void lcd_get_present_stats(struct lcd_present_stats *out);
+void lcd_reset_present_stats(void);
+/* Page flipping on and off at runtime, for A/B testing a flicker against
+ * the thing most likely to be causing it. */
+void lcd_set_doublebuf(bool on);
+bool lcd_doublebuf_enabled(void);
+#endif /* HAVE_LCD_PRESENT_STATS */
+
 /** Port-specific functions. Enable in port config file. **/
 #ifdef HAVE_REMOTE_LCD_AS_MAIN
 void lcd_on(void);

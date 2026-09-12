@@ -38,6 +38,7 @@
 #include "core_alloc.h"
 
 #include "splash.h"
+#include "rpkeys.h"
 #include "stick_glue.h"
 #include "settings.h"
 #include "misc.h"
@@ -105,6 +106,12 @@ typedef struct
 #ifdef HAVE_TOUCHSCREEN
     int ts_data;
     long ts_start_tick;
+    /* The last touchscreen button code, kept apart from .button because the
+     * stick overwrites that one with the prerequisite its synthetic key
+     * needs. Sharing the field made every event after a fired gesture step
+     * look like a fresh press, which restarted the gesture mid-drag and let
+     * ordinary absolute touch back in alongside the stick. */
+    int ts_button;
     struct touchevent touchevent;
     struct gesture gesture;
 #endif
@@ -129,6 +136,7 @@ static action_last_t action_last =
 #ifdef HAVE_TOUCHSCREEN
     .ts_data = 0,
     .ts_start_tick = 0,
+    .ts_button = BUTTON_NONE,
 #endif
 
 #ifdef HAVE_BACKLIGHT
@@ -472,6 +480,7 @@ static inline bool get_action_touchscreen(action_last_t *last, action_cur_t *cur
     if (is_exempted_touch_event(cur))
     {
         last->button = 0;
+        last->ts_button = 0;
         cur->button = 0;
         cur->action = ACTION_NONE;
         last->touchevent.type = TOUCHEVENT_NONE;
@@ -487,8 +496,8 @@ static inline bool get_action_touchscreen(action_last_t *last, action_cur_t *cur
         long now = current_tick;
         last->repeated = false;
 
-        if (has_flag(last->button, BUTTON_TOUCHSCREEN) &&
-            !has_flag(last->button, BUTTON_REL))
+        if (has_flag(last->ts_button, BUTTON_TOUCHSCREEN) &&
+            !has_flag(last->ts_button, BUTTON_REL))
         {
             /* Only update the coordinates if this is not a release event.
              * For release events, we reuse the previous event coordinates. */
@@ -509,13 +518,14 @@ static inline bool get_action_touchscreen(action_last_t *last, action_cur_t *cur
         }
 
         last->button = cur->button;
+        last->ts_button = cur->button;
         last->tick = now;
         cur->action = ACTION_TOUCHSCREEN;
 
         /* Update touchevent data */
-        if (has_flag(last->button, BUTTON_REL))
+        if (has_flag(last->ts_button, BUTTON_REL))
             last->touchevent.type = TOUCHEVENT_RELEASE;
-        else if (has_flag(last->button, BUTTON_REPEAT))
+        else if (has_flag(last->ts_button, BUTTON_REPEAT))
             last->touchevent.type = TOUCHEVENT_CONTACT;
         else
             last->touchevent.type = TOUCHEVENT_PRESS;
@@ -561,7 +571,10 @@ static inline bool get_action_touchscreen(action_last_t *last, action_cur_t *cur
     }
     else
     {
+        /* A real key arrived. Forget any half-finished contact, or the next
+         * touch would be read as the continuation of one. */
         last->touchevent.type = TOUCHEVENT_NONE;
+        last->ts_button = BUTTON_NONE;
     }
 
     return false;
@@ -1194,6 +1207,16 @@ static int get_action_worker(action_last_t *last, action_cur_t *cur)
 {
     send_event(GUI_EVENT_ACTIONUPDATE, NULL);
 
+#ifdef HAVE_TOUCHSCREEN
+    /* A list flicked and let go keeps moving, and nothing but this poll is
+     * still running to move it. */
+    stick_tick(cur->context);
+
+    /* After the screen has finished reacting to the previous action, which
+     * is the only moment an overlay drawn over it will survive. */
+    stick_draw_overlay();
+#endif
+
     /*if button = none/special; returns immediately*/
     if (action_poll_button(last, cur))
     {
@@ -1207,6 +1230,18 @@ static int get_action_worker(action_last_t *last, action_cur_t *cur)
      * could interfere with. */
     stick_check_killswitch(cur->button);
 #endif
+
+    /* The five physical keys mean one thing everywhere, so they are
+     * resolved before any context is consulted. Buttons the stick
+     * synthesises are not offered here - they arrive further down, which
+     * is what lets the stick still produce POWER combinations after a real
+     * POWER press has stopped reaching the keymap. */
+    if (rpkeys_handle(cur->button))
+    {
+        cur->button = BUTTON_NONE;
+        cur->action = ACTION_NONE;
+        return ACTION_NONE;
+    }
 
     if (get_action_touchscreen(last, cur))
     {

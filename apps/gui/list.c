@@ -32,6 +32,7 @@
 #include "action.h"
 #include "screen_access.h"
 #include "list.h"
+#include "stick_glue.h"
 #include "scrollbar.h"
 #include "lang.h"
 #include "sound.h"
@@ -305,6 +306,16 @@ void gui_synclist_draw(struct gui_synclist *gui_list)
         if (!skinlist_draw(&screens[i], gui_list))
             list_draw(&screens[i], gui_list);
     }
+
+#ifdef HAVE_TOUCHSCREEN
+    /* The one place a live gesture can be drawn and survive. Everything the
+     * stick paints is over the top of this list, and the action poll runs
+     * before the list redraws, so anything drawn there is wiped a moment
+     * later. Drawing here, once the rows are down, is the difference
+     * between an overlay you can see and one that only appears in the
+     * margins. */
+    stick_redraw_overlay();
+#endif
 }
 
 /* sets up the list so the selection is shown correctly on the screen */
@@ -721,6 +732,15 @@ bool gui_synclist_do_button(struct gui_synclist * lists, int *actionptr)
 
     /* repeat actions block list wraparound */
     bool allow_wrap = lists->wraparound;
+
+#ifdef HAVE_TOUCHSCREEN
+    /* And so does the stick, for the same reason: a drag is paper under a
+     * thumb, and paper does not jump from the end of the list back to the
+     * start. This is the whole of "finite scrolling" - the user's own Wrap
+     * Around setting still governs the physical keys. */
+    if (stick_is_scrolling())
+        allow_wrap = false;
+#endif
 
     switch (action)
     {

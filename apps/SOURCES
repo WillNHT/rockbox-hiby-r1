@@ -16,6 +16,11 @@ gesture.c
 stick.c
 stick_config.c
 stick_glue.c
+rpkeys.c
+#endif
+#ifdef HAVE_COMPOSITOR
+canvas.c
+canvas_glue.c
 #endif
 language.c
 main.c

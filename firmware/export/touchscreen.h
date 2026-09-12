@@ -40,6 +40,12 @@ enum touchscreen_mode
     TOUCHSCREEN_BUTTON,    /* touchscreen returns BUTTON_* area codes
                               actual pixel value will still be accessible
                               from button_get_data */
+    TOUCHSCREEN_STICK,     /* the Rockpocket stick owns the panel: the
+                              driver behaves exactly as in POINT mode and
+                              the apps layer turns the gesture into
+                              buttons. Absolute touch is deliberately not
+                              available at the same time - the two schemes
+                              fight over the same contact. */
 };
 
 enum touchevent_type

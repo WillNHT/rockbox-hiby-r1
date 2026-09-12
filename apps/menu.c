@@ -200,6 +200,63 @@ static enum themable_icons  menu_get_icon(int selected_item, void * data)
     return menu_icon;
 }
 
+/* Where you are, not only what you are looking at.
+ *
+ * The settings tree is deep and every level of it looks the same: a title
+ * reading "Scrolling" says nothing about which of the several Scrolling
+ * menus this is, or how to describe where you got to. do_menu() already
+ * keeps the ancestors on a stack so the back key works - this walks it.
+ *
+ * Gated on the same Show Path setting the file browser uses. Asking twice
+ * for the same thing in two places is a split nobody remembers they made.
+ */
+static const struct menu_data_t *crumb_stack;
+static const int *crumb_depth;
+
+static const char *crumb_name(const struct menu_item_ex *menu,
+                              char *buf, size_t sz)
+{
+    if (!menu)
+        return NULL;
+    if (menu->flags & MENU_HAS_DESC)
+        return P2STR(menu->callback_and_desc->desc);
+    if (menu->flags & MENU_DYNAMIC_DESC)
+        return menu->menu_get_name_and_icon->list_get_name(-1,
+                   menu->menu_get_name_and_icon->list_get_name_data, buf, sz);
+    return NULL;
+}
+
+static char *build_breadcrumb(char *title)
+{
+    static char crumbs[MAX_PATH];
+    char tmp[64];
+    size_t len = 0;
+    int i;
+
+    if (global_settings.show_path_in_browser != SHOW_PATH_FULL ||
+        !crumb_stack || !crumb_depth || *crumb_depth <= 0)
+        return title;
+
+    for (i = 0; i < *crumb_depth && i < MAX_MENUS; i++)
+    {
+        const char *name = crumb_name(crumb_stack[i].menu, tmp, sizeof tmp);
+        int used;
+
+        if (!name || !*name)
+            continue;
+        used = snprintf(crumbs + len, sizeof(crumbs) - len, "%s / ", name);
+        if (used < 0 || (size_t)used >= sizeof(crumbs) - len)
+            return title;       /* too deep to say: the plain title is honest */
+        len += used;
+    }
+
+    if (len == 0)
+        return title;
+
+    snprintf(crumbs + len, sizeof(crumbs) - len, "%s", title ? title : "");
+    return crumbs;
+}
+
 static char* init_title(const struct menu_item_ex *menu, int *icon)
 {
     char *title;
@@ -267,7 +324,7 @@ static int init_menu_lists(const struct menu_item_ex *menu,
     current_submenus_menu = (struct menu_item_ex *)menu;
 
     gui_synclist_init(lists,get_menu_item_name,(void*)menu,false,1, parent);
-    title = init_title(menu, &icon);
+    title = build_breadcrumb(init_title(menu, &icon));
     gui_synclist_set_title(lists, title, icon);
     gui_synclist_set_icon_callback(lists, global_settings.show_icons?menu_get_icon:NULL);
     if(global_settings.talk_menu)
@@ -413,6 +470,7 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
     title_buf = buf;
     title_buf_sz = sizeof buf;
     title = init_title(menu, &icon);
+    /* No crumbs yet - the stack below is empty at this point anyway. */
     FOR_NB_SCREENS(i)
     {
         sb_set_persistent_title(title, icon, i);
@@ -420,6 +478,14 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
     }
     struct menu_data_t mstack[MAX_MENUS]; /* menu, selected */
     int stack_top = 0;
+
+    /* Hand the stack to the title builder for the length of this menu, and
+     * put back whatever an outer do_menu() had - a context menu opened from
+     * inside a settings menu runs its own nested copy of all this. */
+    const struct menu_data_t *outer_stack = crumb_stack;
+    const int *outer_depth = crumb_depth;
+    crumb_stack = mstack;
+    crumb_depth = &stack_top;
 
     struct viewport *vps = NULL;
     menu_callback_type menu_callback = &empty_menu_callback;
@@ -814,5 +880,7 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
          tsm == old_global_mode))
         touchscreen_set_mode(tsm);
 #endif
+    crumb_stack = outer_stack;
+    crumb_depth = outer_depth;
     return ret;
 }

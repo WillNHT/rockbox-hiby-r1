@@ -54,6 +54,7 @@ struct log
     int  fires[64];
     bool fire_repeating[64];
     int  n_fires;
+    int  rows;      /* scroll steps owed, summed across fires */
     int  dial_total;
     int  dial_events;
     int  taps;
@@ -61,6 +62,8 @@ struct log
     int  passes;
     int  drops;
     int  cues[8];
+    int  hold_ends[16];
+    int  n_hold_ends;
 };
 
 struct rig
@@ -81,6 +84,11 @@ static void rig_init(struct rig *r)
 
 static void rig_apply(struct rig *r, const struct stick_output *out)
 {
+    /* hold_end rides alongside the action: a gesture can end one hold and
+     * deliver something else on the same event. */
+    if (out->hold_end != STICK_BIND_NONE && r->log.n_hold_ends < 16)
+        r->log.hold_ends[r->log.n_hold_ends++] = out->hold_end;
+
     switch (out->action)
     {
     case STICK_ACT_FIRE:
@@ -88,6 +96,7 @@ static void rig_apply(struct rig *r, const struct stick_output *out)
         {
             r->log.fire_repeating[r->log.n_fires] = out->repeating;
             r->log.fires[r->log.n_fires++] = out->binding;
+            r->log.rows += out->dial_steps;
         }
         break;
     case STICK_ACT_DIAL:
@@ -126,6 +135,17 @@ static void up(struct rig *r, int x, int y)    { ev(r, STICK_TOUCH_RELEASE, x, y
 
 /* Hold at one point for ms milliseconds, delivering the 40 ms touch tick the
  * real driver produces. */
+/* A drag the way a panel actually reports one: n samples along the way,
+ * not a single teleport. The engine will not act on one opening sample -
+ * a lone report the wrong way is exactly what it is guarding against - and
+ * a real thumb never produces just one either. */
+static void drag(struct rig *r, int x, int y0, int y1, int n)
+{
+    int i;
+    for (i = 1; i <= n; i++)
+        move(r, x, y0 + (y1 - y0) * i / n);
+}
+
 static void hold(struct rig *r, int x, int y, int ms)
 {
     int t;
@@ -145,16 +165,19 @@ static int only_fire(struct rig *r)
 static void test_tap_inside_window(void)
 {
     struct rig r;
-    begin_test("spec 5: release inside the arm window with no travel is a tap");
+    begin_test("a tap is the centre binding, never an absolute hit test");
     rig_init(&r);
 
     down(&r, 240, 400);
     up(&r, 240, 400);
 
-    CHECK(r.log.taps == 1, "expected one tap, got %d", r.log.taps);
-    CHECK(r.log.tap_x == 240 && r.log.tap_y == 400,
-          "tap at %d,%d not at the press point", r.log.tap_x, r.log.tap_y);
-    CHECK(r.log.n_fires == 0, "a tap must not fire a binding");
+    /* This used to replay the press as an ordinary touch at 240,400. It no
+     * longer does: an absolute hit test inside a relative scheme meant a
+     * tap acted on whatever row sat under the thumb, which is the behaviour
+     * the stick exists to replace. */
+    CHECK(r.log.taps == 0, "a tap must not fall through to absolute touch");
+    CHECK(only_fire(&r) == r.cfg.centre,
+          "expected the centre binding, got %d", only_fire(&r));
 }
 
 static void test_flick_inside_window(void)
@@ -200,6 +223,11 @@ static void test_cancel_commits_nothing(void)
     begin_test("spec 10.5: a cancelled gesture commits nothing");
     rig_init(&r);
 
+    /* A one-shot: scroll steps are applied live as the thumb drags, so
+     * "commits nothing" is a statement about the things that commit at
+     * release, not about a list that already moved. */
+    r.cfg.bind[0] = STICK_BIND_SELECT;
+
     r.cfg.work.shape = STICK_SHAPE_BOX;
     r.cfg.work.a = 0; r.cfg.work.b = 400; r.cfg.work.c = LCD_W; r.cfg.work.d = 400;
 
@@ -218,6 +246,7 @@ static void test_cancel_then_reenter_resumes(void)
     struct rig r;
     begin_test("spec 2: re-entering the work zone resumes the gesture");
     rig_init(&r);
+    r.cfg.bind[0] = STICK_BIND_SELECT;
 
     r.cfg.work.shape = STICK_SHAPE_BOX;
     r.cfg.work.a = 0; r.cfg.work.b = 400; r.cfg.work.c = LCD_W; r.cfg.work.d = 400;
@@ -228,8 +257,8 @@ static void test_cancel_then_reenter_resumes(void)
     move(&r, 240, 500);         /* back inside, deflected up */
     up(&r, 240, 500);
 
-    CHECK(only_fire(&r) == STICK_BIND_SCROLL_UP,
-          "expected scrollUp after resuming, got %d fires", r.log.n_fires);
+    CHECK(only_fire(&r) == STICK_BIND_SELECT,
+          "expected select after resuming, got %d fires", r.log.n_fires);
 }
 
 static void test_centre_binding_after_window(void)
@@ -252,6 +281,7 @@ static void test_mid_flight_correction(void)
     struct rig r;
     begin_test("spec 4: a one-shot fires in whichever sector the thumb ended in");
     rig_init(&r);
+    r.cfg.bind[0] = STICK_BIND_SELECT;
 
     down(&r, 240, 400);
     hold(&r, 240, 400, 200);
@@ -292,6 +322,7 @@ static void test_work_larger_than_arm(void)
     struct rig r;
     begin_test("spec 2: work larger than arm is the forgiving case");
     rig_init(&r);
+    r.cfg.bind[0] = STICK_BIND_SELECT;
 
     r.cfg.arm.shape = STICK_SHAPE_CIRCLE;
     r.cfg.arm.a = 240; r.cfg.arm.b = 600; r.cfg.arm.c = 160;
@@ -303,7 +334,7 @@ static void test_work_larger_than_arm(void)
     move(&r, 240, 420);         /* outside arm, still inside work */
     up(&r, 240, 420);
 
-    CHECK(only_fire(&r) == STICK_BIND_SCROLL_UP,
+    CHECK(only_fire(&r) == STICK_BIND_SELECT,
           "leaving arm but staying in work must not cancel (%d fires)",
           r.log.n_fires);
 }
@@ -449,6 +480,899 @@ static void test_none_sector_is_inert(void)
     CHECK(r.log.n_fires == 0, "a none sector fired %d bindings", r.log.n_fires);
 }
 
+/* ------------------------------------------------- scrolling is a drag */
+
+/* The linear grammar on its own, with velocity acceleration turned off and
+ * the old 28 px baseline restored. These tests are about which way the
+ * list goes and when it stops, not about how far a throw carries; the
+ * acceleration tests below own that. */
+#define LSTEP 28
+
+static void linear_scroll(struct rig *r)
+{
+    r->cfg.scroll_px = LSTEP;
+    r->cfg.accel_max_q8 = 256;   /* gain 1.0: no acceleration */
+    stick_reset(&r->st, &r->cfg);
+}
+
+static void test_scroll_is_inverted(void)
+{
+    struct rig r;
+    begin_test("scroll: dragging up scrolls down, the way a finger pushes paper");
+    rig_init(&r);
+    linear_scroll(&r);
+
+    down(&r, 240, 400);
+    hold(&r, 240, 400, 200);
+    drag(&r, 240, 400, 400 - (LSTEP + STICK_DEF_DETENT_PX + 4), 3);
+    up(&r, 240, 400 - (LSTEP + STICK_DEF_DETENT_PX + 4));
+
+    CHECK(r.log.n_fires >= 1, "dragging up should have scrolled");
+    CHECK(r.log.fires[0] == STICK_BIND_SCROLL_DOWN,
+          "up should scroll down, got binding %d", r.log.fires[0]);
+}
+
+static void test_scroll_follows_the_thumb(void)
+{
+    struct rig r;
+    int one, two;
+    begin_test("scroll: one step per scrollPx of travel, not per unit of time");
+    rig_init(&r);
+    linear_scroll(&r);
+
+    down(&r, 240, 500);
+    hold(&r, 240, 500, 200);
+
+    drag(&r, 240, 500, 500 - LSTEP, 3);
+    one = r.log.n_fires;
+
+    drag(&r, 240, 500 - LSTEP, 500 - 3 * LSTEP, 2);
+    two = r.log.n_fires;
+
+    up(&r, 240, 500 - 3 * LSTEP);
+
+    CHECK(one >= 1, "one step of travel should emit at least one step");
+    CHECK(two > one, "further travel should emit further steps: %d then %d",
+          one, two);
+}
+
+static void test_scroll_stops_when_the_thumb_stops(void)
+{
+    struct rig r;
+    int moving, after;
+    begin_test("scroll: a held but still thumb emits nothing");
+    rig_init(&r);
+    linear_scroll(&r);
+
+    /* Deliberately short of travel_px. Past it the thumb is parked at the
+     * end of the stick's range and the sustain ramp takes over on purpose
+     * - that is a different rule with its own tests. What must never
+     * happen, and what this defends, is a partial deflection turning into
+     * a held key. */
+    down(&r, 240, 500);
+    hold(&r, 240, 500, 200);
+    drag(&r, 240, 500, 500 - 2 * LSTEP, 3);
+    moving = r.log.n_fires;
+
+    /* Two full seconds held and perfectly still. Under a repeat this would
+     * be dozens of fires. */
+    hold(&r, 240, 500 - 2 * LSTEP, 2000);
+    after = r.log.n_fires;
+
+    up(&r, 240, 500 - 2 * LSTEP);
+
+    CHECK(moving > 0, "the drag itself should have scrolled");
+    CHECK(after == moving, "holding still added %d fires", after - moving);
+}
+
+/* A quick drag whose very first sample is a large one the wrong way. The
+ * panel does this: the contact settles and one report lands well off the
+ * track before the rest follow. Until the latch had a direction, that first
+ * sample was taken at face value and became a step the wrong way with
+ * nothing standing in its way - "quick drag up, sometimes it scrolls up".
+ *
+ * Seeding the latch from the distance already travelled from the touch-down
+ * point makes the stray sample a reversal instead, which has to clear
+ * scroll_reverse_px and be agreed with by the next event before it counts.
+ * It never is. */
+static void test_scroll_first_sample_cannot_reverse(void)
+{
+    struct rig r;
+    int i;
+    begin_test("scroll: a stray first sample cannot start the scroll backwards");
+    rig_init(&r);
+    linear_scroll(&r);
+
+    down(&r, 240, 600);
+    hold(&r, 240, 600, 200);      /* close the arm window, still at rest */
+
+    /* One bogus report, far enough down to be worth several steps. */
+    move(&r, 240, 600 + 4 * LSTEP);
+
+    /* Then the drag the user actually made: upward, quickly. */
+    for (i = 1; i <= 6; i++)
+        move(&r, 240, 600 - i * 2 * LSTEP);
+    up(&r, 240, 600 - 12 * LSTEP);
+
+    for (i = 0; i < r.log.n_fires; i++)
+        CHECK(r.log.fires[i] != STICK_BIND_SCROLL_UP,
+              "fire %d went up; an upward drag must only scroll down", i);
+    CHECK(r.log.n_fires > 0, "the drag should still have scrolled");
+}
+
+/* ------------------------------------------------- sustained scrolling */
+
+/* Park the thumb at full deflection and the list keeps going, faster the
+ * longer it is held. This is the long-library case: a drag can only cover
+ * as much list as the thumb can cover screen, and a thumb that has stopped
+ * moving but not let go is asking for a rate, not a distance. */
+static void test_sustain_at_full_deflection(void)
+{
+    struct rig r;
+    int early, late;
+    begin_test("sustain: a parked thumb keeps scrolling, and speeds up");
+    rig_init(&r);
+
+    down(&r, 240, 500);
+    hold(&r, 240, 500, 200);
+    drag(&r, 240, 500, 500 - (STICK_DEF_TRAVEL_PX + 20), 4);
+
+    hold(&r, 240, 500 - (STICK_DEF_TRAVEL_PX + 20), 1200);
+    early = r.log.rows;
+    hold(&r, 240, 500 - (STICK_DEF_TRAVEL_PX + 20), 1200);
+    late = r.log.rows - early;
+    up(&r, 240, 500 - (STICK_DEF_TRAVEL_PX + 20));
+
+    CHECK(early > 0, "a parked thumb should have kept scrolling");
+    CHECK(late > early, "the ramp should accelerate: %d rows then %d",
+          early, late);
+}
+
+/* The rim. A drag that begins near the top of the panel cannot reach full
+ * deflection upward - the glass runs out first - and that is precisely the
+ * drag a long list produces. Pressed against the edge in the direction
+ * already committed counts as being as far over as the stick goes. */
+static void test_sustain_at_the_rim(void)
+{
+    struct rig r;
+    begin_test("sustain: the rim counts, because the glass ran out first");
+    rig_init(&r);
+
+    /* Only 40 px of travel available, well under one scroll step, so the
+     * drag itself never emits anything at all. */
+    down(&r, 240, 60);
+    hold(&r, 240, 60, 200);
+    drag(&r, 240, 60, 20, 3);
+    CHECK(r.log.rows == 0, "the drag alone should not have scrolled");
+
+    hold(&r, 240, 20, 1500);
+    up(&r, 240, 20);
+
+    CHECK(r.log.rows > 0, "pinned at the top rim should sustain");
+    CHECK(r.log.fires[r.log.n_fires - 1] == STICK_BIND_SCROLL_DOWN,
+          "up against the rim must scroll down, got %d",
+          r.log.fires[r.log.n_fires - 1]);
+}
+
+/* The two must never both count, or a thumb that keeps pushing gets the
+ * sum of a drag and a ramp. */
+static void test_sustain_needs_a_still_thumb(void)
+{
+    struct rig r;
+    int moving;
+    begin_test("sustain: a thumb that is still travelling does not sustain");
+    rig_init(&r);
+
+    down(&r, 240, 700);
+    hold(&r, 240, 700, 200);
+
+    /* Past full deflection the whole way, but never still: every sample
+     * moves further than the stillness slop. */
+    {
+        int i;
+        for (i = 1; i <= 20; i++)
+            move(&r, 240, 700 - (STICK_DEF_TRAVEL_PX + 20) - i * 20);
+    }
+    moving = r.log.rows;
+    up(&r, 240, 700 - (STICK_DEF_TRAVEL_PX + 20) - 20 * 20);
+
+    /* 20 samples x 20 px is 400 px of drag; at the accelerated step that
+     * is a handful of rows, nowhere near what 800 ms of ramp would give. */
+    CHECK(moving < 30, "a moving thumb emitted %d rows - the ramp ran too",
+          moving);
+}
+
+/* ------------------------------------------- scrolling is velocity-scaled */
+
+/* Drag from y0 upward by total px, delivered in n equal steps of 40 ms
+ * each. The step size is what sets the speed, so the same distance covered
+ * in fewer events is a faster thumb. */
+static int drag_up(struct rig *r, int y0, int total, int n)
+{
+    int i;
+    down(r, 240, y0);
+    hold(r, 240, y0, 200);
+    for (i = 1; i <= n; i++)
+        move(r, 240, y0 - (total * i) / n);
+    up(r, 240, y0 - total);
+    return r->log.rows;
+}
+
+static void test_slow_drag_is_the_coarse_baseline(void)
+{
+    struct rig r;
+    int fires;
+    begin_test("scroll: a slow thumb gets the coarse baseline, one row at a time");
+    rig_init(&r);
+    r.cfg.coast_min_px_s = 0;   /* the drag only, no coast on top of it */
+    stick_reset(&r.st, &r.cfg);
+
+    /* 300 px of travel over 1.2 s: about 250 px/s, one unit of gain, so a
+     * bit under two rows. The point is that it is a handful and not a
+     * screenful - this is the 10x reduction in baseline sensitivity. */
+    fires = drag_up(&r, 700, 300, 30);
+
+    CHECK(fires >= 1, "a 300 px crawl should still move the list");
+    CHECK(fires <= 4, "a 300 px crawl emitted %d steps, far too twitchy",
+          fires);
+}
+
+static void test_fast_drag_covers_far_more_ground(void)
+{
+    struct rig r;
+    int slow, fast;
+    begin_test("scroll: the same distance dragged fast moves many more rows");
+    rig_init(&r);
+    r.cfg.coast_min_px_s = 0;
+    stick_reset(&r.st, &r.cfg);
+    slow = drag_up(&r, 700, 300, 30);
+
+    rig_init(&r);
+    r.cfg.coast_min_px_s = 0;
+    stick_reset(&r.st, &r.cfg);
+    fast = drag_up(&r, 700, 300, 3);
+
+    /* This is the whole answer to long lists: one scheme, no knowledge of
+     * how many rows the screen holds, precision when the thumb creeps and
+     * reach when it does not. */
+    CHECK(fast > 3 * slow, "fast drag moved %d rows against a slow %d",
+          fast, slow);
+}
+
+static void test_acceleration_is_capped(void)
+{
+    struct rig r;
+    begin_test("scroll: gain has a ceiling, a jerk cannot teleport the list");
+    rig_init(&r);
+    r.cfg.coast_min_px_s = 0;
+    stick_reset(&r.st, &r.cfg);
+
+    /* One 40 ms event covering 600 px: 15000 px/s, sixty units of raw gain
+     * if nothing stopped it. */
+    down(&r, 240, 700);
+    hold(&r, 240, 700, 200);
+    move(&r, 240, 100);
+    up(&r, 240, 100);
+
+    {
+        int max = 600 / (STICK_DEF_SCROLL_PX * 256 / STICK_DEF_ACCEL_MAX_Q8);
+        CHECK(r.log.rows <= max + 1,
+              "%d rows from one jerk, cap allows %d", r.log.rows, max);
+    }
+}
+
+static void test_acceleration_can_be_turned_off(void)
+{
+    struct rig r;
+    int fast_on, fast_off;
+    begin_test("scroll: gain 1.0 restores the plain linear drag");
+    rig_init(&r);
+    r.cfg.coast_min_px_s = 0;
+    stick_reset(&r.st, &r.cfg);
+    fast_on = drag_up(&r, 700, 300, 3);
+
+    rig_init(&r);
+    r.cfg.coast_min_px_s = 0;
+    r.cfg.accel_max_q8 = 256;
+    stick_reset(&r.st, &r.cfg);
+    fast_off = drag_up(&r, 700, 300, 3);
+
+    CHECK(fast_off < fast_on,
+          "acceleration off still moved %d rows against %d with it on",
+          fast_off, fast_on);
+    CHECK(fast_off == 300 / STICK_DEF_SCROLL_PX,
+          "linear drag should be exactly 300/scrollPx rows, got %d",
+          fast_off);
+}
+
+static void test_baseline_is_a_tenth_of_the_old_sensitivity(void)
+{
+    struct rig r;
+    begin_test("scroll: the slow baseline is coarse, the fast end is not");
+    rig_init(&r);
+
+    /* Guards the two decisions together, because they were made together:
+     * the slow baseline is 5x the old 28 px, and the ceiling was lowered
+     * with it so the fast end of the range did not move. */
+    CHECK(r.cfg.scroll_px == 140,
+          "baseline scrollPx is %d, expected 140", r.cfg.scroll_px);
+    CHECK(stick_effective_scroll_px(&r.st) == r.cfg.scroll_px,
+          "a still thumb must get the baseline, got %d",
+          stick_effective_scroll_px(&r.st));
+    CHECK((r.cfg.scroll_px * 256) / r.cfg.accel_max_q8 == 23,
+          "fully accelerated step is %d px, expected 23 as before",
+          (int)((r.cfg.scroll_px * 256) / r.cfg.accel_max_q8));
+}
+
+/* ------------------------------------------------ the dial's slow tap */
+
+static void test_dial_needs_the_slow_tap(void)
+{
+    struct rig r;
+    begin_test("dial: holding still for dialArmMs arms it, travel does not");
+    rig_init(&r);
+    r.cfg.dial = STICK_DIAL_VOLUME;
+    r.cfg.centre = STICK_BIND_NONE;
+    stick_reset(&r.st, &r.cfg);
+
+    down(&r, 240, 400);
+    hold(&r, 240, 400, 400);
+    CHECK(stick_phase(&r.st) != STICK_PHASE_DIAL,
+          "a short hold should not have armed the dial");
+
+    hold(&r, 240, 400, 900);
+    CHECK(stick_phase(&r.st) == STICK_PHASE_DIAL,
+          "a second of holding still should arm the dial, phase %d",
+          stick_phase(&r.st));
+
+    up(&r, 240, 400);
+}
+
+static void test_dial_arming_cues_while_it_builds(void)
+{
+    struct rig r;
+    begin_test("dial: the wait is cued, so it is not silence while it builds");
+    rig_init(&r);
+    r.cfg.dial = STICK_DIAL_VOLUME;
+    r.cfg.centre = STICK_BIND_NONE;
+    stick_reset(&r.st, &r.cfg);
+
+    down(&r, 240, 400);
+    hold(&r, 240, 400, 1100);
+    up(&r, 240, 400);
+
+    /* One per STICK_DIAL_TICK_MS over the arming second, give or take the
+     * event grid. The cue is the progress, not the receipt: it has to tick
+     * several times before the dial arms or the hold is a silent wait. */
+    CHECK(r.log.cues[STICK_CUE_DETENT] >= 3,
+          "only %d progress cues during the hold",
+          r.log.cues[STICK_CUE_DETENT]);
+    CHECK(r.log.cues[STICK_CUE_COMMIT] >= 1,
+          "arming the dial should be cued distinctly");
+}
+
+static void test_a_drag_is_never_a_dial(void)
+{
+    struct rig r;
+    begin_test("dial: a thumb that travels gets sectors, however long it stays");
+    rig_init(&r);
+    r.cfg.dial = STICK_DIAL_VOLUME;
+    stick_reset(&r.st, &r.cfg);
+
+    down(&r, 240, 400);
+    hold(&r, 240, 400, 200);
+    move(&r, 400, 400);              /* out of the detent radius */
+    hold(&r, 400, 400, 4000);        /* and held there far past dialArmMs */
+    up(&r, 400, 400);
+
+    CHECK(stick_phase(&r.st) != STICK_PHASE_DIAL,
+          "a travelled gesture became a dial");
+    CHECK(r.log.dial_events == 0, "a travelled gesture emitted dial steps");
+}
+
+/* ------------------------------- direction, once committed, stays put */
+
+static void test_a_small_reversal_does_not_flip_the_scroll(void)
+{
+    struct rig r;
+    int forward, after;
+    begin_test("scroll: a thumb rocking back does not scroll the other way");
+    rig_init(&r);
+    r.cfg.coast_min_px_s = 0;
+    stick_reset(&r.st, &r.cfg);
+
+    /* A fast drag up, then one sample that jumps a long way back. That is
+     * what the panel does on the way to a release, and it is the shape of
+     * the intermittent backwards scroll: a lone sample nothing else
+     * agrees with. */
+    down(&r, 240, 700);
+    hold(&r, 240, 700, 200);
+    move(&r, 240, 560);
+    move(&r, 240, 420);
+    forward = r.log.rows;
+
+    move(&r, 240, 600);         /* the bogus sample */
+    after = r.log.rows;
+    up(&r, 240, 600);
+
+    CHECK(forward > 0, "the drag should have scrolled");
+    CHECK(after == forward,
+          "one stray sample emitted %d step(s) the wrong way",
+          after - forward);
+}
+
+static void test_a_real_reversal_still_turns_around(void)
+{
+    struct rig r;
+    int i, up_steps = 0, down_steps = 0;
+    begin_test("scroll: a deliberate reversal still changes direction");
+    rig_init(&r);
+    r.cfg.coast_min_px_s = 0;
+    stick_reset(&r.st, &r.cfg);
+
+    down(&r, 240, 500);
+    hold(&r, 240, 500, 200);
+    drag(&r, 240, 500, 360, 2); /* up: scrolls down */
+    /* Back down past the reversal threshold and kept going, which is what
+     * separates a change of mind from a stray sample. */
+    move(&r, 240, 500);
+    move(&r, 240, 640);
+    move(&r, 240, 780);
+    up(&r, 240, 780);
+
+    for (i = 0; i < r.log.n_fires; i++)
+    {
+        if (r.log.fires[i] == STICK_BIND_SCROLL_DOWN) down_steps++;
+        if (r.log.fires[i] == STICK_BIND_SCROLL_UP)   up_steps++;
+    }
+
+    CHECK(down_steps > 0, "the first half should have scrolled down");
+    CHECK(up_steps > 0, "the reversal never took effect");
+}
+
+static void test_an_arc_does_not_leave_the_sector(void)
+{
+    struct rig r;
+    int i;
+    begin_test("scroll: a thumb arcing sideways stays in the vertical sector");
+    rig_init(&r);
+    r.cfg.coast_min_px_s = 0;
+    stick_reset(&r.st, &r.cfg);
+
+    /* Straight up to begin with, so the gesture commits to the vertical
+     * sector, then sweeping right the way a thumb pivoting on its knuckle
+     * does. The last two points are past the 45 degree boundary: without a
+     * margin the gesture changes sector mid-scroll and the release fires
+     * select. */
+    down(&r, 240, 700);
+    hold(&r, 240, 700, 200);
+    move(&r, 240, 600);
+    move(&r, 330, 590);
+    move(&r, 400, 580);
+    up(&r, 400, 580);
+
+    for (i = 0; i < r.log.n_fires; i++)
+        CHECK(r.log.fires[i] == STICK_BIND_SCROLL_DOWN ||
+              r.log.fires[i] == STICK_BIND_SCROLL_UP,
+              "an arcing drag fired %d, not a scroll", r.log.fires[i]);
+}
+
+static void test_a_deliberate_sideways_move_still_leaves_the_sector(void)
+{
+    struct rig r;
+    begin_test("scroll: hysteresis is a margin, not a trap");
+    rig_init(&r);
+
+    down(&r, 240, 400);
+    hold(&r, 240, 400, 200);
+    move(&r, 240, 300);          /* commit to up */
+    move(&r, 400, 390);          /* then firmly right */
+    up(&r, 400, 390);
+
+    CHECK(stick_sector_at(&r.cfg, 160, -10) == 1,
+          "the geometry under test is not the right-hand sector");
+    CHECK(r.log.n_fires > 0, "the sideways move fired nothing at all");
+}
+
+static void test_a_throw_never_coasts_backwards(void)
+{
+    struct rig r;
+    int i;
+    struct stick_output out;
+    begin_test("coast: a throw cannot coast against the way it was thrown");
+    rig_init(&r);
+
+    /* Thrown hard upward, then the last sample before release rocks back -
+     * exactly what a decelerating thumb does, and what used to leave the
+     * smoothed velocity pointing the wrong way. */
+    down(&r, 240, 700);
+    hold(&r, 240, 700, 200);
+    move(&r, 240, 520);
+    move(&r, 240, 340);
+    move(&r, 240, 460);         /* one stray sample, the wrong way */
+    up(&r, 240, 460);
+
+    /* Let any coast run to a stop. */
+    for (i = 0; i < 200; i++)
+    {
+        r.now += 40;
+        stick_process(&r.st, STICK_TOUCH_IDLE, 0, 0, r.now, &out);
+        rig_apply(&r, &out);
+    }
+
+    for (i = 0; i < r.log.n_fires; i++)
+        CHECK(r.log.fires[i] != STICK_BIND_SCROLL_UP,
+              "the coast ran backwards: fire %d was scrollUp", i);
+}
+
+/* ------------------------------------------------------------------ holds */
+
+/* The WPS table in miniature: a one-shot on the short drag and something
+ * else when the same direction is held. */
+static void hold_config(struct rig *r)
+{
+    r->cfg.sectors = 4;
+    r->cfg.bind[0] = STICK_BIND_MENU;
+    r->cfg.hold[0] = STICK_BIND_QUICKSCREEN;
+    r->cfg.bind[1] = STICK_BIND_NEXT;
+    r->cfg.hold[1] = STICK_BIND_SEEK_FWD;
+    r->cfg.bind[3] = STICK_BIND_PREV;
+    r->cfg.hold[3] = STICK_BIND_SEEK_BACK;
+    r->cfg.centre = STICK_BIND_NONE;
+    stick_reset(&r->st, &r->cfg);
+}
+
+static void test_short_drag_fires_the_drag_binding(void)
+{
+    struct rig r;
+    begin_test("hold: a drag released before holdMs fires the drag binding");
+    rig_init(&r);
+    hold_config(&r);
+
+    down(&r, 240, 500);
+    hold(&r, 240, 500, 160);        /* past the arm window */
+    move(&r, 240, 500 - 90);        /* up */
+    up(&r, 240, 500 - 90);
+
+    CHECK(only_fire(&r) == STICK_BIND_MENU,
+          "expected menu, got %d", only_fire(&r));
+    CHECK(r.log.n_hold_ends == 0, "nothing was held, so nothing ended");
+}
+
+static void test_held_drag_fires_the_hold_binding(void)
+{
+    struct rig r;
+    int i, quick = 0, menu = 0;
+    begin_test("hold: the same drag held past holdMs fires the hold binding");
+    rig_init(&r);
+    hold_config(&r);
+
+    down(&r, 240, 500);
+    hold(&r, 240, 500, 160);
+    move(&r, 240, 500 - 90);
+    hold(&r, 240, 500 - 90, 700);   /* well past STICK_DEF_HOLD_MS */
+    up(&r, 240, 500 - 90);
+
+    for (i = 0; i < r.log.n_fires; i++)
+    {
+        if (r.log.fires[i] == STICK_BIND_QUICKSCREEN) quick++;
+        if (r.log.fires[i] == STICK_BIND_MENU)        menu++;
+    }
+
+    CHECK(quick == 1, "expected one quickscreen, got %d", quick);
+    /* The whole point: holding must not also do the short-drag thing. */
+    CHECK(menu == 0, "a held drag also fired its short-drag binding");
+}
+
+static void test_hold_end_is_reported(void)
+{
+    struct rig r;
+    begin_test("hold: a released hold is reported so a seek can be stopped");
+    rig_init(&r);
+    hold_config(&r);
+
+    down(&r, 240, 500);
+    hold(&r, 240, 500, 160);
+    move(&r, 340, 500);             /* right */
+    hold(&r, 340, 500, 700);
+    up(&r, 340, 500);
+
+    CHECK(r.log.n_hold_ends == 1, "expected one hold end, got %d",
+          r.log.n_hold_ends);
+    CHECK(r.log.hold_ends[0] == STICK_BIND_SEEK_FWD,
+          "the wrong binding ended: %d", r.log.hold_ends[0]);
+}
+
+static void test_hold_ends_when_the_sector_changes(void)
+{
+    struct rig r;
+    begin_test("hold: sliding from one held sector to another ends the first");
+    rig_init(&r);
+    hold_config(&r);
+
+    down(&r, 240, 500);
+    hold(&r, 240, 500, 160);
+    move(&r, 340, 500);             /* right: seek forward */
+    hold(&r, 340, 500, 700);
+    move(&r, 140, 500);             /* left, without lifting */
+    hold(&r, 140, 500, 700);
+    up(&r, 140, 500);
+
+    CHECK(r.log.n_hold_ends == 2, "expected two hold ends, got %d",
+          r.log.n_hold_ends);
+    CHECK(r.log.hold_ends[0] == STICK_BIND_SEEK_FWD,
+          "the forward seek should have been stopped first");
+    CHECK(r.log.hold_ends[1] == STICK_BIND_SEEK_BACK,
+          "the backward seek should have been stopped at release");
+}
+
+static void test_cancelled_hold_still_ends(void)
+{
+    struct rig r;
+    begin_test("hold: a hold cancelled out of the work zone is still stopped");
+    rig_init(&r);
+    hold_config(&r);
+    /* A work zone the thumb can leave. */
+    r.cfg.work.shape = STICK_SHAPE_CIRCLE;
+    r.cfg.work.a = 240;
+    r.cfg.work.b = 500;
+    r.cfg.work.c = 150;
+    stick_reset(&r.st, &r.cfg);
+
+    down(&r, 240, 500);
+    hold(&r, 240, 500, 160);
+    move(&r, 340, 500);
+    hold(&r, 340, 500, 700);
+    move(&r, 470, 500);             /* outside the work circle: cancel */
+    up(&r, 470, 500);
+
+    CHECK(r.log.n_hold_ends >= 1,
+          "a cancelled seek would run forever; got %d hold ends",
+          r.log.n_hold_ends);
+    CHECK(r.log.hold_ends[0] == STICK_BIND_SEEK_FWD,
+          "the wrong binding ended: %d", r.log.hold_ends[0]);
+}
+
+static void test_scroll_speed_follows_rockbox(void)
+{
+    int i;
+    begin_test("scroll speed: Rockbox's own setting, 9 leaving the feel alone");
+
+    CHECK(stick_scroll_px_for_speed(9) == STICK_DEF_SCROLL_PX,
+          "the default Scroll Speed should still be the tested feel, got %d",
+          stick_scroll_px_for_speed(9));
+    for (i = 1; i <= 17; i++)
+        CHECK(stick_scroll_px_for_speed(i) <= stick_scroll_px_for_speed(i - 1),
+              "speed %d is not at least as fast as %d", i, i - 1);
+    CHECK(stick_scroll_px_for_speed(17) >= 6,
+          "even the fastest setting needs a floor a thumb can hit");
+}
+
+/* -------------------------------------------------------- edge swipes */
+
+static void edge_rig(struct rig *r)
+{
+    rig_init(r);
+    r->cfg.edge_px = STICK_DEF_EDGE_PX;
+    r->cfg.edge_travel_px = STICK_DEF_EDGE_TRAVEL_PX;
+    r->cfg.edge_left = STICK_BIND_BACK;
+    r->cfg.edge_right = STICK_BIND_MENU;
+    stick_reset(&r->st, &r->cfg);
+}
+
+static void test_edge_swipe_fires(void)
+{
+    struct rig r;
+    begin_test("edge: a swipe inward from the left edge goes back");
+    edge_rig(&r);
+
+    down(&r, 4, 400);
+    move(&r, 40, 400);
+    move(&r, 100, 400);
+    up(&r, 100, 400);
+
+    CHECK(only_fire(&r) == STICK_BIND_BACK,
+          "expected back, got %d", only_fire(&r));
+    CHECK(r.log.passes == 0,
+          "an edge swipe must not fall through to absolute touch");
+}
+
+static void test_edge_swipe_needs_travel(void)
+{
+    struct rig r;
+    begin_test("edge: a short poke at the edge does nothing");
+    edge_rig(&r);
+
+    down(&r, 4, 400);
+    move(&r, 20, 400);
+    up(&r, 20, 400);
+
+    CHECK(r.log.n_fires == 0, "a poke fired %d bindings", r.log.n_fires);
+}
+
+static void test_edge_swipe_fires_once(void)
+{
+    struct rig r;
+    begin_test("edge: a long swipe is still one action");
+    edge_rig(&r);
+
+    down(&r, 4, 400);
+    move(&r, 100, 400);
+    move(&r, 200, 400);
+    move(&r, 400, 400);
+    up(&r, 400, 400);
+
+    CHECK(r.log.n_fires == 1, "fired %d times", r.log.n_fires);
+}
+
+static void test_edge_is_never_a_stick(void)
+{
+    struct rig r;
+    int i;
+    begin_test("edge: a gesture that starts on the strip never scrolls");
+    edge_rig(&r);
+
+    down(&r, 4, 600);
+    hold(&r, 4, 600, 300);
+    move(&r, 4, 300);           /* straight up: a scroll, if it were one */
+    move(&r, 4, 200);
+    up(&r, 4, 200);
+
+    for (i = 0; i < r.log.n_fires; i++)
+        CHECK(r.log.fires[i] != STICK_BIND_SCROLL_UP &&
+              r.log.fires[i] != STICK_BIND_SCROLL_DOWN,
+              "the edge strip scrolled: %d", r.log.fires[i]);
+}
+
+static void test_stick_still_works_beside_the_edge(void)
+{
+    struct rig r;
+    begin_test("edge: the rest of the panel is still the stick");
+    edge_rig(&r);
+    linear_scroll(&r);
+
+    down(&r, 240, 600);
+    hold(&r, 240, 600, 200);
+    move(&r, 240, 600 - 3 * LSTEP);
+    up(&r, 240, 600 - 3 * LSTEP);
+
+    CHECK(r.log.n_fires > 0, "the stick stopped working with edges on");
+}
+
+/* ------------------------------------------------------------- the coast */
+
+static void scroll_rig(struct rig *r)
+{
+    rig_init(r);
+    r->cfg.arm_ms = 0;          /* armed from the first move */
+    stick_reset(&r->st, &r->cfg);
+}
+
+/* Drag upward at a steady speed, one 40 ms tick at a time. */
+static void flick_up(struct rig *r, int px_per_tick, int ticks)
+{
+    int i, y = 600;
+    down(r, 240, y);
+    for (i = 0; i < ticks; i++)
+    {
+        y -= px_per_tick;
+        move(r, 240, y);
+    }
+    up(r, 240, y);
+}
+
+static int coast_ticks(struct rig *r, int max_ticks)
+{
+    int i;
+    for (i = 0; i < max_ticks; i++)
+    {
+        if (stick_phase(&r->st) != STICK_PHASE_COAST)
+            break;
+        ev(r, STICK_TOUCH_IDLE, r->st.x, r->st.y, 40);
+    }
+    return i;
+}
+
+static void test_flick_coasts(void)
+{
+    struct rig r;
+    int during, after;
+    begin_test("coast: a flicked list keeps moving after the thumb goes");
+    scroll_rig(&r);
+
+    flick_up(&r, 40, 6);        /* 1000 px/s, well over the threshold */
+    during = r.log.n_fires;
+    CHECK(stick_phase(&r.st) == STICK_PHASE_COAST,
+          "a fast release should have started a coast, phase %d",
+          stick_phase(&r.st));
+
+    coast_ticks(&r, 200);
+    after = r.log.n_fires;
+
+    CHECK(after > during, "the coast emitted nothing");
+    CHECK(stick_phase(&r.st) == STICK_PHASE_IDLE,
+          "the coast never stopped");
+}
+
+static void test_coast_keeps_direction(void)
+{
+    struct rig r;
+    int i;
+    begin_test("coast: it carries on the way the drag was going");
+    scroll_rig(&r);
+
+    flick_up(&r, 40, 6);
+    i = r.log.n_fires;
+    coast_ticks(&r, 200);
+
+    for (; i < r.log.n_fires; i++)
+        CHECK(r.log.fires[i] == STICK_BIND_SCROLL_DOWN,
+              "dragging up should keep walking down the list, got %d",
+              r.log.fires[i]);
+}
+
+static void test_slow_release_does_not_coast(void)
+{
+    struct rig r;
+    begin_test("coast: letting go gently stops the list, it does not throw it");
+    scroll_rig(&r);
+
+    /* 5 px per 40 ms tick is 125 px/s at the thumb - a deliberate stop. */
+    flick_up(&r, 2, 8);
+
+    CHECK(stick_phase(&r.st) != STICK_PHASE_COAST,
+          "a slow release must not coast");
+}
+
+static void test_touch_catches_the_coast(void)
+{
+    struct rig r;
+    int caught;
+    begin_test("coast: touching a moving list stops it dead");
+    scroll_rig(&r);
+
+    flick_up(&r, 40, 6);
+    coast_ticks(&r, 3);
+    CHECK(stick_phase(&r.st) == STICK_PHASE_COAST, "should still be coasting");
+
+    down(&r, 240, 400);
+    caught = r.log.n_fires;
+    coast_ticks(&r, 50);
+
+    CHECK(stick_phase(&r.st) != STICK_PHASE_COAST,
+          "the coast survived a new press");
+    CHECK(r.log.n_fires == caught,
+          "the caught coast kept scrolling: %d extra fires",
+          r.log.n_fires - caught);
+}
+
+static void test_coast_decelerates(void)
+{
+    struct rig r;
+    int first = 0, last = 0, i, n;
+    begin_test("coast: it slows down rather than stopping all at once");
+    scroll_rig(&r);
+
+    flick_up(&r, 40, 6);
+
+    /* Steps emitted in the first ten ticks against the last ten. */
+    n = r.log.n_fires;
+    coast_ticks(&r, 10);
+    first = r.log.n_fires - n;
+
+    while (stick_phase(&r.st) == STICK_PHASE_COAST)
+    {
+        n = r.log.n_fires;
+        i = coast_ticks(&r, 10);
+        if (i == 0)
+            break;
+        last = r.log.n_fires - n;
+    }
+
+    CHECK(first > 0, "the coast started with nothing");
+    CHECK(last <= first, "the coast sped up: %d then %d", first, last);
+}
+
 /* -------------------------------------------------------- spec 4 repeats */
 
 static void test_repeat_rate_and_linearity(void)
@@ -457,8 +1381,10 @@ static void test_repeat_rate_and_linearity(void)
     int low, high;
     begin_test("spec 4 / plan 3.5: repeat rate follows 2 + 14 d^2 and stays linear");
 
-    /* Small deflection, just past the detent radius. */
+    /* Volume is the held-key case: scroll bindings follow the thumb
+     * instead of repeating, and are covered by their own tests. */
     rig_init(&r);
+    r.cfg.bind[0] = STICK_BIND_VOL_UP;
     down(&r, 240, 400);
     hold(&r, 240, 400, 200);
     move(&r, 240, 400 - (STICK_DEF_DETENT_PX + 2));
@@ -468,6 +1394,7 @@ static void test_repeat_rate_and_linearity(void)
 
     /* Full deflection. */
     rig_init(&r);
+    r.cfg.bind[0] = STICK_BIND_VOL_UP;
     down(&r, 240, 400);
     hold(&r, 240, 400, 200);
     move(&r, 240, 400 - (STICK_DEF_TRAVEL_PX + 20));
@@ -492,6 +1419,7 @@ static void test_repeat_release_adds_nothing(void)
     int during;
     begin_test("spec 4: a repeating binding adds nothing at release");
     rig_init(&r);
+    r.cfg.bind[0] = STICK_BIND_VOL_UP;
 
     down(&r, 240, 400);
     hold(&r, 240, 400, 200);
@@ -527,6 +1455,10 @@ static void test_oneshot_does_not_repeat(void)
 static void dial_config(struct rig *r)
 {
     r->cfg.dial = STICK_DIAL_VOLUME;
+    /* These tests are about the dial's grammar - degrees in, detents out -
+     * so they take it the short way, without the slow tap that arms it in
+     * the firmware. The arming has tests of its own below. */
+    r->cfg.dial_on_hold = 0;
     r->cfg.deg_per_detent = 14;
     r->cfg.arm.shape = STICK_SHAPE_CIRCLE;
     r->cfg.arm.a = 240; r->cfg.arm.b = 600; r->cfg.arm.c = 150;
@@ -622,14 +1554,16 @@ static void test_dial_cancel_reverts_to_arm_time(void)
 static void test_dial_tap_falls_through(void)
 {
     struct rig r;
-    begin_test("spec 6: a dial press with no spin is still a tap");
+    begin_test("spec 6: a dial press with no spin is the centre binding");
     rig_init(&r);
     dial_config(&r);
 
     down(&r, 240, 500);
     up(&r, 240, 500);
 
-    CHECK(r.log.taps == 1, "expected a tap, got %d", r.log.taps);
+    CHECK(r.log.taps == 0, "a tap must not fall through to absolute touch");
+    CHECK(only_fire(&r) == r.cfg.centre,
+          "expected the centre binding, got %d", only_fire(&r));
     CHECK(r.log.dial_total == 0, "a tap must not move the dial");
 }
 
@@ -641,6 +1575,7 @@ static void test_lost_release_is_a_cancel(void)
     struct stick_output out;
     begin_test("spec 9: a lost release is reaped as a cancel, never a commit");
     rig_init(&r);
+    r.cfg.bind[0] = STICK_BIND_SELECT;
 
     down(&r, 240, 400);
     hold(&r, 240, 400, 200);
@@ -665,6 +1600,7 @@ static void test_second_contact_ignored(void)
     struct rig r;
     begin_test("spec 9: a second contact is ignored while a gesture is live");
     rig_init(&r);
+    r.cfg.bind[0] = STICK_BIND_SELECT;
 
     down(&r, 240, 400);
     hold(&r, 240, 400, 200);
@@ -673,7 +1609,7 @@ static void test_second_contact_ignored(void)
     up(&r, 240, 300);
 
     CHECK(r.log.n_fires <= 1, "a second contact started a second gesture");
-    CHECK(only_fire(&r) == STICK_BIND_SCROLL_UP,
+    CHECK(only_fire(&r) == STICK_BIND_SELECT,
           "the original gesture should still win");
 }
 
@@ -734,9 +1670,13 @@ static void test_inert_table_is_detected(void)
 static void test_state_is_small(void)
 {
     begin_test("spec 9: the gesture struct stays small and fixed size");
-    CHECK(sizeof(struct stick_state) <= 72,
+    /* The bound is a bloat alarm, not a budget: it moves when a feature
+     * genuinely needs the room. It went 72 -> 96 for the coast's velocity
+     * and the hold's bookkeeping, and 96 -> 128 for the sustain ramp's
+     * clock. */
+    CHECK(sizeof(struct stick_state) <= 128,
           "stick_state is %d bytes", (int)sizeof(struct stick_state));
-    CHECK(sizeof(struct stick_config) <= 128,
+    CHECK(sizeof(struct stick_config) <= 160,
           "stick_config is %d bytes", (int)sizeof(struct stick_config));
 }
 
@@ -841,7 +1781,7 @@ static void test_fuzz(void)
         r.now += dt;
         stick_process(&r.st, type, x, y, r.now, &out);
 
-        if (r.st.phase < STICK_PHASE_IDLE || r.st.phase > STICK_PHASE_DEAD)
+        if (r.st.phase < STICK_PHASE_IDLE || r.st.phase > STICK_PHASE_EDGE)
         {
             CHECK(0, "phase escaped the valid set: %d", r.st.phase);
             return;
@@ -1003,6 +1943,42 @@ int main(int argc, char **argv)
     test_no_axis_pairing();
     test_none_sector_is_inert();
 
+    test_scroll_is_inverted();
+    test_scroll_follows_the_thumb();
+    test_scroll_stops_when_the_thumb_stops();
+    test_scroll_first_sample_cannot_reverse();
+    test_sustain_at_full_deflection();
+    test_sustain_at_the_rim();
+    test_sustain_needs_a_still_thumb();
+    test_slow_drag_is_the_coarse_baseline();
+    test_fast_drag_covers_far_more_ground();
+    test_acceleration_is_capped();
+    test_acceleration_can_be_turned_off();
+    test_baseline_is_a_tenth_of_the_old_sensitivity();
+    test_dial_needs_the_slow_tap();
+    test_dial_arming_cues_while_it_builds();
+    test_a_drag_is_never_a_dial();
+    test_a_small_reversal_does_not_flip_the_scroll();
+    test_a_real_reversal_still_turns_around();
+    test_an_arc_does_not_leave_the_sector();
+    test_a_deliberate_sideways_move_still_leaves_the_sector();
+    test_a_throw_never_coasts_backwards();
+    test_short_drag_fires_the_drag_binding();
+    test_held_drag_fires_the_hold_binding();
+    test_hold_end_is_reported();
+    test_hold_ends_when_the_sector_changes();
+    test_cancelled_hold_still_ends();
+    test_scroll_speed_follows_rockbox();
+    test_edge_swipe_fires();
+    test_edge_swipe_needs_travel();
+    test_edge_swipe_fires_once();
+    test_edge_is_never_a_stick();
+    test_stick_still_works_beside_the_edge();
+    test_flick_coasts();
+    test_coast_keeps_direction();
+    test_slow_release_does_not_coast();
+    test_touch_catches_the_coast();
+    test_coast_decelerates();
     test_repeat_rate_and_linearity();
     test_repeat_release_adds_nothing();
     test_oneshot_does_not_repeat();

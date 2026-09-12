@@ -274,6 +274,10 @@ enum plugin_status plugin_start(const void *parameter)
     (void)parameter;
 
     rb->lcd_setfont(FONT_UI);
+    /* The lab reads raw touch, so it needs the panel in point mode. The
+     * R1 defaults to the 3x3 button grid, in which BUTTON_TOUCHSCREEN
+     * never reaches a plugin and the lab would sit there idle. */
+    rb->touchscreen_set_mode(TOUCHSCREEN_POINT);
     build_zones();
     draw();
 
@@ -336,6 +340,7 @@ enum plugin_status plugin_start(const void *parameter)
         {
             if (trace_fd >= 0)
                 rb->close(trace_fd);
+            rb->touchscreen_set_mode(rb->global_settings->touch_mode);
             return PLUGIN_USB_CONNECTED;
         }
 
@@ -344,6 +349,7 @@ enum plugin_status plugin_start(const void *parameter)
 
     if (trace_fd >= 0)
         rb->close(trace_fd);
+    rb->touchscreen_set_mode(rb->global_settings->touch_mode);
 
     return PLUGIN_OK;
 }

@@ -411,6 +411,14 @@ void lcd_mono_bitmap(const unsigned char *src, int x, int y, int width, int heig
 #define BLEND_OUT(acc) do {} while (0)
 #endif
 
+#if defined(HAVE_GAMMA_AWARE_TEXT) && (LCD_PIXELFORMAT == RGB565)
+#include "lcd-gamma.h"
+/* Blend in linear light rather than in gamma-encoded RGB565 values, so an
+ * antialiased glyph keeps the same weight whatever background it landed
+ * on. Same signature and the same sense of `a`, so the drawmode switch
+ * below does not have to know which one it is calling. */
+#define blend_two_colors(c1, c2, a) lcd_blend_two_colors_gamma((c1), (c2), (a))
+#else
 /* Blend the given two colors */
 static inline unsigned blend_two_colors(unsigned c1, unsigned c2, unsigned a)
 {
@@ -433,6 +441,7 @@ static inline unsigned blend_two_colors(unsigned c1, unsigned c2, unsigned a)
     return p;
 #endif
 }
+#endif /* HAVE_GAMMA_AWARE_TEXT */
 
 static void ICODE_ATTR lcd_alpha_bitmap_part_mix(
     const fb_data* image, const unsigned char *alpha,
