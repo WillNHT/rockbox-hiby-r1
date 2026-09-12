@@ -17,8 +17,8 @@
  * So these five are resolved here, before any context lookup:
  *
  *   POWER    tap            screen off / on
- *            hold 1 s       lock / unlock input
- *            hold 10 s      shut down
+ *            hold 0.6 s     lock / unlock input
+ *            hold 4 s       shut down
  *   VOL+/-   tap            one step
  *            hold           continuous, linear in the volume value
  *   POWER    double tap     play / pause
@@ -57,6 +57,7 @@
 #include "kernel.h"
 #include "lcd.h"
 #include "misc.h"
+#include "scroll_engine.h"
 #include "timeout.h"
 #include "powermgmt.h"
 #include "rpkeys.h"
@@ -75,7 +76,7 @@
  * PMU stays what it should be - the way out of a wedged device, not the
  * thing that answers an ordinary hold. It also makes the countdown
  * honest, which counting to ten was not. */
-#define LOCK_HOLD_TICKS      (1 * HZ)
+#define LOCK_HOLD_TICKS      (HZ * 600 / 1000)
 #define SHUTDOWN_HOLD_TICKS  (4 * HZ)
 
 /* A press shorter than this is a tap, whatever else is going on. */
@@ -231,36 +232,123 @@ void rpkeys_chirp_step(int step, int total, bool rising)
  * behind it every time. So: clear the whole screen exactly once, when the
  * countdown appears, then repaint only the band the two lines occupy, and
  * only every COUNTDOWN_FRAME_TICKS. */
-#define COUNTDOWN_FRAME_TICKS  (HZ / 15)
+#define COUNTDOWN_FRAME_TICKS  (HZ / 30)
+
+/* The border is the countdown made spatial: a rectangle drawn round the
+ * edge of the screen, clockwise from the top-left corner, closing exactly
+ * as the hold fires. It costs almost nothing to push because it is only
+ * ever *added* to - each frame inks the span since the last one and updates
+ * that span's bounding box, never the whole frame. */
+#define BORDER_PX              8
 
 static long countdown_next_tick;
+static long border_done;        /* perimeter pixels already inked */
+static int  countdown_stage;    /* 0 = heading for the lock, 1 = shutdown */
+
+/* Union a rectangle into an accumulating bounding box. */
+static void bbox_add(int *bx, int *by, int *bw, int *bh,
+                     int x, int y, int w, int h)
+{
+    if (w <= 0 || h <= 0)
+        return;
+    if (*bw == 0 || *bh == 0)
+    {
+        *bx = x; *by = y; *bw = w; *bh = h;
+        return;
+    }
+    if (x < *bx)          { *bw += *bx - x; *bx = x; }
+    if (y < *by)          { *bh += *by - y; *by = y; }
+    if (x + w > *bx + *bw) *bw = x + w - *bx;
+    if (y + h > *by + *bh) *bh = y + h - *by;
+}
+
+/* Ink the part of the perimeter between `from` and `to`, measured clockwise
+ * from the top-left corner, and report what it touched. */
+static void border_span(int vw, int vh, long from, long to,
+                        int *bx, int *by, int *bw, int *bh)
+{
+    /* Side n runs [base, base + len). Lengths are the full edge, so the
+     * corners get inked twice - harmless, and it keeps the arithmetic to
+     * one expression per side. */
+    const long len[4] = { vw, vh, vw, vh };
+    long base = 0;
+    int i;
+
+    for (i = 0; i < 4; i++)
+    {
+        long a = from > base ? from - base : 0;
+        long b = to - base;
+        long n;
+
+        if (b > len[i])
+            b = len[i];
+        n = b - a;
+
+        if (n > 0)
+        {
+            int x, y, w, h;
+
+            switch (i)
+            {
+            case 0:  /* top, left to right */
+                x = (int)a; y = 0; w = (int)n; h = BORDER_PX; break;
+            case 1:  /* right, top to bottom */
+                x = vw - BORDER_PX; y = (int)a; w = BORDER_PX; h = (int)n; break;
+            case 2:  /* bottom, right to left */
+                x = vw - (int)b; y = vh - BORDER_PX; w = (int)n; h = BORDER_PX; break;
+            default: /* left, bottom to top */
+                x = 0; y = vh - (int)b; w = BORDER_PX; h = (int)n; break;
+            }
+
+            lcd_fillrect(x, y, w, h);
+            bbox_add(bx, by, bw, bh, x, y, w, h);
+        }
+
+        base += len[i];
+    }
+}
 
 static void countdown_draw(long held_ticks)
 {
     struct viewport vp;
     char line[32];
     const char *what;
-    long target;
+    long target, start, perim, want;
     long left_ms;
     int w, h, y;
     int band_y, band_h;
-    bool first = !countdown_drawn;
-
-    if (!first && !TIME_AFTER(current_tick, countdown_next_tick))
-        return;
-
-    countdown_next_tick = current_tick + COUNTDOWN_FRAME_TICKS;
+    int bx = 0, by = 0, bw = 0, bh = 0;
+    int stage;
+    bool first;
 
     if (held_ticks >= LOCK_HOLD_TICKS)
     {
         what = locked ? "Unlocking - hold for shutdown" : "Locking - hold for shutdown";
         target = SHUTDOWN_HOLD_TICKS;
+        start = LOCK_HOLD_TICKS;
+        stage = 1;
     }
     else
     {
         what = locked ? "Hold to unlock" : "Hold to lock";
         target = LOCK_HOLD_TICKS;
+        start = LOCK_ARM_TICKS;
+        stage = 0;
     }
+
+    /* Crossing into the shutdown stage restarts the border from nothing, so
+     * it has to restart the screen too - the first stage's rectangle is
+     * closed by then and would otherwise stay up behind the second. */
+    if (countdown_drawn && stage != countdown_stage)
+        countdown_drawn = false;
+
+    first = !countdown_drawn;
+
+    if (!first && !TIME_AFTER(current_tick, countdown_next_tick))
+        return;
+
+    countdown_next_tick = current_tick + COUNTDOWN_FRAME_TICKS;
+    countdown_stage = stage;
 
     left_ms = (target - held_ticks) * 1000 / HZ;
     if (left_ms < 0)
@@ -283,8 +371,16 @@ static void countdown_draw(long held_ticks)
     if (first)
     {
         /* Once: take the whole screen, so nothing of what was underneath
-         * shows around the countdown. */
+         * shows around the countdown.
+         *
+         * A scrolling line does not stop for a cleared screen. The WPS
+         * title is scrolled by the scroll thread, which owns its own
+         * rectangle and repaints it on its own timer, so the track name
+         * kept reappearing across the middle of the lock screen - not a
+         * repaint race, just a second writer nobody told. */
+        lcd_scroll_stop();
         lcd_clear_viewport();
+        border_done = 0;
         countdown_drawn = true;
     }
     else
@@ -295,17 +391,38 @@ static void countdown_draw(long held_ticks)
         lcd_set_drawmode(mode);
     }
 
+    bbox_add(&bx, &by, &bw, &bh, 0, band_y, vp.width, band_h);
+
+    /* The border, as far as this frame has got. */
+    perim = 2L * (vp.width + vp.height);
+    want = (target > start)
+         ? perim * (held_ticks - start) / (target - start)
+         : perim;
+    if (want < 0)
+        want = 0;
+    if (want > perim)
+        want = perim;
+    if (want > border_done)
+    {
+        border_span(vp.width, vp.height, border_done, want, &bx, &by, &bw, &bh);
+        border_done = want;
+    }
+
     lcd_getstringsize(what, &w, NULL);
     lcd_putsxy((vp.width - w) / 2, y, what);
 
-    snprintf(line, sizeof(line), "%ld.%03ld s", left_ms / 1000, left_ms % 1000);
+    /* Hundredths. Thousandths were three digits of noise churning too fast
+     * to read; two move at about the speed the eye can follow and still say
+     * plainly that the device has not frozen. */
+    snprintf(line, sizeof(line), "%ld.%02ld s", left_ms / 1000,
+             (left_ms % 1000) / 10);
     lcd_getstringsize(line, &w, NULL);
     lcd_putsxy((vp.width - w) / 2, y + h + h / 2, line);
 
     if (first)
         lcd_update_viewport();
-    else
-        lcd_update_viewport_rect(0, band_y, vp.width, band_h);
+    else if (bw > 0 && bh > 0)
+        lcd_update_viewport_rect(bx, by, bw, bh);
 
     lcd_set_viewport(NULL);
 }
@@ -316,6 +433,7 @@ static void countdown_clear(void)
         return;
     countdown_drawn = false;
     countdown_next_tick = 0;
+    border_done = 0;
     /* Whatever was underneath owns the screen again. The lists redraw on
      * this event; the WPS does not listen to it and has to be told in its
      * own language, or the countdown stays on the skin until the track
@@ -633,6 +751,23 @@ bool rpkeys_handle(int button)
 
     if (button == BUTTON_NONE)
         return false;
+
+    /* Re-sync with the screen we do not own.
+     *
+     * screen_dark only tracks the times *we* darkened the display. Rockbox's
+     * own backlight timeout is the other way it goes out, and it does not
+     * tell us, so the first POWER tap after an idle screen-off saw
+     * screen_dark == false, read the press as "turn it off", and gave the
+     * flicker-then-black that only happened on the first try - the second
+     * tap then found the state agreeing with reality again.
+     *
+     * The button driver calls backlight_on() before this handler ever runs,
+     * so by now the light is already coming back. backlight_consume_wake()
+     * is the record of what that call found, taken on the near side of the
+     * race: if the press woke the screen, the screen was off, whoever put
+     * it out. */
+    if (!repeat && !release && backlight_consume_wake())
+        screen_dark = true;
 
     /* Both volume keys together is the stick's kill switch, which is
      * checked before this and must not also change the volume. */

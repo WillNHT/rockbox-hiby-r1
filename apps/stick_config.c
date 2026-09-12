@@ -202,6 +202,14 @@ static bool load_config_file(struct stick_config *cfg)
             cfg->travel_px = atoi(rest);
         else if (!strcmp(key, "dialMinPx"))
             cfg->dial_min_px = atoi(rest);
+        /* How long the slow tap has to last before the dial arms, and how
+         * far the thumb may wander from the pivot before the pivot follows
+         * it. Both here rather than in the settings screen because they are
+         * feel, and feel is what a file is for. */
+        else if (!strcmp(key, "dialArmMs"))
+            cfg->dial_arm_ms = atoi(rest);
+        else if (!strcmp(key, "dialMaxPx"))
+            cfg->dial_max_px = atoi(rest);
         /* The scroll feel, for tuning on the device without a rebuild.
          * scrollPx is the slow baseline; accelV0 and accelMaxQ8 decide how
          * hard speed shrinks it. accelMaxQ8 256 means no acceleration. */

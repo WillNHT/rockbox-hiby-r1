@@ -820,10 +820,31 @@ void backlight_close(void)
 }
 #endif /* BACKLIGHT_DRIVER_CLOSE */
 
+/* Set when a backlight_on() arrives while the light is actually out.
+ *
+ * The button driver calls backlight_on() from its own thread the instant
+ * any key goes down, long before the action layer dequeues that press, so
+ * by the time anything can ask "was the screen on when the user pressed
+ * this?" the answer is always yes. Here, though, we are on the near side of
+ * that race: the check happens synchronously inside the call the button
+ * driver just made, before the backlight thread has acted on it. Whoever
+ * wants the answer consumes it. */
+static bool backlight_woke_screen;
+
+bool backlight_consume_wake(void)
+{
+    bool woke = backlight_woke_screen;
+    backlight_woke_screen = false;
+    return woke;
+}
+
 void backlight_on(void)
 {
     if(!ignore_backlight_on)
     {
+        if (!is_backlight_on(true))
+            backlight_woke_screen = true;
+
         queue_remove_from_head(&backlight_queue, BACKLIGHT_ON);
         queue_post(&backlight_queue, BACKLIGHT_ON, 0);
 
@@ -1056,6 +1077,7 @@ void backlight_init(void)
 
 void backlight_on(void) {}
 void backlight_off(void) {}
+bool backlight_consume_wake(void) { return false; }
 void backlight_set_timeout(int value) {(void)value;}
 
 bool is_backlight_on(bool ignore_always_off)

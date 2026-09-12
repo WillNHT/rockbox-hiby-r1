@@ -92,6 +92,18 @@ enum stick_dial_kind
  * LCD_DPI by the glue layer so a second target inherits sane numbers. */
 #define STICK_DEF_DETENT_PX      18   /* no sector selected inside this   */
 #define STICK_DEF_DIAL_MIN_PX    34   /* angle is not read below this     */
+/* The dial's pivot floats rather than being nailed to the point the thumb
+ * armed at.
+ *
+ * Anchoring on the arming point meant the dial could only be drawn around
+ * wherever the gesture happened to begin, and arming near an edge left no
+ * room to draw anything at all. Instead the pivot is dragged along behind
+ * the thumb whenever the thumb gets further away than this: a straight
+ * slide pushes the pivot directly ahead of itself, so the bearing never
+ * changes and no detents come out of it, while a curve leaves the pivot
+ * where it is and turns into rotation. So the user can arm anywhere, slide
+ * anywhere, and circle there. */
+#define STICK_DEF_DIAL_MAX_PX   110
 #define STICK_DEF_SCROLL_PX     140   /* vertical travel per scroll step  */
 /* Scrolling is velocity-accelerated. STICK_DEF_SCROLL_PX is the *slow*
  * baseline, deliberately coarse - a tenth of the old sensitivity - so a
@@ -141,7 +153,7 @@ enum stick_dial_kind
  * enabled ended up with no working left or right at all. Armed by a slow
  * tap instead, both can exist on one screen: travel resolves a sector,
  * staying put resolves the dial. */
-#define STICK_DEF_DIAL_ARM_MS  1000
+#define STICK_DEF_DIAL_ARM_MS  1500
 #define STICK_DIAL_TICK_MS      250   /* cue while the hold is building */
 #define STICK_DEF_TAP_SLOP_PX    10
 /* Sustained scrolling - the long library.
@@ -195,6 +207,9 @@ struct stick_config
     uint16_t repeat_delay_ms;
     int16_t  detent_px;
     int16_t  dial_min_px;
+    /* How far the thumb may get from the dial's pivot before the pivot is
+     * dragged after it. See STICK_DEF_DIAL_MAX_PX. */
+    int16_t  dial_max_px;
     /* Pixels of vertical travel per scroll step. Scrolling is a drag, not
      * a repeat: the list follows the thumb and stops when it stops. */
     int16_t  scroll_px;

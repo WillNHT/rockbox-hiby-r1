@@ -1019,12 +1019,19 @@ void stick_redraw_overlay(void)
 void stick_draw_overlay(void)
 {
     bool moved;
+    bool phase_is_dial;
 
     if (!overlay.want)
     {
         overlay_clear();
         return;
     }
+
+#ifdef STICK_HAVE_KEYMAP
+    phase_is_dial = stick_phase(&live_state) == STICK_PHASE_DIAL;
+#else
+    phase_is_dial = false;
+#endif
 
     moved = !overlay.drawn ||
             memcmp(&overlay.have_s, &overlay.want_s,
@@ -1055,7 +1062,14 @@ void stick_draw_overlay(void)
      * Throttled, because a repaint per motion event is more than the
      * screen is worth: at OVERLAY_REPAINT_MS the trail is at most one
      * frame long. */
-    if (overlay.drawn &&
+    /* Except on a skin, mid-dial. A full WPS update is the whole panel torn
+     * down and rebuilt - backdrop, art, every bitmap - and a dial asks for
+     * one several times a second while the volume change it is producing is
+     * *already* making the skin repaint itself. Two full rebuilds racing at
+     * 7 Hz is what the flicker was. The dial's own repaint is the one to
+     * give up: the volume it is changing repaints the skin anyway, and the
+     * ring sits still under a thumb that is going round in circles. */
+    if (overlay.drawn && !(on_a_skin() && phase_is_dial) &&
         TIME_AFTER(current_tick, overlay.last_repaint + repaint_interval_ticks()))
     {
         overlay.last_repaint = current_tick;
@@ -1217,6 +1231,23 @@ static int binding_to_button(int binding, int *prebutton)
     return binding_buttons[binding].button;
 }
 
+/* The queue is the one path where a synthesised button is indistinguishable
+ * from a real key press.
+ *
+ * The inline path is safe by position: get_action_touchscreen() runs after
+ * the five physical keys have already been resolved, so a button it returns
+ * never reaches rpkeys. A queued one comes back round through
+ * action_poll_button() on a later poll and arrives at the top of the
+ * pipeline like any other press - which is how a scroll binding's
+ * BUTTON_UP was being read as the volume key and why dragging a list
+ * changed the volume. BUTTON_SYNTH marks them; action.c strips it before
+ * the keymaps, so the impersonation still works everywhere it should. */
+#ifdef BUTTON_SYNTH
+#define SYNTH_TAG(b)  ((b) | BUTTON_SYNTH)
+#else
+#define SYNTH_TAG(b)  (b)
+#endif
+
 /* Extra emissions that will not fit into this call go through the button
  * queue, where they drain on their own. */
 static void post_binding(int binding)
@@ -1228,8 +1259,8 @@ static void post_binding(int binding)
         return;
 
     if (pre != BUTTON_NONE)
-        button_queue_post(pre, 0);
-    button_queue_post(btn, 0);
+        button_queue_post(SYNTH_TAG(pre), 0);
+    button_queue_post(SYNTH_TAG(btn), 0);
 }
 
 /* Stops whatever a hold started. Only the seeks need it; for everything
@@ -1247,8 +1278,8 @@ static void post_hold_end(int binding)
         return;
 
     if (bb->release_pre != BUTTON_NONE)
-        button_queue_post(bb->release_pre, 0);
-    button_queue_post(bb->release, 0);
+        button_queue_post(SYNTH_TAG(bb->release_pre), 0);
+    button_queue_post(SYNTH_TAG(bb->release), 0);
 }
 
 static int dial_binding(int kind, int step)
@@ -1323,6 +1354,17 @@ int stick_handle_touch(const struct touchevent *ev, int context,
 
     *button = BUTTON_NONE;
     *prebutton = BUTTON_NONE;
+
+    /* Locked means locked. The POWER hold swallows every physical key but
+     * itself, and a panel that still scrolled and selected underneath that
+     * would be a lock in name only - the touchscreen is the input this
+     * device is most likely to get in a pocket. Consumed rather than
+     * passed, so nothing downstream sees the contact either. */
+    if (rpkeys_locked())
+    {
+        stick_reset(&live_state, &live_cfg);
+        return STICK_RESULT_CONSUMED;
+    }
 
     if (context != cached_context)
     {

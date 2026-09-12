@@ -34,6 +34,10 @@ bool is_backlight_on(bool ignore_always_off);
 void backlight_on_ignore(bool value, int timeout);
 void backlight_on(void);
 void backlight_off(void);
+/* True once if the most recent backlight_on() found the light already out,
+ * i.e. the key press that caused it was the one that woke the screen.
+ * Reading it clears it. See the comment on backlight_woke_screen. */
+bool backlight_consume_wake(void);
 void backlight_set_timeout(int value);
 
 #ifdef HAVE_BACKLIGHT

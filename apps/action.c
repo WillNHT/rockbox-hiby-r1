@@ -1236,6 +1236,20 @@ static int get_action_worker(action_last_t *last, action_cur_t *cur)
      * synthesises are not offered here - they arrive further down, which
      * is what lets the stick still produce POWER combinations after a real
      * POWER press has stopped reaching the keymap. */
+#ifdef BUTTON_SYNTH
+    /* A button the stick made, coming back round through the button queue.
+     * It looks exactly like the physical key it is impersonating, which is
+     * the whole point on the keymap side and exactly wrong here: a scroll
+     * binding emits BUTTON_UP, rpkeys reads BUTTON_UP as the volume key,
+     * and dragging a list changed the volume. The tag is stripped before
+     * anything downstream sees it, so the keymaps still match the real
+     * key. */
+    if (cur->button & BUTTON_SYNTH)
+    {
+        cur->button &= ~BUTTON_SYNTH;
+    }
+    else
+#endif
     if (rpkeys_handle(cur->button))
     {
         cur->button = BUTTON_NONE;
@@ -1553,7 +1567,14 @@ void set_selective_backlight_actions(bool selective, unsigned int mask,
 #ifndef HAS_BUTTON_HOLD
 bool is_keys_locked(void)
 {
-    return (action_last.keys_locked);
+    /* The rpkeys POWER-hold lock is a lock in its own right, not a private
+     * flag: the skins ask this question through %mh, the keymaps ask it
+     * through CONTEXT_LOCKED, and a device that has swallowed every key but
+     * POWER while claiming to be unlocked is lying to both. Held here as an
+     * OR rather than by having rpkeys write action_last.keys_locked,
+     * because the softlock machinery owns that field and clears it on its
+     * own schedule. */
+    return (action_last.keys_locked || rpkeys_locked());
 }
 
 /* Enable selected actions to bypass a locked state */

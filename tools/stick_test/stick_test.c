@@ -820,9 +820,9 @@ static void test_dial_needs_the_slow_tap(void)
     CHECK(stick_phase(&r.st) != STICK_PHASE_DIAL,
           "a short hold should not have armed the dial");
 
-    hold(&r, 240, 400, 900);
+    hold(&r, 240, 400, 1400);
     CHECK(stick_phase(&r.st) == STICK_PHASE_DIAL,
-          "a second of holding still should arm the dial, phase %d",
+          "holding still for dialArmMs should arm the dial, phase %d",
           stick_phase(&r.st));
 
     up(&r, 240, 400);
@@ -838,10 +838,10 @@ static void test_dial_arming_cues_while_it_builds(void)
     stick_reset(&r.st, &r.cfg);
 
     down(&r, 240, 400);
-    hold(&r, 240, 400, 1100);
+    hold(&r, 240, 400, 1600);
     up(&r, 240, 400);
 
-    /* One per STICK_DIAL_TICK_MS over the arming second, give or take the
+    /* One per STICK_DIAL_TICK_MS over the arming wait, give or take the
      * event grid. The cue is the progress, not the receipt: it has to tick
      * several times before the dial arms or the hold is a silent wait. */
     CHECK(r.log.cues[STICK_CUE_DETENT] >= 3,
@@ -1498,6 +1498,42 @@ static void test_dial_steps(void)
     CHECK(r.log.cues[STICK_CUE_DETENT] > 0, "each detent should click");
 }
 
+/* The pivot is not nailed to where the dial was armed. A straight slide
+ * drags it along behind the thumb - same bearing, so no detents - and a
+ * circle drawn wherever the thumb ended up is a real circle around it. */
+static void test_dial_pivot_floats(void)
+{
+    struct rig r;
+    int i, after_slide;
+    begin_test("dial: the pivot follows a straight slide, so circling works anywhere");
+    rig_init(&r);
+    dial_config(&r);
+    r.cfg.work.c = 600;          /* room to slide right across the panel */
+
+    down(&r, 240, 500);
+    hold(&r, 240, 500, 200);
+
+    for (i = 490; i >= 200; i -= 10)
+        move(&r, 240, i);
+
+    after_slide = r.log.dial_total;
+    CHECK(after_slide == 0,
+          "a straight slide should produce no detents, got %d", after_slide);
+
+    /* The pivot has been pulled to dial_max_px behind the thumb, so it sits
+     * at y = 310. Circle around that. */
+    for (i = 0; i < 180; i += 2)
+    {
+        double d = i * M_PI / 180.0;
+        move(&r, 240 + (int)(100 * sin(d)), 310 - (int)(100 * cos(d)));
+    }
+    up(&r, 240, 410);
+
+    CHECK(r.log.dial_total >= 8,
+          "half a turn around the floated pivot should be about 12 detents, got %d",
+          r.log.dial_total);
+}
+
 static void test_dial_recircling_is_unlimited(void)
 {
     struct rig r;
@@ -1984,6 +2020,7 @@ int main(int argc, char **argv)
     test_oneshot_does_not_repeat();
 
     test_dial_steps();
+    test_dial_pivot_floats();
     test_dial_recircling_is_unlimited();
     test_dial_jitter_floor();
     test_dial_cancel_reverts_to_arm_time();

@@ -101,6 +101,15 @@ int button_apply_acceleration(const unsigned int data);
 #define BUTTON_MULTIMEDIA   0x10000000
 #define BUTTON_REDRAW       0x20000000
 
+#if (CONFIG_KEYPAD == HIBY_R1_PAD)
+/* Set on the button codes the stick synthesises, so the layer that resolves
+ * the five physical keys can tell them apart from a real press. Stripped in
+ * get_action_worker() before any keymap lookup, so nothing downstream ever
+ * sees it. Only this target defines it; other targets spend this bit on
+ * BUTTON_RC_DOWN. */
+#define BUTTON_SYNTH        0x01000000
+#endif
+
 #define BUTTON_MULTIMEDIA_PLAYPAUSE (BUTTON_MULTIMEDIA|0x01)
 #define BUTTON_MULTIMEDIA_STOP      (BUTTON_MULTIMEDIA|0x02)
 #define BUTTON_MULTIMEDIA_PREV      (BUTTON_MULTIMEDIA|0x04)

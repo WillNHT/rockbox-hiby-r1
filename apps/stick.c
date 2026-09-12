@@ -265,6 +265,7 @@ void stick_config_default(struct stick_config *cfg, int lcd_w, int lcd_h)
     cfg->repeat_delay_ms = STICK_DEF_REPEAT_MS;
     cfg->detent_px = STICK_DEF_DETENT_PX;
     cfg->dial_min_px = STICK_DEF_DIAL_MIN_PX;
+    cfg->dial_max_px = STICK_DEF_DIAL_MAX_PX;
     cfg->scroll_px = STICK_DEF_SCROLL_PX;
     cfg->accel_v0 = STICK_DEF_ACCEL_V0;
     cfg->accel_max_q8 = STICK_DEF_ACCEL_MAX_Q8;
@@ -462,6 +463,13 @@ bool stick_config_validate(struct stick_config *cfg, int lcd_w, int lcd_h)
     {
         cfg->dial_min_px = def.dial_min_px;
         ok = false;
+    }
+    if (cfg->dial_max_px <= cfg->dial_min_px || cfg->dial_max_px > lcd_w)
+    {
+        cfg->dial_max_px = def.dial_max_px;
+        ok = false;
+        if (cfg->dial_max_px <= cfg->dial_min_px)
+            cfg->dial_min_px = def.dial_min_px;
     }
     if (cfg->travel_px <= cfg->detent_px || cfg->travel_px > lcd_h)
     {
@@ -1117,6 +1125,11 @@ static bool advance_dial_arm(struct stick_state *st, long now_ms,
 
     st->dial = true;
     st->phase = STICK_PHASE_DIAL;
+    /* The pivot starts under the thumb, not at the arm zone centre. From
+     * here it floats (see advance_dial): the user can slide anywhere before
+     * they start circling and the dial goes with them. */
+    st->cx = st->x;
+    st->cy = st->y;
     st->last_angle = STICK_ANGLE_UNSET;
     st->acc_angle = 0;
     st->detents = 0;
@@ -1203,10 +1216,33 @@ static void advance_dial(struct stick_state *st, struct stick_output *out)
     int dy = st->y - st->cy;
     int32_t per = (int32_t)cfg->deg_per_detent * 64;
     int32_t a, delta;
+    int32_t r;
     int steps = 0;
 
+    /* The floating pivot. Once the thumb is further out than dial_max_px,
+     * the pivot is pulled straight along the line joining the two until it
+     * is exactly that far behind - which leaves the bearing from pivot to
+     * thumb unchanged, so dragging the pivot never manufactures a detent.
+     *
+     * What it buys is that a straight slide, however long, is all radius
+     * and no angle: the pivot simply follows. Only turning changes the
+     * bearing. The dial therefore belongs wherever the user starts circling
+     * rather than wherever they happened to arm it, which is the whole
+     * point - arming near an edge used to leave nowhere to draw. */
+    r = stick_hypot(dx, dy);
+    if (cfg->dial_max_px > 0 && r > cfg->dial_max_px)
+    {
+        int32_t pull = r - cfg->dial_max_px;
+
+        st->cx = (int16_t)(st->cx + (int32_t)dx * pull / r);
+        st->cy = (int16_t)(st->cy + (int32_t)dy * pull / r);
+        dx = st->x - st->cx;
+        dy = st->y - st->cy;
+        r = stick_hypot(dx, dy);
+    }
+
     /* The jitter floor: below this radius the angle is not read at all. */
-    if (stick_hypot(dx, dy) < cfg->dial_min_px)
+    if (r < cfg->dial_min_px)
         return;
 
     a = stick_atan2_deg64(dx, dy);
