@@ -314,6 +314,32 @@ void get_image_filename(const char *start, const char* bmpdir,
     path_append(buf, bmpdir, start, buf_size);
 }
 
+/* %an(frames, period_ms) - a free-running frame counter.
+ *
+ * The two numbers are held per-token rather than being globals, so a skin
+ * can run several animations at different rates; they are validated here
+ * because a period of zero is a divide by zero in the render path and a
+ * frame count of zero is a modulo by zero. */
+static int parse_animation(struct skin_element *element,
+                           struct wps_token *token,
+                           struct wps_data *wps_data)
+{
+    struct skin_animation *an = skin_buffer_alloc(sizeof(*an));
+
+    if (!an)
+        return WPS_ERROR_INVALID_PARAM;
+
+    an->frames    = get_param(element, 0)->data.number;
+    an->period_ms = get_param(element, 1)->data.number;
+
+    if (an->frames < 1 || an->period_ms < 1)
+        return WPS_ERROR_INVALID_PARAM;
+
+    token->value.data = PTRTOSKINOFFSET(skin_buffer, an);
+    wps_data->animation_enabled = true;
+    return 0;
+}
+
 static int parse_image_display(struct skin_element *element,
                                struct wps_token *token,
                                struct wps_data *wps_data)
@@ -2002,6 +2028,7 @@ static void skin_data_reset(struct wps_data *wps_data)
 #endif
 
     wps_data->peak_meter_enabled = false;
+    wps_data->animation_enabled = false;
     wps_data->wps_sb_tag = false;
     wps_data->show_sb_on_wps = false;
     wps_data->wps_loaded = false;
@@ -2501,6 +2528,9 @@ static int skin_element_callback(struct skin_element* element, void* data)
                 case SKIN_TOKEN_VIEWPORT_ENABLE:
                 case SKIN_TOKEN_UIVIEWPORT_ENABLE:
                     token->value.data = get_param(element, 0)->data.text;
+                    break;
+                case SKIN_TOKEN_ANIMATION_FRAME:
+                    function = parse_animation;
                     break;
                 case SKIN_TOKEN_IMAGE_PRELOAD_DISPLAY:
                 case SKIN_TOKEN_IMAGE_DISPLAY_9SEGMENT:

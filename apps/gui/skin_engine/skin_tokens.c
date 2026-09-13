@@ -1564,6 +1564,32 @@ const char *get_token_value(struct gui_wps *gwps,
 #else
             return NULL;
 #endif
+        case SKIN_TOKEN_ANIMATION_FRAME:
+        {
+            /* 1..frames, from the tick count. Deliberately read off the
+             * clock rather than counted up per render: the render pass
+             * runs at whatever rate the screen happens to be updating, so
+             * a counter would make the animation run at different speeds
+             * on different screens and stall entirely while a menu is up.
+             * From the clock it is always the same animation, and a frame
+             * that is not drawn is a frame that is skipped rather than one
+             * that is owed. */
+            struct skin_animation *an;
+            long ms;
+
+            an = SKINOFFSETTOPTR(get_skin_buffer(data), token->value.data);
+
+            if (!an || an->frames < 1 || an->period_ms < 1)
+                return NULL;
+
+            ms = (long)current_tick * 1000 / HZ;
+            numeric_ret = (int)((ms / an->period_ms) % an->frames) + 1;
+
+            itoa_buf(buf, buf_size, numeric_ret);
+            numeric_buf = buf;
+            goto gtv_ret_numeric_tag_info;
+        }
+
         /* peakmeter */
         case SKIN_TOKEN_PEAKMETER_LEFT:
         case SKIN_TOKEN_PEAKMETER_RIGHT:

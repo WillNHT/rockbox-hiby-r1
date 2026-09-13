@@ -111,6 +111,12 @@ struct gui_img {
     bool dither;
 };
 
+/* %an(frames, period_ms). See parse_animation(). */
+struct skin_animation {
+    int frames;
+    int period_ms;
+};
+
 struct image_display {
     OFFSETTYPE(char*) label;
     OFFSETTYPE(struct wps_token*) token; /* the token to get the subimage number from */
@@ -386,6 +392,12 @@ struct wps_data
 #endif
 
     bool peak_meter_enabled;
+    /* Set at parse time by %an. Unlike peak_meter_enabled, which the
+     * render pass keeps up to date because a peak meter can be inside a
+     * conditional, this stays true for the life of the skin: an animation
+     * that is only sometimes visible still has to be given the frame rate
+     * to be animated at all. */
+    bool animation_enabled;
     bool wps_sb_tag;
     bool show_sb_on_wps;
     bool wps_loaded;

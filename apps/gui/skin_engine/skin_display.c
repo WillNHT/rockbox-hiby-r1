@@ -774,6 +774,11 @@ bool skin_has_sbs(struct gui_wps *gwps)
 /* do the button loop as often as required for the peak meters to update
  * with a good refresh rate.
  */
+/* An animation is redrawn this often. Past about here the limit stops
+ * being the panel and starts being the skin engine's own repaint, which
+ * on this device is a viewport rebuild per frame. */
+#define SKIN_ANIMATION_FPS 20
+
 int skin_wait_for_action(enum skinnable_screens skin, int context, int timeout)
 {
     int button = ACTION_NONE;
@@ -782,13 +787,24 @@ int skin_wait_for_action(enum skinnable_screens skin, int context, int timeout)
         other hand we don't want to waste energy if it
         isn't displayed */
     bool pm=false;
+    bool anim=false;
+    int fps;
     FOR_NB_SCREENS(i)
     {
-       if(skin_get_gwps(skin, i)->data->peak_meter_enabled)
+       struct wps_data *d = skin_get_gwps(skin, i)->data;
+       if(d->peak_meter_enabled)
            pm = true;
+       /* An %an animation wants the same fast cadence, and for the same
+        * reason: it is the difference between motion and a slideshow.
+        * A little faster, in fact - the peak meter is a level and reads
+        * fine at 10 fps, while a moving picture does not. */
+       if(d->animation_enabled)
+           anim = true;
     }
 
-    if (pm) {
+    fps = anim ? SKIN_ANIMATION_FPS : PEAK_METER_FPS;
+
+    if (pm || anim) {
         long next_refresh = current_tick;
         long next_big_refresh = current_tick + timeout;
         button = BUTTON_NONE;
@@ -797,15 +813,17 @@ int skin_wait_for_action(enum skinnable_screens skin, int context, int timeout)
             if (button != ACTION_NONE) {
                 break;
             }
-            peak_meter_peek();
+            if (pm)
+                peak_meter_peek();
             sleep(0);   /* Sleep until end of current tick. */
 
             if (TIME_AFTER(current_tick, next_refresh)) {
                 FOR_NB_SCREENS(i)
                 {
-                    if(skin_get_gwps(skin, i)->data->peak_meter_enabled)
+                    struct wps_data *d = skin_get_gwps(skin, i)->data;
+                    if(d->peak_meter_enabled || d->animation_enabled)
                         skin_update(skin, i, SKIN_REFRESH_PEAK_METER);
-                    next_refresh += HZ / PEAK_METER_FPS;
+                    next_refresh += HZ / fps;
                 }
             }
         }

@@ -308,6 +308,19 @@ enum skin_token_type {
     SKIN_TOKEN_SUBSTRING,
 
     SKIN_TOKEN_DRAWRECTANGLE,
+
+    /* A free-running frame counter, so a skin can animate something that
+     * is not driven by the music. Everything else that moves in a skin is
+     * a reading of some value; this is the only one whose whole content is
+     * the passage of time.
+     *
+     * Appended, never inserted. Inserting it in the middle shifted every
+     * token after it, and one object file that had not been rebuilt still
+     * held the old numbering - which routed %an into the progress bar
+     * group and segfaulted the moment the skin drew. The compiler cannot
+     * catch that; keeping new tokens at the end means there is nothing to
+     * catch. */
+    SKIN_TOKEN_ANIMATION_FRAME,
 };
 
 /*

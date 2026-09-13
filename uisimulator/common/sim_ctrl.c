@@ -47,6 +47,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <signal.h>
+#include <execinfo.h>
+
 #include <SDL.h>
 
 #include "sim_ctrl.h"
@@ -62,6 +65,20 @@
 #define CTL_LCD_X   0
 #define CTL_LCD_Y   0
 #endif
+
+/* A crash in the simulator otherwise says only "exit code 139", which is
+ * the same amount of information as no simulator at all. glibc can tell us
+ * where, and a headless run has nowhere else to say it. */
+static void ctl_segv(int sig)
+{
+    void *frames[32];
+    int n = backtrace(frames, 32);
+
+    fprintf(stderr, "sim_ctrl: caught signal %d, backtrace:\n", sig);
+    fflush(stderr);
+    backtrace_symbols_fd(frames, n, 2);
+    _exit(128 + sig);
+}
 
 static pthread_t ctl_thread;
 static int  touch_x, touch_y;
@@ -247,6 +264,10 @@ void sim_ctrl_init(void)
         return;
 
     snprintf(path, sizeof(path), "%s", env);
+
+    signal(SIGSEGV, ctl_segv);
+    signal(SIGBUS, ctl_segv);
+    signal(SIGFPE, ctl_segv);
 
     if (mkfifo(path, 0666) != 0 && errno != EEXIST)
     {
