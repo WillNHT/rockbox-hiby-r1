@@ -35,6 +35,12 @@ HEADER = """#
 %Vl(voldb,30,30,110,62,4)
 %Vs(invert)%ac%pv
 #
+# The clock has the box the rest of the time. The volume number is worth
+# the corner only while it is changing - the bar says the rest, all the
+# time, and a number that never moves is a number nobody reads.
+%Vl(clock,30,30,110,62,3)
+%Vs(invert)%ac%cH:%cM
+#
 # Shuffle
 %V(174,28,94,22,2)
 SHF%xd(O,%ps)
@@ -239,7 +245,8 @@ def snappy_v2():
     o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
     o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>")
     o.append("%?mh<%Vd(locked)|%Vd(volbar)>")
-    o.append("%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>")
+    o.append("%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|"
+             "%?mv(1.5)<%Vd(voldb)|%Vd(clock)>>")
     o += dial_border(30, 110, 420, 36)
     o.append(HEADER)
     o.append("""#
@@ -351,8 +358,15 @@ def animated(gauge=False):
     o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
     o.append("%?C<%Vd(mirror)>")
     o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>")
-    o.append("%?mh<%Vd(locked)|%Vd(volbar)>")
-    o.append("%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>")
+    # With a cover, the volume bar is drawn inside the backdrop viewport
+    # instead of in one of its own: a viewport clears its background, and a
+    # black box across the top of a blurred cover is exactly what that
+    # looks like. There is no transparent viewport in the skin language, so
+    # the bar has to be drawn by something that is already painting the
+    # picture underneath it.
+    o.append("%?mh<%Vd(locked)|%?C<|%Vd(volbar)>>")
+    o.append("%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|"
+             "%?mv(1.5)<%Vd(voldb)|%Vd(clock)>>")
 
     if gauge:
         o.append("%?if(%sd,=,1)<%Vd(gauge)>%?if(%sd,=,1)<%Vd(gaugepv)>"
@@ -416,6 +430,8 @@ def animated(gauge=False):
 # punch their own panels out of it is what actually works.
 %%Vl(bg,0,0,-,-,-)
 %%Cb(0,0,480,800,26,55)
+%%pv(30,110,420,36,vb,backdrop,vb_backdrop)
+%%?if(%%pv, >, 0)<%%pv(30,110,420,36,vb_too_loud,backdrop,vb_backdrop)>
 #
 # Main
 # ====

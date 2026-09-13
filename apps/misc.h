@@ -302,4 +302,18 @@ void clear_screen_buffer(bool update);
 enum { ALTSETTINGS_UNKNOWN = 0, ALTSETTINGS_TRUE, ALTSETTINGS_FALSE };
 void init_alt_settings(struct mp3entry *id3);
 //static bool is_from_path(const struct mp3entry *id3, unsigned char *path_to_check);
+/* A display-only lowercase, in the spirit of CSS text-transform. Copies
+ * src into buf folding A-Z, and leaves every other byte alone - which is
+ * the whole of it: UTF-8 case folding needs tables this firmware does not
+ * carry, and a menu that lowercased "Khùng" but not "KHÙNG" would be worse
+ * than one that lowercases neither. Returns buf, or src if there is no
+ * room. src and buf may be the same pointer. */
+const char *display_lower(const char *src, char *buf, size_t buf_len);
+#ifdef HAVE_TOUCHSCREEN
+/* "There is nothing here to point at, so treat the panel as a keypad."
+ * That is the job the stick took over, so under the stick this leaves the
+ * panel alone - otherwise entering any plugin, or the set-time screen,
+ * silently turned the panel off and left a screen with no way back. */
+void touchscreen_use_as_keys(void);
+#endif
 #endif /* MISC_H */

@@ -1018,7 +1018,7 @@ int plugin_load(const char* plugin, const void* parameter)
             viewportmanager_theme_enable(i, false, NULL);
 
 #ifdef HAVE_TOUCHSCREEN
-    touchscreen_set_mode(TOUCHSCREEN_BUTTON);
+    touchscreen_use_as_keys();
 #endif
 
     /* allow voice to back off if the plugin needs lots of memory */

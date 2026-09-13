@@ -2309,9 +2309,25 @@ int read_jpeg_fd(int fd, int flags,
 #endif
 
 const size_t JPEG_DECODE_OVERHEAD =
-    /* Reserve an arbitrary amount for the decode buffer
-     * FIXME: Somebody who knows what they're doing should look at this */
-    (38 * 1024)
+    /* Room for the decoder's MCU row buffer, which is a property of the
+     * *source* image and so is not knowable here - buffering.c has to
+     * reserve before the header has been read.
+     *
+     * The decoder needs one full row of MCUs:
+     *     x_mbl * 16 * JPEG_PIX_SZ * 16  ==  64 bytes per source pixel of
+     * width, for the usual 4:2:0 colour JPEG. 38 KiB therefore covered a
+     * source only 608 px wide, and album art wider than that failed - not
+     * in the decoder, which has its own check and passes, but two steps
+     * later in resize_on_load(), which is handed what is left and needs
+     * sizeof(uint32_argb) * 3 * dest_width for its line buffers. A 640x640
+     * cover into a 416 px box missed by 48 bytes and drew nothing at all,
+     * silently, while a 600x600 cover of the same album fitted. That is
+     * the whole of "most of my tracks show no artwork".
+     *
+     * 128 KiB covers a source up to 2048 px wide. It costs nothing while
+     * no art is loading: bufopen() reserves padded_size, load_image()
+     * reports what it actually used, and the handle keeps only that. */
+    (128 * 1024)
 #ifndef JPEG_FROM_MEM
     /* Unless the struct jpeg is defined statically, we need to allocate
      * it in the bitmap buffer as well */

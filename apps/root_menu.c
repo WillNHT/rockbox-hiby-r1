@@ -544,7 +544,7 @@ MENUITEM_RETURNVALUE(custom_folder_item, ID2P(LANG_CUSTOM_FOLDER),
                         GO_TO_CUSTOMFOLDER, NULL, Icon_Folder);
 
 MENUITEM_RETURNVALUE(audiobooks_item, ID2P(LANG_AUDIOBOOKS),
-                        GO_TO_AUDIOBOOKS, NULL, Icon_Bookmark);
+                        GO_TO_AUDIOBOOKS, NULL, Icon_Book);
 
 MENUITEM_RETURNVALUE(file_browser, ID2P(LANG_DIR_BROWSER), GO_TO_FILEBROWSER,
                         NULL, Icon_file_view_menu);

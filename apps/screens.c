@@ -149,7 +149,7 @@ bool set_time_screen(const char* title, struct tm *tm, bool set_date)
 
 #ifdef HAVE_TOUCHSCREEN
     enum touchscreen_mode old_mode = touchscreen_get_mode();
-    touchscreen_set_mode(TOUCHSCREEN_BUTTON);
+    touchscreen_use_as_keys();
 #endif
     while (!done) {
         int button;

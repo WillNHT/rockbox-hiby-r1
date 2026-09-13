@@ -386,8 +386,13 @@ static const char * value_setting_get_name_cb(int selected_item,
                                               char *buffer,
                                               size_t buffer_len)
 {
+    static char lowered[64];
+    const char *name;
+
     selected_item = selection_to_val(data, selected_item);
-    return option_get_valuestring(data, buffer, buffer_len, selected_item);
+    name = option_get_valuestring(data, buffer, buffer_len, selected_item);
+    name = P2STR((unsigned char *)name);
+    return display_lower(name, lowered, sizeof(lowered));
 }
 
 /* wrapper to convert from int param to bool param in option_screen */
@@ -515,6 +520,11 @@ bool option_screen(const struct settings_list *setting,
     if (!title)
         title = P2STR(option_title);
 
+    {
+        static char lowered_title[MAX_PATH];
+        title = (char *)display_lower(title, lowered_title,
+                                      sizeof(lowered_title));
+    }
     gui_synclist_set_title(&lists, title, Icon_Questionmark);
     if(global_settings.talk_menu)
         gui_synclist_set_voice_callback(&lists, option_talk);

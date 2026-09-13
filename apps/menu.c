@@ -124,10 +124,35 @@ static int find_menu_selection(int selected)
             return i;
     return 0;
 }
+/* Every row of every menu goes through here, so this is the one place the
+ * lowercase has to be applied - and the one place it is safe, because the
+ * name a menu *stores* is untouched: config.cfg keys, voice ids and the
+ * strings other screens read are all still the originals. */
+static const char* menu_item_name(int selected_item,
+                                  void * data,
+                                  char *buffer,
+                                  size_t buffer_len);
+
 static const char* get_menu_item_name(int selected_item,
                                       void * data,
                                       char *buffer,
                                       size_t buffer_len)
+{
+    static char lowered[MAX_PATH];
+    const char *name = menu_item_name(selected_item, data, buffer, buffer_len);
+
+    /* What comes back may still be a lang id rather than a string - the
+     * list resolves it with P2STR itself - so resolve it here before
+     * treating it as one. Reading an id as text is a segfault. */
+    name = P2STR((unsigned char *)name);
+
+    return display_lower(name, lowered, sizeof(lowered));
+}
+
+static const char* menu_item_name(int selected_item,
+                                  void * data,
+                                  char *buffer,
+                                  size_t buffer_len)
 {
     const char *name;
     const struct menu_item_ex *menu = (const struct menu_item_ex *)data;
@@ -337,6 +362,11 @@ static int init_menu_lists(const struct menu_item_ex *menu,
 
     gui_synclist_init(lists,get_menu_item_name,(void*)menu,false,1, parent);
     title = build_breadcrumb(init_title(menu, &icon));
+    {
+        static char lowered_title[MAX_PATH];
+        title = (char *)display_lower(title, lowered_title,
+                                      sizeof(lowered_title));
+    }
     gui_synclist_set_title(lists, title, icon);
     gui_synclist_set_icon_callback(lists, global_settings.show_icons?menu_get_icon:NULL);
     if(global_settings.talk_menu)

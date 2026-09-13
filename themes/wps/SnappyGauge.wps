@@ -39,8 +39,8 @@
 %?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>
 %?C<%Vd(mirror)>
 %?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>
-%?mh<%Vd(locked)|%Vd(volbar)>
-%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>
+%?mh<%Vd(locked)|%?C<|%Vd(volbar)>>
+%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%?mv(1.5)<%Vd(voldb)|%Vd(clock)>>
 %?if(%sd,=,1)<%Vd(gauge)>%?if(%sd,=,1)<%Vd(gaugepv)>%?if(%sd,=,1)<%Vd(gaugecap)>%?if(%sd,=,1)<%Vd(gaugebar)>
 %?if(%sd,=,0)<%Vd(pm_short)>
 %?if(%sd,=,0)<%Vd(pm_long)>
@@ -62,6 +62,12 @@
 # Volume (percent of the -70..-10 dB scale)
 %Vl(voldb,30,30,110,62,4)
 %Vs(invert)%ac%pv
+#
+# The clock has the box the rest of the time. The volume number is worth
+# the corner only while it is changing - the bar says the rest, all the
+# time, and a number that never moves is a number nobody reads.
+%Vl(clock,30,30,110,62,3)
+%Vs(invert)%ac%cH:%cM
 #
 # Shuffle
 %V(174,28,94,22,2)
@@ -202,6 +208,8 @@ SHF%xd(O,%ps)
 # punch their own panels out of it is what actually works.
 %Vl(bg,0,0,-,-,-)
 %Cb(0,0,480,800,26,55)
+%pv(30,110,420,36,vb,backdrop,vb_backdrop)
+%?if(%pv, >, 0)<%pv(30,110,420,36,vb_too_loud,backdrop,vb_backdrop)>
 #
 # Main
 # ====

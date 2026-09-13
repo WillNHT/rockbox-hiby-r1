@@ -104,6 +104,41 @@ void screen_put_iconxy(struct screen * display,
     const int is_rtl = lang_is_rtl();
     const struct bitmap *iconset;
 
+    if (icon == Icon_Book)
+    {
+        int m = height / 8;
+        int bx = xpos + m, by = ypos + m;
+        int bw = width - 2 * m, bh = height - 2 * m;
+        int mid = bx + bw / 2;
+        int i;
+
+        if (is_rtl)
+            bx = display->getwidth() - bx - bw;
+
+        if (bw < 4 || bh < 4)
+            return;
+
+        /* A closed book, front on: the cover, a solid spine down the
+         * left, and a couple of rules for the words on it. Drawn rather
+         * than themed - see the note in icon.h. */
+        int spine = bw / 5;
+        if (spine < 2)
+            spine = 2;
+        (void)mid;
+
+        display->drawrect(bx, by, bw, bh);
+        display->fillrect(bx, by, spine, bh);
+
+        for (i = 1; i <= 2; i++)
+        {
+            int ly = by + (bh * i) / 3;
+            if (ly <= by + 1 || ly >= by + bh - 2)
+                continue;
+            display->hline(bx + spine + 2, bx + bw - 3, ly);
+        }
+        return;
+    }
+
     if (icon <= Icon_NOICON)
     {
         if (is_rtl)

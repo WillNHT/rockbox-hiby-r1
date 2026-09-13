@@ -29,6 +29,14 @@ typedef const unsigned char * ICON;
 /* Don't #ifdef icon values, or we wont be able to use the same 
    bmp for every target. */
 enum themable_icons {
+    /* Drawn rather than themed, and that is not a shortcut.
+     * ICON_HEIGHT() is the icon strip's height divided by
+     * Icon_Last_Themeable, so one more themable icon re-slices every icon
+     * set on the device - including the ones the user installed from other
+     * authors, which cannot be regenerated from here. A negative id costs
+     * no cell, and a book made of rectangles inherits the list's own
+     * foreground colour and is the right size at any icon height. */
+    Icon_Book = -2,
     NOICON = -1,
     Icon_NOICON = NOICON, /* Dont put this in a .bmp */
     Icon_Audio,

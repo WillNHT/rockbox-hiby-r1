@@ -42,7 +42,7 @@
 %?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>
 %?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>
 %?mh<%Vd(locked)|%Vd(volbar)>
-%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>
+%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%?mv(1.5)<%Vd(voldb)|%Vd(clock)>>
 #
 # The volume dial, armed
 # =====================
@@ -102,6 +102,12 @@
 # Volume (percent of the -70..-10 dB scale)
 %Vl(voldb,30,30,110,62,4)
 %Vs(invert)%ac%pv
+#
+# The clock has the box the rest of the time. The volume number is worth
+# the corner only while it is changing - the bar says the rest, all the
+# time, and a number that never moves is a number nobody reads.
+%Vl(clock,30,30,110,62,3)
+%Vs(invert)%ac%cH:%cM
 #
 # Shuffle
 %V(174,28,94,22,2)

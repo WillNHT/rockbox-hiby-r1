@@ -534,6 +534,8 @@ static bool bd_active(void)
 }
 
 /* Put every slot back and push the result. This is the erase. */
+static void dirty_flush(void);
+
 static void bd_restore_all(void)
 {
     int i;
@@ -543,6 +545,17 @@ static void bd_restore_all(void)
         if (bd_ov[i] && bd_held[i])
         {
             canvas_overlay_restore(bd_ov[i]);
+            /* What was put back has to be pushed, and only the caller
+             * knows the rectangle: canvas_overlay_restore() writes into
+             * the framebuffer and adds to the compositor's pending box,
+             * and nothing here was calling canvas_present(). On a list
+             * that went unnoticed because the list's own repaint pushed
+             * the same pixels a moment later. On a skin nothing repaints
+             * on its own, so the last frame of the overlay stayed lit on
+             * the panel while the framebuffer underneath was already
+             * correct - which is the edge lights that would not clear. */
+            dirty_add(bd_rx[i], bd_ry[i],
+                      bd_rx[i] + bd_rw[i] - 1, bd_ry[i] + bd_rh[i] - 1);
             bd_held[i] = false;
         }
     canvas_present();
@@ -1112,15 +1125,7 @@ static void overlay_paint(const struct overlay_shape *s)
     }
 
 flush:
-    if (dirty_x0 < 0)          dirty_x0 = 0;
-    if (dirty_y0 < 0)          dirty_y0 = 0;
-    if (dirty_x1 > LCD_WIDTH - 1)  dirty_x1 = LCD_WIDTH - 1;
-    if (dirty_y1 > LCD_HEIGHT - 1) dirty_y1 = LCD_HEIGHT - 1;
-
-    w = dirty_x1 - dirty_x0 + 1;
-    h = dirty_y1 - dirty_y0 + 1;
-    if (w > 0 && h > 0)
-        lcd_update_rect(dirty_x0, dirty_y0, w, h);
+    dirty_flush();
 
     /* Restores the caller's viewport and, in doing so, leaves the default
      * one flagged dirty - see the note at the top. */
@@ -1159,6 +1164,22 @@ static void request_repaint(void)
  * could, so clearing the overlay means asking the screen to repaint and
  * letting the list's callback decline to draw anything the next time
  * round. */
+/* Push whatever has been added to the dirty box since the last reset. */
+static void dirty_flush(void)
+{
+    int w, h;
+
+    if (dirty_x0 < 0)          dirty_x0 = 0;
+    if (dirty_y0 < 0)          dirty_y0 = 0;
+    if (dirty_x1 > LCD_WIDTH - 1)  dirty_x1 = LCD_WIDTH - 1;
+    if (dirty_y1 > LCD_HEIGHT - 1) dirty_y1 = LCD_HEIGHT - 1;
+
+    w = dirty_x1 - dirty_x0 + 1;
+    h = dirty_y1 - dirty_y0 + 1;
+    if (w > 0 && h > 0)
+        lcd_update_rect(dirty_x0, dirty_y0, w, h);
+}
+
 static void overlay_clear(void)
 {
     if (!overlay.drawn && !overlay.repair_owed)
@@ -1172,14 +1193,18 @@ static void overlay_clear(void)
      * only the Canvas HUD - the flicker was never style-specific. */
     if (bd_active())
     {
+        dirty_reset();
         bd_restore_all();
+        dirty_flush();
         bd_gesture_reset();
         return;
     }
 
     /* Either there is no compositor, or a frame this gesture could not
      * save left ink behind. Only a repaint clears that. */
+    dirty_reset();
     bd_restore_all();
+    dirty_flush();
     bd_gesture_reset();
     request_repaint();
 }

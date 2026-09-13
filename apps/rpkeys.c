@@ -434,6 +434,10 @@ static void countdown_clear(void)
      * changes. */
     send_event(GUI_EVENT_NEED_UI_UPDATE, NULL);
     skin_request_full_update(WPS);
+    /* And the status bar, which is a skin of its own and was the half that
+     * stayed: a list repaints its own viewport, so the band above it kept
+     * the countdown's ink until something else happened to touch it. */
+    skin_request_full_update(CUSTOM_STATUSBAR);
 }
 
 /* True while the full-screen countdown owns the display.

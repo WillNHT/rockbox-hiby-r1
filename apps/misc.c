@@ -2181,3 +2181,32 @@ void init_alt_settings(struct mp3entry *id3)
 //            id3->path, is_resumable ? "" : " not");
 
 }
+const char *display_lower(const char *src, char *buf, size_t buf_len)
+{
+    size_t i;
+
+    if (!src || !buf || buf_len == 0)
+        return src;
+
+    for (i = 0; i + 1 < buf_len && src[i]; i++)
+    {
+        char c = src[i];
+        buf[i] = (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;
+    }
+
+    if (src[i])          /* would have truncated - say it plainly instead */
+        return src;
+
+    buf[i] = '\0';
+    return buf;
+}
+
+#ifdef HAVE_TOUCHSCREEN
+void touchscreen_use_as_keys(void)
+{
+    if (global_settings.touch_mode == TOUCHSCREEN_STICK)
+        touchscreen_set_mode(TOUCHSCREEN_STICK);
+    else
+        touchscreen_set_mode(TOUCHSCREEN_BUTTON);
+}
+#endif
