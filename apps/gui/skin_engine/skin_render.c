@@ -191,7 +191,8 @@ static bool do_non_text_tags(struct gui_wps *gwps, struct skin_draw_info *info,
         case SKIN_TOKEN_PEAKMETER:
             data->peak_meter_enabled = true;
             if (do_refresh)
-                draw_peakmeters(gwps, info->line_number, &skin_vp->vp);
+                draw_peakmeters(gwps, info->line_number, &skin_vp->vp,
+                                token->value.i);
             break;
         case SKIN_TOKEN_DRAWRECTANGLE:
             if (do_refresh)

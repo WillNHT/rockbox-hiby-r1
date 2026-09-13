@@ -663,7 +663,7 @@ void write_line(struct screen *display, struct align_pos *format_align,
 }
 
 void draw_peakmeters(struct gui_wps *gwps, int line_number,
-                     struct viewport *viewport)
+                     struct viewport *viewport, int height)
 {
     struct wps_data *data = gwps->data;
     if (!data->peak_meter_enabled)
@@ -674,14 +674,30 @@ void draw_peakmeters(struct gui_wps *gwps, int line_number,
     {
         int h = font_get(viewport->font)->height;
         int peak_meter_y = line_number * h;
+        int draw_h = h;
+
+        /* %pm(height) asks for a meter that many pixels tall. Without it
+         * the meter is one line of the viewport's font, which is what it
+         * has always been - and which made "give the visualiser more
+         * room" mean "set a bigger font on a viewport that draws no
+         * text". The line is still placed on the font's height, so a
+         * meter among other lines stays where its line is; only what it
+         * fills changes. */
+        if (height > 0)
+        {
+            draw_h = height;
+            if (peak_meter_y + draw_h > viewport->height)
+                draw_h = viewport->height - peak_meter_y;
+        }
 
         /* The user might decide to have the peak meter in the last
             line so that it is only displayed if no status bar is
             visible. If so we neither want do draw nor enable the
             peak meter. */
-        if (peak_meter_y + h <= viewport->y+viewport->height) {
+        if (draw_h > 3 && peak_meter_y + h <= viewport->y+viewport->height) {
             peak_meter_enable(true);
             peak_meter_screen(gwps->display, 0, peak_meter_y,
+                              height > 0 ? draw_h :
                               MIN(h, viewport->y+viewport->height - peak_meter_y));
         }
     }

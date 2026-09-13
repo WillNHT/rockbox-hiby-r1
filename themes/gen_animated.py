@@ -42,7 +42,7 @@ CHASE = chase_stops()
 
 # The pulse: an accent rule under the title that breathes in and out.
 PULSE_MS = 110
-PULSE_X, PULSE_Y, PULSE_H = 30, 744, 3
+PULSE_X, PULSE_Y, PULSE_H = 30, 764, 3
 PULSE_W = [40, 90, 150, 220, 300, 220, 150, 90]
 
 out = []
@@ -177,49 +177,56 @@ SHF%xd(O,%ps)
 #
 # The band under the art
 # ----------------------
-%Vl(pm_short,30,568,240,60,2)
-%pm
+# The meter fills 78 px of an 82 px band. It used to be 24, because the
+# engine drew a peak meter one line of the viewport's font tall and
+# nothing else; %pm takes a height now. The room comes from the 22 px that
+# were doing nothing under the footer and from closing the gaps in the
+# text stack.
+%Vl(pm_short,30,566,240,82,2)
+%pm(78)
 #
-%Vl(pm_long,30,568,-30,60,2)
-%pm
+%Vl(pm_long,30,566,-30,82,2)
+%pm(78)
 #
 # Paused. The two bars blink together rather than sitting there: a paused
 # screen is the one case where nothing else on it is moving.
-%Vl(paused,30,568,240,60,2)
-%?if(%an(2,600),=,1)<%dr(86,6,28,48,F4F2EE,F4F2EE)%dr(128,6,28,48,F4F2EE,F4F2EE)|%dr(86,6,28,48,3A3B3D,3A3B3D)%dr(128,6,28,48,3A3B3D,3A3B3D)>
+%Vl(paused,30,566,240,82,2)
+%?if(%an(2,600),=,1)<%dr(80,12,32,58,F4F2EE,F4F2EE)%dr(130,12,32,58,F4F2EE,F4F2EE)|%dr(80,12,32,58,3A3B3D,3A3B3D)%dr(130,12,32,58,3A3B3D,3A3B3D)>
 #
-%Vl(rew,30,568,240,60,4)
+%Vl(rew,30,584,240,46,4)
 %al%<%< REW
 #
-%Vl(ff,30,568,240,60,4)
+%Vl(ff,30,584,240,46,4)
 %al%>%> FF
 #
 # Codec, bit rate, sample rate - cycling, because there is more here than
 # fits and %t is the engine's own way of saying "in turn".
-%V(280,568,-30,30,2)
+%V(280,578,-30,30,2)
 %ar%fc %fb
 #
-%V(280,598,-30,30,2)
+%V(280,608,-30,30,2)
 %ar%?if(%St(party mode),!=,off)<party|%?if(%St(single mode),!=,off)<%St(single mode)|%t(4)%fk kHz;%t(4)%pp of %pe>>
 #
 # Track
 # -----
 # Album
-%V(30,632,-30,30,2)
+%V(30,652,-30,30,2)
 %s%al%id
 #
 # Artist
-%V(30,664,-30,30,2)
+%V(30,684,-30,30,2)
 %s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
 #
 # Title
-%V(30,698,-30,46,4)
+%V(30,716,-30,46,4)
 %al%s%?it<%it|%fn>
 #
 # Footer
 # ======
-# The pulse rule sits at y=744, between the title and this.
-%V(30,752,-30,30,2)
+# The pulse rule sits at y=764, between the title and this. The footer
+# ends on the last row of the panel; the 22 px that used to be empty
+# underneath it went into the visualiser.
+%V(30,770,-30,30,2)
 %al%pc/%pt%ar%pp/%pe""")
 
 io.open("themes/wps/SnappyAnimated.wps", "w", newline="\n").write("\n".join(out) + "\n")

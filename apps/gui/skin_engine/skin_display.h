@@ -53,8 +53,10 @@ int evaluate_conditional(struct gui_wps *gwps, int offset,
 */
 void write_line(struct screen *display, struct align_pos *format_align,
                 int line, bool scroll, struct line_desc *line_desc);
+/* height is %pm's optional parameter: 0 means one line of the viewport's
+ * font, which is what it has always been. */
 void draw_peakmeters(struct gui_wps *gwps, int line_number,
-                     struct viewport *viewport);
+                     struct viewport *viewport, int height);
 #ifdef HAVE_ALBUMART
 /* Draw the album art bitmap from the given handle ID onto the given Skin.
    Call with clear = true to clear the bitmap instead of drawing it. */

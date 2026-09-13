@@ -2487,6 +2487,13 @@ static int skin_element_callback(struct skin_element* element, void* data)
                     function = parse_drawrectangle;
                     break;
 #endif
+                case SKIN_TOKEN_PEAKMETER:
+                    /* %pm(height). Without it the meter is one line of the
+                     * viewport's font tall, which is what it has always
+                     * been and what every existing skin expects. */
+                    token->value.i = element->params_count > 0 ?
+                                        get_param(element, 0)->data.number : 0;
+                    break;
                 case SKIN_TOKEN_FILE_DIRECTORY:
                     token->value.i = get_param(element, 0)->data.number;
                     break;
