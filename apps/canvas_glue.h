@@ -43,8 +43,12 @@
 
 /* Hard cap on everything this module will ever allocate. Memory on this
  * device is not as free as 64 MB suggests: the build asks for 16 and the
- * audio buffer has most of it. */
-#define CANVAS_POOL_MAX_KIB  384
+ * audio buffer has most of it.
+ *
+ * Raised from 384 KiB when the stick overlay adopted the backing store for
+ * every style rather than only the Canvas HUD: the widest region any style
+ * saves is the full panel width by 320 px, which is 300 KiB on its own. */
+#define CANVAS_POOL_MAX_KIB  768
 
 struct canvas_overlay;
 

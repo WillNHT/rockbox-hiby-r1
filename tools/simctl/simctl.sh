@@ -48,9 +48,19 @@ if ! grep -q "sim_ctrl: listening" /tmp/sim.log; then
 fi
 sleep 2   # let the boot screen settle before the first command
 
-cat "$SCRIPT" > $FIFO
-sleep 1
-kill $SP 2>/dev/null || true
+# The script's own sleeps run in the simulator's control thread, so the
+# writer finishing says nothing about the script finishing. Every run ends
+# with "quit" and we wait for the process: killing on a guessed interval
+# silently truncated scripts and produced screenshots of a half-run test.
+{ cat "$SCRIPT"; echo; echo quit; } > $FIFO
+for i in $(seq 1 600); do
+  kill -0 $SP 2>/dev/null || break
+  sleep 0.1
+done
+if kill -0 $SP 2>/dev/null; then
+  echo "simctl: script did not finish in 60 s; killing" >&2
+  kill $SP 2>/dev/null || true
+fi
 wait $SP 2>/dev/null || true
 
 n=0

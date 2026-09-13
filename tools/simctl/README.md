@@ -67,13 +67,18 @@ compare-im6.q16 -metric AE a.png b.png null:
 
 ## Two things that will bite you
 
-- **The backlight times out.** Roughly two seconds into an idle script the
-  panel goes dark and every later shot is a flat gradient. That is the device
-  behaving correctly, not the harness failing. Keep scripts moving, or raise
-  the backlight timeout in the simulator's `config.cfg`.
+- **`sleep` runs inside the simulator, not in the shell.** The script is
+  written into the FIFO in one go, so the writer finishing says nothing about
+  the script finishing. Every run therefore ends with an appended `quit` and
+  `simctl.sh` waits for the process to exit. Killing on a guessed interval is
+  what the first version did, and it truncated scripts silently: the run
+  looked fine and produced screenshots of a test that was still half way
+  through. If shots go missing from the end of a run, suspect this first.
 - **Always run a negative control.** Two `dump`s with nothing between them
   must differ by zero pixels. If they do not, something in the harness is
-  lying and no result from that run means anything.
+  lying and no result from that run means anything. An idle simulator
+  otherwise holds still to within the battery and clock text — about 200
+  pixels on this panel.
 
 `screen_dump()` uses numbered filenames rather than timestamped ones in
 simulator builds. Timestamps have one-second resolution, and a script taking
