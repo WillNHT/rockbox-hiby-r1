@@ -458,6 +458,20 @@ bool set_color(struct screen *display, char *title,
                 break;
 
             case ACTION_STD_OK:
+#if (CONFIG_KEYPAD == HIBY_R1_PAD)
+                /* Select steps through the components and only accepts
+                 * after the last one. This keypad has four inputs to
+                 * spend here and needs six things - see the note above
+                 * button_context_colourchooser in keymap-hibyr1.c - so up
+                 * and down are the value and the components ride on
+                 * select. Holding select still jumps straight to the next
+                 * one for anyone who would rather. */
+                if (slider < 2)
+                {
+                    slider++;
+                    break;
+                }
+#endif
                 if (banned_color != (unsigned)-1 &&
                     banned_color == rgb.color)
                 {

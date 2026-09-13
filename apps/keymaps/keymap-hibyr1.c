@@ -239,6 +239,39 @@ static const struct button_mapping button_context_settings_right_is_inc[]  = {
         LAST_ITEM_IN_LIST__NEXTLIST(CONTEXT_SETTINGS),
 }; /* button_context_settings_right_is_inc */
 
+/* The colour chooser, which on this device was a room with no door.
+ *
+ * The shared button_context_settings_right_is_inc table puts ACTION_STD_OK
+ * and ACTION_STD_CANCEL on the POWER key, and rpkeys.c resolves all five
+ * physical keys before any keymap is consulted - POWER never arrives. The
+ * stick's default four-way preset emits UP, DOWN, RIGHT and LEFT, which
+ * that table spends on the three colour components and their values, so
+ * every input the user had changed the colour and none of them left the
+ * screen. That is the soft lock.
+ *
+ * Four inputs, and three things that have to be reachable, so the
+ * components move on select rather than having a pair of keys to
+ * themselves: up and down are the value, select steps red -> green ->
+ * blue and accepts after blue (see color_picker.c), and back cancels. A
+ * held select or back still jumps straight between components for anyone
+ * with the keys or a stick binding for it, and the POWER combinations are
+ * left in place for a keypad where POWER survives. */
+static const struct button_mapping button_context_colourchooser[]  = {
+        { ACTION_SETTINGS_INC,      BUTTON_UP,                  BUTTON_NONE },
+        { ACTION_SETTINGS_INCREPEAT,BUTTON_UP|BUTTON_REPEAT,    BUTTON_NONE },
+        { ACTION_SETTINGS_DEC,      BUTTON_DOWN,                BUTTON_NONE },
+        { ACTION_SETTINGS_DECREPEAT,BUTTON_DOWN|BUTTON_REPEAT,  BUTTON_NONE },
+
+        { ACTION_STD_NEXT,          BUTTON_RIGHT|BUTTON_REPEAT, BUTTON_RIGHT },
+        { ACTION_STD_PREV,          BUTTON_LEFT|BUTTON_REPEAT,  BUTTON_LEFT },
+        { ACTION_STD_OK,            BUTTON_RIGHT|BUTTON_REL,    BUTTON_RIGHT },
+        { ACTION_STD_CANCEL,        BUTTON_LEFT|BUTTON_REL,     BUTTON_LEFT },
+
+        { ACTION_STD_OK,            BUTTON_POWER|BUTTON_RIGHT,  BUTTON_NONE },
+        { ACTION_STD_CANCEL,        BUTTON_POWER|BUTTON_LEFT,   BUTTON_NONE },
+        LAST_ITEM_IN_LIST
+}; /* button_context_colourchooser */
+
 static const struct button_mapping button_context_pitchscreen[]  = {
         { ACTION_PS_INC_SMALL,      BUTTON_UP,                      BUTTON_NONE },
         { ACTION_PS_INC_BIG,        BUTTON_UP|BUTTON_REPEAT,        BUTTON_NONE },
@@ -326,6 +359,7 @@ const struct button_mapping* target_get_context_mapping(int context)
             return button_goto_settings_context;
 
         case CONTEXT_SETTINGS_COLOURCHOOSER:
+            return button_context_colourchooser;
         case CONTEXT_SETTINGS_EQ:
             return button_goto_settings_right_is_inc_context;
         //case CONTEXT_SETTINGS_RECTRIGGER:

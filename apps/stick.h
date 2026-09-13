@@ -177,12 +177,12 @@ enum stick_dial_kind
  * a walk to a run. The rim only ever qualifies a gesture that is already
  * running; it never decides a direction, so "up" always means what it
  * meant during the drag. sustain_ms of 0 turns the whole thing off. */
-#define STICK_DEF_SUSTAIN_MS       450  /* still this long before it runs */
+#define STICK_DEF_SUSTAIN_MS       250  /* still this long before it runs */
 #define STICK_DEF_SUSTAIN_SLOP_PX   12  /* "still" is within this          */
 #define STICK_DEF_SUSTAIN_EDGE_PX   40  /* pinned this close to the rim    */
 #define STICK_DEF_SUSTAIN_V0         6  /* rows per second at the start    */
-#define STICK_DEF_SUSTAIN_VMAX      45  /* rows per second at the cap      */
-#define STICK_DEF_SUSTAIN_RAMP_MS 2500  /* v0 -> vmax over this            */
+#define STICK_DEF_SUSTAIN_VMAX      90  /* rows per second at the cap      */
+#define STICK_DEF_SUSTAIN_RAMP_MS 3500  /* v0 -> vmax over this            */
 #define STICK_TIMEOUT_MS       2000   /* lost release is reaped as cancel */
 
 struct stick_config
