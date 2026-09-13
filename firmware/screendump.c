@@ -123,9 +123,13 @@ void screen_dump(void)
     unsigned char linebuf[DUMP_BMP_LINESIZE * 3];
 #endif
 
-#if CONFIG_RTC
+#if CONFIG_RTC && !defined(SIMULATOR)
     create_datetime_filename(filename, HOME_DIR, "dump ", ".bmp", false);
 #else
+    /* Numbered, not timestamped, in the simulator: the headless harness
+     * takes several shots a second and a one-second filename resolution
+     * silently loses all but the last of them - which looks exactly like
+     * a screen that did not change. */
     create_numbered_filename(filename, HOME_DIR, "dump_", ".bmp", 4
                              IF_CNFN_NUM_(, NULL));
 #endif

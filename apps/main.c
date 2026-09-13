@@ -144,6 +144,7 @@
 #if (CONFIG_PLATFORM & PLATFORM_SDL)
 #ifdef SIMULATOR
 #include "sim_tasks.h"
+#include "sim_ctrl.h"
 #endif
 #include "system-sdl.h"
 #define HAVE_ARGV_MAIN
@@ -423,6 +424,7 @@ static void init(void)
 #endif
 #ifdef SIMULATOR
     sim_tasks_init();
+    sim_ctrl_init();
 #endif
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
     notification_init();
