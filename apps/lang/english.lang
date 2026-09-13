@@ -18337,3 +18337,59 @@
   </voice>
 </phrase>
 <phrase>
+  id: LANG_DIM_BRIGHTNESS
+  desc: in display settings, what the panel dims to instead of blanking
+  user: core
+  <source>
+    *: "Dim Brightness"
+  </source>
+  <dest>
+    *: "Dim Brightness"
+  </dest>
+  <voice>
+    *: "Dim Brightness"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CUSTOM_FOLDER
+  desc: default name of the main menu's user-defined folder entry
+  user: core
+  <source>
+    *: "Folder"
+  </source>
+  <dest>
+    *: "Folder"
+  </dest>
+  <voice>
+    *: "Folder"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_MAIN_MENU_SET_FOLDER
+  desc: verb in the main menu editor, for the custom folder entry
+  user: core
+  <source>
+    *: "Set Folder"
+  </source>
+  <dest>
+    *: "Set Folder"
+  </dest>
+  <voice>
+    *: "Set Folder"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_SET_AS_MENU_FOLDER
+  desc: in the file browser Set As menu, points the main menu's folder entry here
+  user: core
+  <source>
+    *: "Main Menu Folder"
+  </source>
+  <dest>
+    *: "Main Menu Folder"
+  </dest>
+  <voice>
+    *: "Main Menu Folder"
+  </voice>
+</phrase>
+<phrase>

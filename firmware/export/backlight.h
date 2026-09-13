@@ -31,13 +31,17 @@
 #endif
 
 bool is_backlight_on(bool ignore_always_off);
+
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+/* What the panel drops to when the backlight timeout expires, instead of
+ * going dark. Below MIN_BRIGHTNESS_SETTING means "go dark", which is what
+ * every other target does. */
+void backlight_set_dim_brightness(int level);
+int  backlight_get_dim_brightness(void);
+#endif
 void backlight_on_ignore(bool value, int timeout);
 void backlight_on(void);
 void backlight_off(void);
-/* True once if the most recent backlight_on() found the light already out,
- * i.e. the key press that caused it was the one that woke the screen.
- * Reading it clears it. See the comment on backlight_woke_screen. */
-bool backlight_consume_wake(void);
 void backlight_set_timeout(int value);
 
 #ifdef HAVE_BACKLIGHT

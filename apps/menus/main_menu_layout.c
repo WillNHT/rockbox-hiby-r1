@@ -59,6 +59,11 @@
 #include "settings.h"
 #include "splash.h"
 #include "string-extra.h"
+#include "tree.h"
+#include "filetypes.h"
+#include "pathfuncs.h"
+#include "file.h"
+#include "dir.h"
 
 #include "exported_menus.h"
 
@@ -95,6 +100,23 @@ MENUITEM_STRINGLIST(ctx_hidden, ID2P(LANG_MAIN_MENU_LAYOUT), NULL,
                     ID2P(LANG_MAIN_MENU_SHOW),
                     ID2P(LANG_MAIN_MENU_RENAME),
                     ID2P(LANG_MAIN_MENU_RESET_NAME));
+
+/* The custom folder row has one verb more than the rest: somewhere to
+ * point. Two more tables rather than a conditional entry, because a menu
+ * whose items move depending on the row is a menu nobody can learn. */
+MENUITEM_STRINGLIST(ctx_folder_visible, ID2P(LANG_MAIN_MENU_LAYOUT), NULL,
+                    ID2P(LANG_MAIN_MENU_MOVE),
+                    ID2P(LANG_MAIN_MENU_HIDE),
+                    ID2P(LANG_MAIN_MENU_RENAME),
+                    ID2P(LANG_MAIN_MENU_RESET_NAME),
+                    ID2P(LANG_MAIN_MENU_SET_FOLDER));
+
+MENUITEM_STRINGLIST(ctx_folder_hidden, ID2P(LANG_MAIN_MENU_LAYOUT), NULL,
+                    ID2P(LANG_MAIN_MENU_MOVE),
+                    ID2P(LANG_MAIN_MENU_SHOW),
+                    ID2P(LANG_MAIN_MENU_RENAME),
+                    ID2P(LANG_MAIN_MENU_RESET_NAME),
+                    ID2P(LANG_MAIN_MENU_SET_FOLDER));
 
 static const char *layout_get_name(int selected_item, void *data,
                                    char *buffer, size_t buffer_len)
@@ -180,10 +202,54 @@ static void rename_row(int row)
     root_menu_set_name(t, buf);
 }
 
+/* Pick the folder the custom entry opens. The file browser itself is the
+ * picker - the same one the "Set As" context menu uses - so there is one
+ * way to choose a folder on this device and not two. */
+static void set_folder_row(void)
+{
+    char buf[MAX_PATHNAME+1];
+    struct browse_context browse = {
+        .dirfilter = SHOW_ALL,
+        .flags = BROWSE_DIRFILTER | BROWSE_SELECTONLY | BROWSE_NO_CONTEXT_MENU,
+        .title = (char *)str(LANG_MAIN_MENU_SET_FOLDER),
+        .icon = Icon_Folder,
+        .root = global_settings.custom_folder[0] ?
+                    global_settings.custom_folder : "/",
+        .buf = buf,
+        .bufsize = sizeof(buf),
+    };
+
+    buf[0] = 0;
+    rockbox_browse(&browse);
+
+    if (!(browse.flags & BROWSE_SELECTED) || !buf[0])
+        return;
+
+    /* A file is a perfectly reasonable thing to land on while looking for
+     * the folder it is in, so take the folder rather than refusing. */
+    if (!dir_exists(buf))
+    {
+        char *slash = strrchr(buf, '/');
+        if (!slash || slash == buf)
+            return;
+        *slash = 0;
+    }
+
+    strmemccpy(global_settings.custom_folder, buf,
+               sizeof(global_settings.custom_folder));
+}
+
 static void item_menu(int row)
 {
     bool hidden = row >= layout.visible;
-    int sel = do_menu(hidden ? &ctx_hidden : &ctx_visible, NULL, NULL, false);
+    bool folder = root_menu_is_custom_folder(layout.order[row]);
+    int sel;
+
+    if (folder)
+        sel = do_menu(hidden ? &ctx_folder_hidden : &ctx_folder_visible,
+                      NULL, NULL, false);
+    else
+        sel = do_menu(hidden ? &ctx_hidden : &ctx_visible, NULL, NULL, false);
 
     switch (sel)
     {
@@ -198,6 +264,10 @@ static void item_menu(int row)
             break;
         case 3:
             root_menu_set_name(layout.order[row], NULL);
+            break;
+        case 4:
+            if (folder)
+                set_folder_row();
             break;
         default:
             break;

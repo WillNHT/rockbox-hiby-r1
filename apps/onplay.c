@@ -980,6 +980,19 @@ static bool set_recdir(void)
 MENUITEM_FUNCTION(set_recdir_item, 0, ID2P(LANG_RECORDING_DIR),
                   set_recdir, clipboard_callback, Icon_Recording);
 #endif
+/* Where the main menu's custom folder entry points. It lives in the same
+ * "Set As" menu as the start directory and the playlist directory because
+ * it is the same act, and a folder you are standing in is the only place
+ * you ever know you want it. */
+static bool set_menufolder(void)
+{
+    set_dir_helper(global_settings.custom_folder,
+                   sizeof(global_settings.custom_folder));
+    return false;
+}
+MENUITEM_FUNCTION(set_menufolder_item, 0, ID2P(LANG_SET_AS_MENU_FOLDER),
+                  set_menufolder, clipboard_callback, Icon_Folder);
+
 static bool set_startdir(void)
 {
     set_dir_helper(global_settings.start_directory,
@@ -1024,7 +1037,8 @@ MAKE_ONPLAYMENU(set_as_dir_menu, ID2P(LANG_SET_AS),
 #ifdef HAVE_RECORDING
                 &set_recdir_item,
 #endif
-                &set_startdir_item);
+                &set_startdir_item,
+                &set_menufolder_item);
 
 static int clipboard_callback(int action,
                               const struct menu_item_ex *this_item,
@@ -1089,6 +1103,7 @@ static int clipboard_callback(int action,
                     /* only for directories */
                     if (this_item == &delete_dir_item ||
                         this_item == &set_startdir_item ||
+                        this_item == &set_menufolder_item ||
                         this_item == &set_catalogdir_item ||
 #ifdef HAVE_TAGCACHE
                         this_item == &set_databasedir_item ||

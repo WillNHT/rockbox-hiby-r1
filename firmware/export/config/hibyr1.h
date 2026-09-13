@@ -100,6 +100,10 @@
 /* Special backlight paths */
 #define BACKLIGHT_HIBY
 
+/* The idle timeout dims the panel instead of blanking it, to a level the
+ * user chooses. See do_backlight_off() in firmware/backlight.c. */
+#define HAVE_BACKLIGHT_DIM_IDLE
+
 #define MIN_BRIGHTNESS_SETTING      1
 #define MAX_BRIGHTNESS_SETTING      100
 #define BRIGHTNESS_STEP             5

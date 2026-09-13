@@ -64,7 +64,13 @@ enum {
     GO_TO_PLAYLISTS_SCREEN,
     GO_TO_PLAYLIST_VIEWER,
     GO_TO_SYSTEM_SCREEN,
-    GO_TO_SHORTCUTMENU
+    GO_TO_SHORTCUTMENU,
+    /* A main menu entry the user points at a folder of their own. It is
+     * the file browser opened somewhere in particular, not a new screen:
+     * everything the browser does - playing, the context menu, going up -
+     * has to keep working, and anything that reimplemented it would be a
+     * second file browser to maintain. */
+    GO_TO_CUSTOMFOLDER
 };
 #ifndef PLUGIN
 extern struct menu_item_ex root_menu_;
@@ -101,6 +107,9 @@ const char *root_menu_default_name(int table_index);
 bool root_menu_has_custom_name(int table_index);
 bool root_menu_is_settings(int table_index);
 const char *root_menu_name_of(int table_index);
+/* Whether this table entry is the user's custom folder, which is the one
+ * row in the Main Menu editor that has a folder to set. */
+bool root_menu_is_custom_folder(int table_index);
 void root_menu_set_name(int table_index, const char *name);
 #endif
 

@@ -821,6 +821,11 @@ struct user_settings
 #endif
 #ifdef HAVE_BACKLIGHT_BRIGHTNESS
     int brightness;
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+    /* Where the panel sits once the backlight timeout expires. Zero is
+     * "go dark", the way every other target behaves. */
+    int dim_brightness;
+#endif
 #endif
 
 #ifdef HAVE_REMOTE_LCD
@@ -980,6 +985,10 @@ struct user_settings
      * names themselves live in root_menu.c; this is the flag the custom
      * setting machinery needs to know whether to write the line. */
     bool root_menu_renamed;
+    /* Where the main menu's custom folder entry points. Empty means the
+     * root, which is what an unconfigured entry does rather than refusing
+     * to open. */
+    char custom_folder[MAX_PATHNAME+1];
 #ifdef HAVE_QUICKSCREEN
     bool shortcuts_replaces_qs;
 #endif

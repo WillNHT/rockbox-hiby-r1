@@ -16,12 +16,11 @@
  *
  * So these five are resolved here, before any context lookup:
  *
- *   POWER    tap            screen off / on
- *            hold 0.6 s     lock / unlock input
+ *   POWER    tap            play / pause
+ *            hold 1 s       lock / unlock input
  *            hold 4 s       shut down
  *   VOL+/-   tap            one step
  *            hold           continuous, linear in the volume value
- *   POWER    double tap     play / pause
  *   Next key press          back five seconds, at once
  *            hold           previous track
  *   Play key press          forward five seconds, at once
@@ -76,7 +75,7 @@
  * PMU stays what it should be - the way out of a wedged device, not the
  * thing that answers an ordinary hold. It also makes the countdown
  * honest, which counting to ten was not. */
-#define LOCK_HOLD_TICKS      (HZ * 600 / 1000)
+#define LOCK_HOLD_TICKS      (HZ)
 #define SHUTDOWN_HOLD_TICKS  (4 * HZ)
 
 /* A press shorter than this is a tap, whatever else is going on. */
@@ -104,9 +103,6 @@
 /* Seeking. */
 #define SEEK_STEP_MS         5000
 
-/* Two taps inside this is play/pause rather than two screen toggles. */
-#define DOUBLE_TAP_TICKS     (HZ * 400 / 1000)
-
 static bool locked;
 static bool lock_cue_done;      /* the lock has fired for this press      */
 static int  lock_chirp_step;    /* how far the arming run has got         */
@@ -114,8 +110,6 @@ static long power_down_tick;    /* 0 when POWER is not held               */
 static bool power_consumed;     /* this press already did something       */
 static long vol_next_tick;
 static bool countdown_drawn;
-static bool screen_dark;        /* we turned the backlight off            */
-static long last_tap_tick;      /* for spotting a double tap              */
 
 bool rpkeys_locked(void)
 {
@@ -457,39 +451,6 @@ bool rpkeys_countdown_active(void)
 
 /* ------------------------------------------------------------- the screen */
 
-/* The backlight state cannot be read at the moment POWER goes down and be
- * believed. The button driver calls backlight_on() from its own thread the
- * instant any key is pressed, long before the action layer dequeues the
- * event, so by the time this code runs the screen is always lit - and a
- * plain toggle then turns it straight back off. That was the tap that
- * flickered and went black.
- *
- * So the state is held here instead of inferred, and backlight_on_ignore()
- * keeps it true: while the screen is off by our hand, no keypress relights
- * it behind our back. A tap of POWER is the way back, which is the whole
- * point of the gesture. */
-static void screen_off(void)
-{
-    screen_dark = true;
-    backlight_off();
-    backlight_on_ignore(true, 0);
-}
-
-static void screen_on(void)
-{
-    screen_dark = false;
-    backlight_on_ignore(false, 0);
-    backlight_on();
-}
-
-static void screen_toggle(void)
-{
-    if (screen_dark)
-        screen_on();
-    else
-        screen_off();
-}
-
 /* --------------------------------------------------------------- playback */
 
 /* Two taps in quick succession have to add up, and reading id3->elapsed
@@ -559,33 +520,22 @@ static bool handle_power(int held, bool repeat, bool release)
 
         if (was_tap)
         {
-            /* A second tap close behind the first means play/pause, not
-             * two screen toggles. Resolving that with a timer would put a
-             * wait in front of every single tap, so the first tap acts
-             * immediately and the second one takes its effect back - the
-             * screen blinks on a double tap, which is a fair price for a
-             * single tap that never hesitates. */
-            if (last_tap_tick && now - last_tap_tick <= DOUBLE_TAP_TICKS)
-            {
-                screen_toggle();          /* undo the first tap */
-                last_tap_tick = 0;
-                cue();
-                if (audio_status() & AUDIO_STATUS_PLAY)
-                    audio_pause();
-                else
-                    audio_resume();
-                return true;
-            }
-
-            last_tap_tick = now;
-
-            /* The tap that wakes the screen must not also put it back to
-             * sleep. Pressing any key turns the backlight on before this
-             * handler ever runs, so by the time the release arrives the
-             * screen is already lit and a plain toggle darkens it again -
-             * which is the flicker-then-black. What the screen was doing
-             * when the finger went *down* is the only honest answer. */
-            screen_toggle();
+            /* Play/pause, directly. It used to be the screen toggle, with
+             * play/pause on a double tap and the first tap taken back when
+             * the second arrived - a blink on every double tap, and a
+             * single tap that had to be read twice before it meant
+             * anything.
+             *
+             * Two things made that unnecessary. The screen no longer goes
+             * dark on its own (HAVE_BACKLIGHT_DIM_IDLE - it dims and stays
+             * readable), so there is nothing to toggle; and one press with
+             * one meaning is what makes the rest of the key legible, since
+             * everything else on it is a hold. */
+            cue();
+            if (audio_status() & AUDIO_STATUS_PLAY)
+                audio_pause();
+            else
+                audio_resume();
         }
         return true;
     }
@@ -751,23 +701,6 @@ bool rpkeys_handle(int button)
 
     if (button == BUTTON_NONE)
         return false;
-
-    /* Re-sync with the screen we do not own.
-     *
-     * screen_dark only tracks the times *we* darkened the display. Rockbox's
-     * own backlight timeout is the other way it goes out, and it does not
-     * tell us, so the first POWER tap after an idle screen-off saw
-     * screen_dark == false, read the press as "turn it off", and gave the
-     * flicker-then-black that only happened on the first try - the second
-     * tap then found the state agreeing with reality again.
-     *
-     * The button driver calls backlight_on() before this handler ever runs,
-     * so by now the light is already coming back. backlight_consume_wake()
-     * is the record of what that call found, taken on the near side of the
-     * race: if the press woke the screen, the screen was off, whoever put
-     * it out. */
-    if (!repeat && !release && backlight_consume_wake())
-        screen_dark = true;
 
     /* Both volume keys together is the stick's kill switch, which is
      * checked before this and must not also change the volume. */

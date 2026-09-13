@@ -126,6 +126,30 @@ static int browser(void* param)
 
     switch ((intptr_t)param)
     {
+        case GO_TO_CUSTOMFOLDER:
+            /* Deliberately not remembered in last_folder: this entry means
+             * "that folder", and a main menu item that lands somewhere
+             * different depending on where the file browser was last is
+             * not a shortcut to anywhere. */
+            filter = global_settings.dirfilter;
+            if (global_settings.custom_folder[0])
+            {
+                size_t n;
+                strmemccpy(folder, global_settings.custom_folder, MAX_PATH);
+                /* rockbox_browse() hands .root to set_current_file(), which
+                 * reads it as a path *to a file* and splits it at the last
+                 * slash - so "/lab" opened "/" with "lab" highlighted. A
+                 * trailing slash is how that function is told the whole
+                 * thing is the directory. */
+                n = strlen(folder);
+                if (n > 0 && n < MAX_PATH - 1 && folder[n - 1] != '/')
+                {
+                    folder[n] = '/';
+                    folder[n + 1] = 0;
+                }
+            }
+            break;
+
         case GO_TO_FILEBROWSER:
             filter = global_settings.dirfilter;
             if (global_settings.browse_current &&
@@ -492,6 +516,7 @@ static const struct root_items items[] = {
     [GO_TO_PLAYLIST_VIEWER] = { playlist_view, NULL, &playlist_options },
     [GO_TO_SYSTEM_SCREEN] = { miscscrn, &info_menu, &system_menu },
     [GO_TO_SHORTCUTMENU] = { do_shortcut_menu, NULL, NULL },
+    [GO_TO_CUSTOMFOLDER] = { browser, (void*)GO_TO_CUSTOMFOLDER, &file_menu },
 
 };
 //static const int nb_items = sizeof(items)/sizeof(*items);
@@ -502,6 +527,14 @@ static int item_callback(int action,
 
 MENUITEM_RETURNVALUE(shortcut_menu, ID2P(LANG_SHORTCUTS), GO_TO_SHORTCUTMENU,
                         NULL, Icon_Bookmark);
+
+/* The user's own folder. Its *name* is not defined here on purpose: the
+ * main menu already has renaming, so this entry is renamed the same way
+ * every other one is rather than carrying a second, parallel setting that
+ * does the same job in a different place. All it needs of its own is
+ * somewhere to point. */
+MENUITEM_RETURNVALUE(custom_folder_item, ID2P(LANG_CUSTOM_FOLDER),
+                        GO_TO_CUSTOMFOLDER, NULL, Icon_Folder);
 
 MENUITEM_RETURNVALUE(file_browser, ID2P(LANG_DIR_BROWSER), GO_TO_FILEBROWSER,
                         NULL, Icon_file_view_menu);
@@ -566,6 +599,7 @@ static struct menu_table menu_table[] = {
     { "plugins", &rocks_browser },
     { "system_menu", &system_menu_ },
     { "shortcuts", &shortcut_menu },
+    { "custom folder", &custom_folder_item },
 };
 #define MAX_MENU_ITEMS (sizeof(menu_table) / sizeof(struct menu_table))
 static struct menu_item_ex *root_menu__[MAX_MENU_ITEMS];
@@ -757,6 +791,13 @@ bool root_menu_is_settings(int table_index)
     if (table_index < 0 || table_index >= (int)MAX_MENU_ITEMS)
         return false;
     return menu_table[table_index].item == &menu_;
+}
+
+bool root_menu_is_custom_folder(int table_index)
+{
+    if (table_index < 0 || table_index >= (int)MAX_MENU_ITEMS)
+        return false;
+    return menu_table[table_index].item == &custom_folder_item;
 }
 
 const char *root_menu_custom_name(const struct menu_item_ex *item)
@@ -1226,6 +1267,7 @@ void root_menu(void)
 #ifdef HAVE_TAGCACHE
             case GO_TO_DBBROWSER:
 #endif
+            case GO_TO_CUSTOMFOLDER:
             case GO_TO_FILEBROWSER:
             case GO_TO_PLAYLISTS_SCREEN:
                 previous_browser = next_screen;

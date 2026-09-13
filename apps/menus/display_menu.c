@@ -181,6 +181,9 @@ MENUITEM_SETTING(lcd_sleep_after_backlight_off,
 #endif
 #ifdef HAVE_BACKLIGHT_BRIGHTNESS
 MENUITEM_SETTING(brightness_item, &global_settings.brightness, NULL);
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+MENUITEM_SETTING(dim_brightness_item, &global_settings.dim_brightness, NULL);
+#endif
 #endif
 #endif /* HAVE_BACKLIGHT */
 #ifdef HAVE_LCD_CONTRAST
@@ -214,6 +217,9 @@ MAKE_MENU(lcd_settings,ID2P(LANG_LCD_MENU),
 # endif
 # ifdef HAVE_BACKLIGHT_BRIGHTNESS
             ,&brightness_item
+# endif
+# ifdef HAVE_BACKLIGHT_DIM_IDLE
+            ,&dim_brightness_item
 # endif
 #endif /* HAVE_BACKLIGHT */
 #ifdef HAVE_LCD_CONTRAST

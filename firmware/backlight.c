@@ -484,9 +484,57 @@ static void backlight_setup_fade_down(void)
 }
 #endif /* CONFIG_BACKLIGHT_FADING */
 
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+/* The idle level, or below MIN_BRIGHTNESS_SETTING for "go dark", which is
+ * what every other target does and what this one did. */
+static int backlight_dim_level;
+static bool backlight_dimmed;
+
+void backlight_set_dim_brightness(int level)
+{
+    backlight_dim_level = level;
+
+    /* If the panel is sitting at the old idle level right now, move it, so
+     * the setting screen shows what it is choosing. Turning dimming off
+     * while dimmed brings the panel back up rather than blanking it on the
+     * spot: the next timeout will blank it, and blanking the screen the
+     * user is reading the setting on is not an answer to anything. */
+    if (backlight_dimmed)
+    {
+        backlight_dimmed = (level >= MIN_BRIGHTNESS_SETTING);
+        backlight_hw_brightness(backlight_dimmed ? level
+                                                 : backlight_brightness);
+    }
+}
+
+int backlight_get_dim_brightness(void)
+{
+    return backlight_dim_level;
+}
+#endif
+
 static inline void do_backlight_off(void)
 {
     backlight_timer = 0;
+
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+    /* The timeout dims rather than blanks. A screen that goes black is a
+     * screen you have to wake before you can read it, and on a player
+     * whose whole job is showing what is playing that is the wrong
+     * trade - so the panel drops to a level the user picks and stays
+     * readable. Deliberately not a call into the off path at a low
+     * brightness: the LCD controller must stay awake (no lcd_enable(false),
+     * no LCD sleep countdown) or there is nothing to see at any
+     * brightness. */
+    if (backlight_dim_level >= MIN_BRIGHTNESS_SETTING)
+    {
+        backlight_dimmed = true;
+        backlight_hw_on();
+        backlight_hw_brightness(backlight_dim_level);
+        return;
+    }
+    backlight_dimmed = false;
+#endif
 #if BACKLIGHT_FADE_IN_THREAD
     backlight_setup_fade_down();
 #else
@@ -532,6 +580,16 @@ static void backlight_update_state(void)
         backlight_setup_fade_up();
 #else
         backlight_hw_on();
+#endif
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+        /* Coming back up from the idle level. Without fading,
+         * backlight_hw_on() does not touch brightness, so the panel would
+         * stay dim for the rest of the session. */
+        if (backlight_dimmed)
+        {
+            backlight_dimmed = false;
+            backlight_hw_brightness(backlight_brightness);
+        }
 #endif
     }
 }
@@ -829,22 +887,11 @@ void backlight_close(void)
  * that race: the check happens synchronously inside the call the button
  * driver just made, before the backlight thread has acted on it. Whoever
  * wants the answer consumes it. */
-static bool backlight_woke_screen;
-
-bool backlight_consume_wake(void)
-{
-    bool woke = backlight_woke_screen;
-    backlight_woke_screen = false;
-    return woke;
-}
 
 void backlight_on(void)
 {
     if(!ignore_backlight_on)
     {
-        if (!is_backlight_on(true))
-            backlight_woke_screen = true;
-
         queue_remove_from_head(&backlight_queue, BACKLIGHT_ON);
         queue_post(&backlight_queue, BACKLIGHT_ON, 0);
 
@@ -875,6 +922,14 @@ bool is_backlight_on(bool ignore_always_off)
 {
     if (backlight_timer > 0)   /* countdown */
         return true;
+
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+    /* Dimmed is on. The panel is readable and the LCD is awake, so no
+     * caller should be swallowing a key to "wake" it - which is the whole
+     * point of dimming rather than blanking. */
+    if (backlight_dimmed)
+        return true;
+#endif
 
     int timeout = backlight_get_current_timeout();
     return 
@@ -1077,7 +1132,6 @@ void backlight_init(void)
 
 void backlight_on(void) {}
 void backlight_off(void) {}
-bool backlight_consume_wake(void) { return false; }
 void backlight_set_timeout(int value) {(void)value;}
 
 bool is_backlight_on(bool ignore_always_off)

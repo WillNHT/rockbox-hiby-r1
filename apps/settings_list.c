@@ -1535,6 +1535,16 @@ const struct settings_list settings[] = {
                 MIN_BRIGHTNESS_SETTING, MAX_BRIGHTNESS_SETTING, 1,
                 NULL, NULL, backlight_set_brightness),
 #endif
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+    /* Zero is the bottom of the range rather than a brightness, and means
+     * "blank it", so the old behaviour is still reachable. The default is
+     * a dim but readable panel: on a player the point of the screen is
+     * what is playing, and having to wake it to read that is backwards. */
+    INT_SETTING(F_NO_WRAP, dim_brightness, LANG_DIM_BRIGHTNESS,
+                10, "dim brightness", UNIT_INT,
+                0, MAX_BRIGHTNESS_SETTING, 1,
+                NULL, NULL, backlight_set_dim_brightness),
+#endif
     /* backlight fading */
 #if defined(HAVE_BACKLIGHT_FADING_INT_SETTING)
     TABLE_SETTING_LIST(F_TIME_SETTING | F_ALLOW_ARBITRARY_VALS, backlight_fade_in,
@@ -2617,6 +2627,7 @@ const struct settings_list settings[] = {
     * because they are separate decisions - a user who rearranges the menu
     * has not asked to rename anything, and a config.cfg carrying one and
     * not the other has to keep working. */
+   TEXT_SETTING(0, custom_folder, "custom folder path", "", NULL, NULL),
    CUSTOM_SETTING(0, root_menu_renamed,
                   LANG_ROCKBOX_TITLE, /* lang string here is never actually used */
                   NULL, "root menu names",
