@@ -36,7 +36,7 @@
 %xl(vb_too_loud,vb_too_loud.bmp)
 %xl(bb_backdrop,bb_backdrop.bmp)
 %?C<%Vd(bg)>
-%?C<%Vd(aa)>
+%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>
 %?C<%Vd(mirror)>
 %?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>|%Vd(paused)|%Vd(ff)|%Vd(rew)|>
 %?mh<%Vd(locked)|%Vd(volbar)>
@@ -101,37 +101,37 @@ SHF%xd(O,%ps)
 %?mp<|%?if(%an(16,70),=,15)<%Vd(ch14)>|||||>
 %?mp<|%?if(%an(16,70),=,16)<%Vd(ch15)>|||||>
 #
-%Vl(ch00,50,146,95,4,-)
+%Vl(ch00,30,146,105,4,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch01,145,146,95,4,-)
+%Vl(ch01,135,146,105,4,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch02,240,146,95,4,-)
+%Vl(ch02,240,146,105,4,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch03,335,146,95,4,-)
+%Vl(ch03,345,146,105,4,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch04,430,150,4,95,-)
+%Vl(ch04,450,150,4,100,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch05,430,245,4,95,-)
+%Vl(ch05,450,250,4,100,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch06,430,340,4,95,-)
+%Vl(ch06,450,350,4,100,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch07,430,435,4,95,-)
+%Vl(ch07,450,450,4,100,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch08,335,530,95,4,-)
+%Vl(ch08,345,550,105,4,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch09,240,530,95,4,-)
+%Vl(ch09,240,550,105,4,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch10,145,530,95,4,-)
+%Vl(ch10,135,550,105,4,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch11,50,530,95,4,-)
+%Vl(ch11,30,550,105,4,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch12,46,435,4,95,-)
+%Vl(ch12,26,450,4,100,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch13,46,340,4,95,-)
+%Vl(ch13,26,350,4,100,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch14,46,245,4,95,-)
+%Vl(ch14,26,250,4,100,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch15,46,150,4,95,-)
+%Vl(ch15,26,150,4,100,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
 #
 # The sheen
@@ -196,14 +196,30 @@ SHF%xd(O,%ps)
 #
 # Main
 # ====
-# The cover, floating, with its own reflection under it. Smaller than
-# V2's: a reflection needs somewhere to be.
-%Vl(aa,50,150,380,380,-)
-%Cl(0,0,380,380,c,c)
+# The cover, floating, with its own reflection under it.
+%Vl(aa,30,150,420,400,-)
+%Cl(2,2,416,396,c,c)
 %Cd
 #
-%Vl(mirror,50,532,380,66,-)
-%Cm(50,532,380,66,150,0)
+%Vl(mirror,30,552,420,46,-)
+%Cm(30,552,420,46,140,0)
+#
+# No cover is not an empty screen. %C is false for a track with no
+# artwork, and with it the backdrop, the cover and the reflection all go -
+# so without this the whole middle of the panel is nothing at all. The
+# chase still runs round it, because what it is saying is "this is
+# playing", and that is still true.
+%Vl(noart,30,150,420,400,-)
+%dr(0,0,-,2)
+%dr(0,398,-,2)
+%dr(0,2,2,396)
+%dr(418,2,2,396)
+#
+# The label is its own viewport. Rules and text in one viewport fight over
+# where the line sits, and the frame came out a fifth of its height with
+# the caption stranded below it.
+%Vl(noartlabel,40,330,400,40,2)
+%ac%s%?id<%id|%?ia<%ia|no cover>>
 #
 # The pulse
 # =========

@@ -39,7 +39,7 @@
 %xl(vb_backdrop,vb_backdrop.bmp)
 %xl(vb_too_loud,vb_too_loud.bmp)
 %xl(bb_backdrop,bb_backdrop.bmp)
-%?C<%Vd(aa)>
+%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>
 %?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>|%Vd(paused)|%Vd(ff)|%Vd(rew)|>
 %?mh<%Vd(locked)|%Vd(volbar)>
 %?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>
@@ -140,6 +140,18 @@ SHF%xd(O,%ps)
 %dr(0,2,2,396)
 %dr(418,2,-,396)
 %Cd
+#
+# No cover is not an empty screen. %C is false for a track with no
+# artwork, and the frame above is inside the viewport that goes with it,
+# so without this the whole middle of the panel is nothing at all.
+%Vl(noart,30,160,420,400,-)
+%dr(0,0,420,2)
+%dr(0,398,-,-)
+%dr(0,2,2,396)
+%dr(418,2,-,396)
+#
+%Vl(noartlabel,40,340,400,40,2)
+%ac%s%?id<%id|%?ia<%ia|no cover>>
 #
 # The band
 # ========

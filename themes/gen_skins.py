@@ -233,7 +233,7 @@ def snappy_v2():
 #
 %wd""")
     o.append(PRELOAD)
-    o.append("%?C<%Vd(aa)>")
+    o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
     o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>|%Vd(paused)|%Vd(ff)|%Vd(rew)|>")
     o.append("%?mh<%Vd(locked)|%Vd(volbar)>")
     o.append("%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>")
@@ -251,7 +251,19 @@ def snappy_v2():
 %dr(0,398,-,-)
 %dr(0,2,2,396)
 %dr(418,2,-,396)
-%Cd""")
+%Cd
+#
+# No cover is not an empty screen. %C is false for a track with no
+# artwork, and the frame above is inside the viewport that goes with it,
+# so without this the whole middle of the panel is nothing at all.
+%Vl(noart,30,160,420,400,-)
+%dr(0,0,420,2)
+%dr(0,398,-,-)
+%dr(0,2,2,396)
+%dr(418,2,-,396)
+#
+%Vl(noartlabel,40,340,400,40,2)
+%ac%s%?id<%id|%?ia<%ia|no cover>>""")
     o.append(band(566))
     o.append("""#
 # Track
@@ -275,9 +287,20 @@ def snappy_v2():
 # ------------------------------------------------------- Snappy Animated
 
 # The cover floats, with its own reflection under it, over a blurred copy
-# of itself. Smaller than V2's because a reflection needs somewhere to be.
-AX, AY, AS = 50, 150, 380
-MIRROR_Y, MIRROR_H = AY + AS + 2, 66
+# of itself.
+#
+# Deliberately the same rectangle and the same %Cl size as Snappy V2, and
+# that is not tidiness. playback_claim_aa_slot() hands out one slot per
+# *distinct* size and there are only SKINNABLE_SCREENS_COUNT of them, so a
+# skin asking for a size nothing else asks for claims one of its own; when
+# they run out the claim fails, %C goes false, and every art-dependent
+# viewport in the skin silently disappears - which is a now playing screen
+# that is a black hole from the header to the peak meter. Matching V2 to
+# the pixel means these skins share one slot between them.
+AX, AY, AS = 30, 150, 420
+AH = 400              # the art box is not square; the mirror wants the rest
+ART_W, ART_H = 416, 396
+MIRROR_Y, MIRROR_H = AY + 402, 46
 BAND_Y = 602
 PULSE_Y, PULSE_H = 767, 3
 PULSE_W = [40, 90, 150, 220, 300, 220, 150, 90]
@@ -315,7 +338,7 @@ def animated(gauge=False):
 %%wd""" % (name.upper().replace("SNAPPY ", ""), name))
     o.append(PRELOAD)
     o.append("%?C<%Vd(bg)>")
-    o.append("%?C<%Vd(aa)>")
+    o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
     o.append("%?C<%Vd(mirror)>")
     o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>|%Vd(paused)|%Vd(ff)|%Vd(rew)|>")
     o.append("%?mh<%Vd(locked)|%Vd(volbar)>")
@@ -329,7 +352,7 @@ def animated(gauge=False):
     o.append(HEADER)
 
     # the chase around the art
-    en, vp = march("ch", AX, AY, AS, AS, 16, 70, thick=4)
+    en, vp = march("ch", AX, AY, AS, AH, 16, 70, thick=4)
     o.append("""#
 # The chase
 # =========
@@ -382,16 +405,35 @@ def animated(gauge=False):
 #
 # Main
 # ====
-# The cover, floating, with its own reflection under it. Smaller than
-# V2's: a reflection needs somewhere to be.
+# The cover, floating, with its own reflection under it.
 %%Vl(aa,%d,%d,%d,%d,-)
-%%Cl(0,0,%d,%d,c,c)
+%%Cl(2,2,%d,%d,c,c)
 %%Cd
 #
 %%Vl(mirror,%d,%d,%d,%d,-)
-%%Cm(%d,%d,%d,%d,150,0)""" % (AX, AY, AS, AS, AS, AS,
+%%Cm(%d,%d,%d,%d,140,0)
+#
+# No cover is not an empty screen. %%C is false for a track with no
+# artwork, and with it the backdrop, the cover and the reflection all go -
+# so without this the whole middle of the panel is nothing at all. The
+# chase still runs round it, because what it is saying is "this is
+# playing", and that is still true.
+%%Vl(noart,%d,%d,%d,%d,-)
+%%dr(0,0,-,2)
+%%dr(0,%d,-,2)
+%%dr(0,2,2,%d)
+%%dr(%d,2,2,%d)
+#
+# The label is its own viewport. Rules and text in one viewport fight over
+# where the line sits, and the frame came out a fifth of its height with
+# the caption stranded below it.
+%%Vl(noartlabel,%d,%d,%d,40,2)
+%%ac%%s%%?id<%%id|%%?ia<%%ia|no cover>>""" % (AX, AY, AS, AH, ART_W, ART_H,
                               AX, MIRROR_Y, AS, MIRROR_H,
-                              AX, MIRROR_Y, AS, MIRROR_H))
+                              AX, MIRROR_Y, AS, MIRROR_H,
+                              AX, AY, AS, AH,
+                              AH - 2, AH - 4, AS - 2, AH - 4,
+                              AX + 10, AY + AH // 2 - 20, AS - 20))
     content = [band(BAND_Y), """#
 # Track
 # -----
