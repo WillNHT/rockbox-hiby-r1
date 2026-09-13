@@ -69,8 +69,25 @@ int gui_list_get_item_offset(struct gui_synclist * gui_list, int item_width,
 bool list_display_title(struct gui_synclist *list, enum screen_type screen);
 int list_get_nb_lines(struct gui_synclist *list, enum screen_type screen);
 
+/* What the marquees currently belong to, per screen. See list_draw(). */
+struct list_scroll_keep
+{
+    const struct gui_synclist *list;
+    int selected_item;
+    int start_item;
+    int nb_items;
+    int selected_size;
+};
+static struct list_scroll_keep scroll_keep[NB_SCREENS];
+
 void gui_synclist_scroll_stop(struct gui_synclist *lists)
 {
+    /* Everything the marquees belonged to is going away, so the next draw
+     * must start them again rather than assume the ones still running are
+     * the right text. This is the hook a screen already calls when it
+     * reloads or leaves - see list_draw(). */
+    memset(scroll_keep, 0, sizeof(scroll_keep));
+
     FOR_NB_SCREENS(i)
     {
         screens[i].scroll_stop_viewport(&list_text[i]);
@@ -222,8 +239,39 @@ void list_draw(struct screen *display, struct gui_synclist *list)
 
     struct viewport * last_vp = display->set_viewport(parent);
     display->clear_viewport();
+
+    /* Stopping every marquee on every draw is what stopped long names from
+     * ever scrolling. puts_scroll_worker() keeps an existing line's offset
+     * and start delay if it finds one at the same place, so a redraw that
+     * changes nothing should leave it alone - but this stopped the whole
+     * viewport first, so each redraw restarted the name from the left and
+     * re-armed the start delay. Anything that repaints a list more often
+     * than the delay is long - a stick gesture, a sustained scroll, a
+     * playing track updating the status bar - meant the name never moved
+     * at all.
+     *
+     * So stop them only when something that owns them changed: which item
+     * is selected, which items are on screen, or how many there are. Those
+     * are exactly the cases where a line left running would be a marquee
+     * belonging to a row that is no longer there. */
     if (!list->scroll_all)
-        display->scroll_stop_viewport(list_text_vp);
+    {
+        struct list_scroll_keep *keep = &scroll_keep[screen];
+
+        if (keep->list != list ||
+            keep->selected_item != list->selected_item ||
+            keep->start_item != list_start_item ||
+            keep->nb_items != list->nb_items ||
+            keep->selected_size != list->selected_size)
+        {
+            display->scroll_stop_viewport(list_text_vp);
+            keep->list          = list;
+            keep->selected_item = list->selected_item;
+            keep->start_item    = list_start_item;
+            keep->nb_items      = list->nb_items;
+            keep->selected_size = list->selected_size;
+        }
+    }
     *list_text_vp = *parent;
     if ((show_title = draw_title(display, list, callback_draw_item)))
     {
