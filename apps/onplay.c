@@ -993,6 +993,15 @@ static bool set_menufolder(void)
 MENUITEM_FUNCTION(set_menufolder_item, 0, ID2P(LANG_SET_AS_MENU_FOLDER),
                   set_menufolder, clipboard_callback, Icon_Folder);
 
+static bool set_audiobookdir(void)
+{
+    set_dir_helper(global_settings.audiobook_folder,
+                   sizeof(global_settings.audiobook_folder));
+    return false;
+}
+MENUITEM_FUNCTION(set_audiobookdir_item, 0, ID2P(LANG_AUDIOBOOKS),
+                  set_audiobookdir, clipboard_callback, Icon_Bookmark);
+
 static bool set_startdir(void)
 {
     set_dir_helper(global_settings.start_directory,
@@ -1038,7 +1047,8 @@ MAKE_ONPLAYMENU(set_as_dir_menu, ID2P(LANG_SET_AS),
                 &set_recdir_item,
 #endif
                 &set_startdir_item,
-                &set_menufolder_item);
+                &set_menufolder_item,
+                &set_audiobookdir_item);
 
 static int clipboard_callback(int action,
                               const struct menu_item_ex *this_item,
@@ -1104,6 +1114,7 @@ static int clipboard_callback(int action,
                     if (this_item == &delete_dir_item ||
                         this_item == &set_startdir_item ||
                         this_item == &set_menufolder_item ||
+                        this_item == &set_audiobookdir_item ||
                         this_item == &set_catalogdir_item ||
 #ifdef HAVE_TAGCACHE
                         this_item == &set_databasedir_item ||

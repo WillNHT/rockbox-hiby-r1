@@ -989,6 +989,8 @@ struct user_settings
      * root, which is what an unconfigured entry does rather than refusing
      * to open. */
     char custom_folder[MAX_PATHNAME+1];
+    /* Where the main menu's Audiobooks entry points. */
+    char audiobook_folder[MAX_PATHNAME+1];
 #ifdef HAVE_QUICKSCREEN
     bool shortcuts_replaces_qs;
 #endif

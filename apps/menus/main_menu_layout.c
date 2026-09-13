@@ -205,16 +205,20 @@ static void rename_row(int row)
 /* Pick the folder the custom entry opens. The file browser itself is the
  * picker - the same one the "Set As" context menu uses - so there is one
  * way to choose a folder on this device and not two. */
-static void set_folder_row(void)
+static void set_folder_row(int row)
 {
     char buf[MAX_PATHNAME+1];
+    bool books = root_menu_is_audiobooks(layout.order[row]);
+    char *dest = books ? global_settings.audiobook_folder
+                       : global_settings.custom_folder;
+    size_t dest_sz = books ? sizeof(global_settings.audiobook_folder)
+                           : sizeof(global_settings.custom_folder);
     struct browse_context browse = {
         .dirfilter = SHOW_ALL,
         .flags = BROWSE_DIRFILTER | BROWSE_SELECTONLY | BROWSE_NO_CONTEXT_MENU,
         .title = (char *)str(LANG_MAIN_MENU_SET_FOLDER),
         .icon = Icon_Folder,
-        .root = global_settings.custom_folder[0] ?
-                    global_settings.custom_folder : "/",
+        .root = dest[0] ? dest : "/",
         .buf = buf,
         .bufsize = sizeof(buf),
     };
@@ -235,14 +239,14 @@ static void set_folder_row(void)
         *slash = 0;
     }
 
-    strmemccpy(global_settings.custom_folder, buf,
-               sizeof(global_settings.custom_folder));
+    strmemccpy(dest, buf, dest_sz);
 }
 
 static void item_menu(int row)
 {
     bool hidden = row >= layout.visible;
-    bool folder = root_menu_is_custom_folder(layout.order[row]);
+    bool folder = root_menu_is_custom_folder(layout.order[row]) ||
+                  root_menu_is_audiobooks(layout.order[row]);
     int sel;
 
     if (folder)
@@ -267,7 +271,7 @@ static void item_menu(int row)
             break;
         case 4:
             if (folder)
-                set_folder_row();
+                set_folder_row(row);
             break;
         default:
             break;

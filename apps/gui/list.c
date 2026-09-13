@@ -314,7 +314,16 @@ void gui_synclist_draw(struct gui_synclist *gui_list)
      * later. Drawing here, once the rows are down, is the difference
      * between an overlay you can see and one that only appears in the
      * margins. */
-    stick_redraw_overlay();
+    {
+        /* The rectangle the list just repainted, so the overlay can tell
+         * what of its own saved backdrop is now stale and what is not.
+         * Everything outside this is untouched by the draw above. */
+        struct viewport *pv = gui_list->parent[SCREEN_MAIN];
+        if (pv)
+            stick_redraw_overlay(pv->x, pv->y, pv->width, pv->height);
+        else
+            stick_redraw_overlay(0, 0, LCD_WIDTH, LCD_HEIGHT);
+    }
 #endif
 }
 

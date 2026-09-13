@@ -1,0 +1,466 @@
+#!/usr/bin/env python3
+"""Generate the Snappy family of .wps files.
+
+Three skins share most of their layout and all of their dial border, and
+the skin engine cannot move a viewport - anything that travels is one
+viewport per stop with %an choosing which is enabled. Hand-typing sixteen
+near-identical blocks three times over is how coordinates drift, so the
+geometry is stated once, here, and the files are generated.
+
+    python3 themes/gen_skins.py      (run from the rockbox/ directory)
+
+Writes themes/wps/SnappyV2.wps, SnappyAnimated.wps and SnappyGauge.wps.
+"""
+import io
+
+ACCENT = "D9E021"
+INK    = "F4F2EE"
+GROUND = "0C0D0E"
+DIM    = "3A3B3D"
+
+W, H = 480, 800
+MARGIN = 30
+
+# ----------------------------------------------------------------- pieces
+
+HEADER = """#
+# Header
+# ======
+# Sleep timer
+%Vl(sleep,30,30,110,62,2)
+%Vs(invert)%ac%bs
+%aczzz...
+#
+# Volume (percent of the -70..-10 dB scale)
+%Vl(voldb,30,30,110,62,4)
+%Vs(invert)%ac%pv
+#
+# Shuffle
+%V(174,28,94,22,2)
+SHF%xd(O,%ps)
+#
+# Repeat
+%V(174,58,94,22,2)
+%?mm<RPT%xd(Ob)|RPT%xd(O)|RP1%xd(O)|RND%xd(O)|A-B%xd(O)>
+#
+# Battery bar
+%V(-168,26,-30,18,-)
+%bl(0,0,138,18,bb,backdrop,bb_backdrop)
+#
+# Battery percentage
+%V(-168,48,-30,34,3)
+%Vs(invert)%ac%?bp<%xd(Bb)|%xd(Ba)> %bl%%
+#
+# Volume bar
+%Vl(volbar,30,110,-30,36,-)
+%pv(0,0,-,-,vb,backdrop,vb_backdrop)
+%?if(%pv, >, 0)<%pv(0,0,-,-,vb_too_loud,backdrop,vb_backdrop)>
+#
+# Locked
+%Vl(locked,30,106,-30,44,4)
+%acLOCKED%Vs(invert)"""
+
+PRELOAD = """%Fl(2,24-GeistMono-SemiBold.fnt)
+%Fl(3,31-GeistMono-SemiBold.fnt)
+%Fl(4,44-GeistMono-SemiBold.fnt)
+%Fl(5,58-GeistMono-SemiBold.fnt)
+%xl(B,batt_wps.bmp,2,0,2)
+%xl(O,off_on.bmp,48,0,2)
+%xl(vb,vb.bmp)
+%xl(bb,bb.bmp)
+%xl(vb_backdrop,vb_backdrop.bmp)
+%xl(vb_too_loud,vb_too_loud.bmp)
+%xl(bb_backdrop,bb_backdrop.bmp)"""
+
+
+def march(name, x, y, w, h, stops, ms, thick=3, colour=None, tail=None):
+    """A bright segment travelling clockwise around a rectangle.
+
+    Returns (enable_lines, viewport_lines). The caller decides what gates
+    the enables - the dial border wraps them in %?if(%sd...), the album
+    chase in %?mp<...>.
+    """
+    colour = colour or ACCENT
+    tail = tail or INK
+    per_side_x = max(1, stops * w // (2 * (w + h)))
+    per_side_y = max(1, (stops - 2 * per_side_x) // 2)
+    segw = w // per_side_x
+    segh = h // per_side_y
+
+    box = []
+    for i in range(per_side_x):                      # top, left to right
+        box.append((x + i * segw, y - thick, segw, thick))
+    for i in range(per_side_y):                      # right, down
+        box.append((x + w, y + i * segh, thick, segh))
+    for i in range(per_side_x - 1, -1, -1):          # bottom, right to left
+        box.append((x + i * segw, y + h, segw, thick))
+    for i in range(per_side_y - 1, -1, -1):          # left, up
+        box.append((x - thick, y + i * segh, thick, segh))
+
+    n = len(box)
+    en = ["%%?if(%%an(%d,%d),=,%d)<%%Vd(%s%02d)>" % (n, ms, i + 1, name, i)
+          for i in range(n)]
+    vp = []
+    for i, (bx, by, bw, bh) in enumerate(box):
+        vp.append("%%Vl(%s%02d,%d,%d,%d,%d,-)" % (name, i, bx, by, bw, bh))
+        vp.append("%%dr(0,0,-,-,%s,%s)" % (colour, tail))
+    return en, vp
+
+
+def dial_border(x, y, w, h, ms=60, stops=12):
+    """The volume bar, while the stick's dial is armed.
+
+    The dial used to draw a ring around the thumb. A ring around a thumb
+    going in circles is a second thing to watch, on top of the one that
+    matters, and it sat wherever the hand happened to be. %sd lets the skin
+    say it instead, in the place the user is already looking: a rim around
+    the volume bar with a segment marching round it.
+
+    Everything here is inside the %sd branch, and %an only costs the skin
+    its 20 fps while it is actually being drawn - see animation_enabled in
+    wps_internals.h - so a skin that is otherwise still stays still.
+    """
+    en, vp = march("vd", x, y, w, h, stops, ms, thick=3)
+    out = ["#",
+           "# The volume dial, armed",
+           "# =====================",
+           "# See dial_border() in themes/gen_skins.py.",
+           "%?if(%sd,=,1)<%Vd(vdrim)>"]
+    out += ["%%?if(%%sd,=,1)<%s>" % e for e in en]
+    out += ["#",
+            "%%Vl(vdrim,%d,%d,%d,%d,-)" % (x - 3, y - 3, w + 6, h + 6),
+            "%%dr(0,0,-,2,%s,%s)" % (ACCENT, ACCENT),
+            "%%dr(0,%d,-,2,%s,%s)" % (h + 4, ACCENT, ACCENT),
+            "%%dr(0,0,2,-,%s,%s)" % (ACCENT, ACCENT),
+            "%%dr(%d,0,2,-,%s,%s)" % (w + 4, ACCENT, ACCENT),
+            "#"]
+    out += vp
+    return out
+
+
+def band(y, meter_h=78, h=82):
+    """The peak meter, the codec column, and the transport states that
+    share their rectangle."""
+    return """#
+# The band
+# ========
+# The meter fills %d px of an %d px band. It used to be 24, because the
+# engine drew a peak meter one line of the viewport's font tall and
+# nothing else; %%pm takes a height now.
+%%Vl(pm_short,30,%d,240,%d,2)
+%%pm(%d)
+#
+%%Vl(pm_long,30,%d,-30,%d,2)
+%%pm(%d)
+#
+%%Vl(paused,30,%d,240,%d,2)
+%%dr(80,12,32,58)
+%%dr(130,12,32,58)
+#
+%%Vl(rew,30,%d,240,46,4)
+%%al%%<%%< REW
+#
+%%Vl(ff,30,%d,240,46,4)
+%%al%%>%%> FF
+#
+%%V(280,%d,-30,30,2)
+%%ar%%fc %%fb
+#
+%%V(280,%d,-30,30,2)
+%%ar%%?if(%%St(party mode),!=,off)<party|%%?if(%%St(single mode),!=,off)<%%St(single mode)|%%t(4)%%fk kHz;%%t(4)%%pp of %%pe>>""" % (
+        meter_h, h, y, h, meter_h, y, h, meter_h, y, h, y + 18, y + 18,
+        y + 12, y + 42)
+
+
+
+def hide_while_armed(lines):
+    """Turn every plain viewport in `lines` into a labelled one that is
+    only enabled while the dial is *not* armed, and return the enables.
+
+    The gauge covers the panel, and being declared last it wins the full
+    update - but a full update is not the only thing that paints. The peak
+    meter and the elapsed time are refreshed on their own faster class,
+    which does not clear a viewport and does not care what is drawn over
+    it, so the skin came back through the gauge a frame later in pieces.
+    A modal overlay has to actually turn the rest of the screen off, and in
+    the skin language that means every viewport under it is conditional.
+    """
+    out, enables, n = [], [], 0
+    for ln in lines.split("\n"):
+        if ln.startswith("%V(") or ln.startswith("%Vl("):
+            if ln.startswith("%V("):
+                label = "q%d" % n
+                n += 1
+                ln = "%%Vl(%s,%s" % (label, ln[3:])
+            else:
+                label = ln[4:ln.index(",")]
+            enables.append("%%?if(%%sd,=,0)<%%Vd(%s)>" % label)
+        out.append(ln)
+    return "\n".join(out), enables
+
+# ------------------------------------------------------------ Snappy V2
+
+def snappy_v2():
+    o = []
+    o.append("""#
+#  ____ _  _ ____ ___  ___  _   _   _  _ ____
+#  [__  |\\ | |__| |__] |__]  \\_/    |  |  __]
+#  ___] | \\| |  | |    |      |      \\/  |___
+#
+#  Snappy V2 - Chris Soffke's Snappy (CC-BY-SA), relaid for a device whose
+#  transport lives on the physical keys and whose panel belongs to the
+#  stick.
+#
+#  * The prev / play-pause / next badges and their touch band are gone.
+#    Under the stick those regions never fire, so they were decoration
+#    holding 88 px of the middle of the screen.
+#  * The progress bar and its seek region are gone for the same reason: a
+#    seek you cannot touch is a picture of a seek. Elapsed / total and the
+#    playlist position stay as text - information, not a control.
+#  * The album art takes the freed space: the full width between the
+#    theme's 30 px margins.
+#  * The peak meter, codec, bit rate and sample rate move into one band
+#    beneath it. The meter fills 78 px of that band; the room came from
+#    the 22 px that were empty under the footer.
+#  * While the stick's volume dial is armed, the volume bar wears a
+#    marching rim (%sd). The dial used to draw a ring around the thumb;
+#    this says the same thing where the user is already looking.
+#
+#  Generated by themes/gen_skins.py. Coordinates are absolute for 480x800.
+#
+#  Based on Snappy v1.3 2026 by Chris Soffke, CC-BY-SA, itself a remix of
+#  Simon Anden's SNARTY and the SPAZZ / SNAZZ / SNAZZY / Adwaitapod line.
+#
+%wd""")
+    o.append(PRELOAD)
+    o.append("%?C<%Vd(aa)>")
+    o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>|%Vd(paused)|%Vd(ff)|%Vd(rew)|>")
+    o.append("%?mh<%Vd(locked)|%Vd(volbar)>")
+    o.append("%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>")
+    o += dial_border(30, 110, 420, 36)
+    o.append(HEADER)
+    o.append("""#
+# Main
+# ====
+# The art, full width. The frame is four rules rather than a bitmap so it
+# costs nothing and inherits the theme's foreground colour. %Cl is
+# viewport-relative, so the inset is 2,2 and not 32,162.
+%Vl(aa,30,160,420,400,-)
+%Cl(2,2,416,396,c,c)
+%dr(0,0,420,2)
+%dr(0,398,-,-)
+%dr(0,2,2,396)
+%dr(418,2,-,396)
+%Cd""")
+    o.append(band(566))
+    o.append("""#
+# Track
+# -----
+%V(30,652,-30,30,2)
+%s%al%id
+#
+%V(30,684,-30,30,2)
+%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
+#
+%V(30,716,-30,46,4)
+%al%s%?it<%it|%fn>
+#
+# Footer
+# ======
+%V(30,768,-30,30,2)
+%al%pc/%pt%ar%pp/%pe""")
+    return "\n".join(o) + "\n"
+
+
+# ------------------------------------------------------- Snappy Animated
+
+# The cover floats, with its own reflection under it, over a blurred copy
+# of itself. Smaller than V2's because a reflection needs somewhere to be.
+AX, AY, AS = 50, 150, 380
+MIRROR_Y, MIRROR_H = AY + AS + 2, 66
+BAND_Y = 602
+PULSE_Y, PULSE_H = 767, 3
+PULSE_W = [40, 90, 150, 220, 300, 220, 150, 90]
+SHEEN_MS = 90
+
+
+def animated(gauge=False):
+    name = "Snappy Gauge" if gauge else "Snappy Animated"
+    o = []
+    o.append("""#
+#   ____ _  _ ____ ___  ___  _   _   %s
+#   [__  |\\ | |__| |__] |__]  \\_/
+#   ___] | \\| |  | |    |      |
+#
+#  %s - Snappy V2, in motion.
+#
+#  Everything that moves here comes from something this fork added:
+#
+#  * %%an(frames, period_ms) is a free-running frame counter - the only
+#    skin token whose whole content is the passage of time. A skin drawing
+#    one is redrawn at 20 fps instead of waiting for the track to do
+#    something. It costs nothing while it is not being drawn, so the dial
+#    border below is free until the dial is armed.
+#  * %%Cb draws the cover scaled to cover the panel, blurred, with a veil
+#    of the theme's ground over it - into the *backdrop buffer*, which is
+#    the one surface a later viewport's clear restores rather than wipes.
+#    That is what %%VB is for and why it is the first viewport in the file.
+#  * %%Cm mirrors the bottom of the cover under itself, fading out.
+#  * %%dr with two colours goes through gradient_fillrect.
+#
+#  The skin engine cannot move a viewport, so anything that travels is one
+#  viewport per stop with %%an choosing which is enabled. Generated by
+#  themes/gen_skins.py; do not hand-edit.
+#
+%%wd""" % (name.upper().replace("SNAPPY ", ""), name))
+    o.append(PRELOAD)
+    o.append("%?C<%Vd(bg)>")
+    o.append("%?C<%Vd(aa)>")
+    o.append("%?C<%Vd(mirror)>")
+    o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>|%Vd(paused)|%Vd(ff)|%Vd(rew)|>")
+    o.append("%?mh<%Vd(locked)|%Vd(volbar)>")
+    o.append("%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>")
+
+    if gauge:
+        o.append("%?if(%sd,=,1)<%Vd(gauge)>")
+    else:
+        o += dial_border(30, 110, 420, 36)
+
+    o.append(HEADER)
+
+    # the chase around the art
+    en, vp = march("ch", AX, AY, AS, AS, 16, 70, thick=4)
+    o.append("""#
+# The chase
+# =========
+# A bright segment running clockwise around the cover, one stop per frame,
+# and only while something is playing: a still screen with a light running
+# round it looks like it is doing something when it is not.""")
+    o += ["%%?mp<|%s|||||>" % e for e in en]
+    o.append("#")
+    o += vp
+
+    # the sheen: a translucent band sweeping down the panel
+    o.append("""#
+# The sheen
+# =========
+# A soft band sweeping down the panel. The backdrop cannot move - it is
+# rendered once into the backdrop buffer and re-rendering it every frame
+# would be a 480x800 scale and blur at 20 fps - so the movement goes over
+# the top of it instead, which costs one gradient-filled rectangle.""")
+    steps = 10
+    for i in range(steps):
+        o.append("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%d)>" % (steps, SHEEN_MS, i + 1, i))
+    o.append("#")
+    for i in range(steps):
+        sy = 150 + i * 62
+        o.append("%%Vl(sh%d,0,%d,-,26,-)" % (i, sy))
+        o.append("%%dr(0,0,-,-,%s,%s)" % (DIM, GROUND))
+
+    o.append("""#
+# The backdrop
+# ============
+# The cover, scaled to cover the whole panel, blurred, with a veil of the
+# theme's ground blended over it so text stays readable. %%Cb does the
+# work; apps/canvas.c has had the blur since it was written and nothing
+# could ask for it.
+#
+# Labelled and enabled from the default viewport, because the default
+# viewport cannot draw: skin_render() sets its refresh mode to zero
+# whenever a skin has real viewports after it, so a %%Cb in an unlabelled
+# %%V(0,0,-,-,-) is parsed, is reached, and is silently never refreshed.
+#
+# Straight to the panel rather than into the backdrop buffer via %%VB. The
+# buffer looks like the right home - a viewport clear copies from it, so
+# the picture would survive every later viewport - but nothing makes the
+# *gaps between* viewports repaint from it: that whole-screen clear only
+# happens when the default viewport is dirty, and skin_render() marks it
+# clean at the end of every pass. Drawing here and letting later viewports
+# punch their own panels out of it is what actually works.
+%%Vl(bg,0,0,-,-,-)
+%%Cb(0,0,480,800,26,55)
+#
+# Main
+# ====
+# The cover, floating, with its own reflection under it. Smaller than
+# V2's: a reflection needs somewhere to be.
+%%Vl(aa,%d,%d,%d,%d,-)
+%%Cl(0,0,%d,%d,c,c)
+%%Cd
+#
+%%Vl(mirror,%d,%d,%d,%d,-)
+%%Cm(%d,%d,%d,%d,150,0)""" % (AX, AY, AS, AS, AS, AS,
+                              AX, MIRROR_Y, AS, MIRROR_H,
+                              AX, MIRROR_Y, AS, MIRROR_H))
+    content = [band(BAND_Y), """#
+# Track
+# -----
+%V(30,688,-30,30,2)
+%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
+#
+%V(30,720,-30,46,4)
+%al%s%?it<%it|%fn>"""]
+
+    o.append("""#
+# The pulse
+# =========
+# An accent rule under the title, breathing. Eight widths, and the two
+# colours make it a gradient rather than a flat bar.""")
+    for i in range(len(PULSE_W)):
+        o.append("%%?if(%%an(%d,110),=,%d)<%%Vd(pu%d)>" % (len(PULSE_W), i + 1, i))
+    o.append("#")
+    for i, pw in enumerate(PULSE_W):
+        o.append("%%Vl(pu%d,30,%d,%d,%d,-)" % (i, PULSE_Y, pw, PULSE_H))
+        o.append("%%dr(0,0,-,-,%s,%s)" % (ACCENT, GROUND))
+
+    content.append("""#
+# Footer
+# ======
+%V(30,770,-30,30,2)
+%al%pc/%pt%ar%pp/%pe""")
+
+    if gauge:
+        body, enables = hide_while_armed("\n".join(content))
+        o += enables
+        o.append(body)
+    else:
+        o += content
+
+    if gauge:
+        # The whole panel, while the dial is armed.
+        o.append("""#
+# The gauge
+# =========
+# Snappy Animated says "the volume is what your thumb means now" with a rim
+# round the volume bar. This fork says it with the whole screen: while the
+# dial is armed the panel becomes the volume and nothing else, because a
+# gesture that has taken over the meaning of the entire surface may as well
+# say so on the entire surface.
+#
+# Declared last on purpose. A viewport clears its background, so this one
+# covers what came before it - which is exactly what a modal overlay is -
+# and arming or disarming the dial asks the skin for a full update, so the
+# screen underneath comes back the moment the thumb lifts.
+%Vl(gauge,0,0,-,-,5)
+%Vb(0C0D0E)
+#
+%V(0,300,-,70,5)
+%ac%pv
+#
+%V(0,380,-,30,2)
+%acVOLUME
+#
+%Vl(gaugebar,60,440,360,40,-)
+%pv(0,0,-,-,vb,backdrop,vb_backdrop)""")
+        en, vp = march("gg", 60, 440, 360, 40, 16, 55, thick=4)
+        o += ["%%?if(%%sd,=,1)<%s>" % e for e in en]
+        o.append("#")
+        o += vp
+
+    return "\n".join(o) + "\n"
+
+
+io.open("themes/wps/SnappyV2.wps", "w", newline="\n").write(snappy_v2())
+io.open("themes/wps/SnappyAnimated.wps", "w", newline="\n").write(animated(False))
+io.open("themes/wps/SnappyGauge.wps", "w", newline="\n").write(animated(True))
+print("wrote SnappyV2.wps, SnappyAnimated.wps, SnappyGauge.wps")

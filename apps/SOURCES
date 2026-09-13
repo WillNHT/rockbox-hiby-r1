@@ -121,6 +121,7 @@ gui/yesno.c
 #endif
 gui/viewport.c
 
+gui/skin_engine/skin_art_fx.c
 gui/skin_engine/skin_backdrops.c
 gui/skin_engine/skin_display.c
 gui/skin_engine/skin_engine.c

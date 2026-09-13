@@ -18393,3 +18393,17 @@
   </voice>
 </phrase>
 <phrase>
+  id: LANG_AUDIOBOOKS
+  desc: main menu entry for the audiobooks folder
+  user: core
+  <source>
+    *: "Audiobooks"
+  </source>
+  <dest>
+    *: "Audiobooks"
+  </dest>
+  <voice>
+    *: "Audiobooks"
+  </voice>
+</phrase>
+<phrase>

@@ -104,6 +104,11 @@
  * user chooses. See do_backlight_off() in firmware/backlight.c. */
 #define HAVE_BACKLIGHT_DIM_IDLE
 
+/* This device has no hold switch, and its lock is a software one the user
+ * asks for with a key. Locking input must not also blank the screen. See
+ * backlight_get_current_timeout(). */
+#define SOFTLOCK_KEEPS_BACKLIGHT
+
 #define MIN_BRIGHTNESS_SETTING      1
 #define MAX_BRIGHTNESS_SETTING      100
 #define BRIGHTNESS_STEP             5

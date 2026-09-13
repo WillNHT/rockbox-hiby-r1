@@ -111,6 +111,14 @@ struct gui_img {
     bool dither;
 };
 
+/* %Cb / %Cm: a rectangle and two numbers whose meaning depends on which
+ * tag it is - blur radius and veil percent, or the reflection's top and
+ * bottom alpha. See skin_art_fx.c. */
+struct skin_art_fx {
+    int16_t x, y, w, h;
+    int16_t a, b;
+};
+
 /* %an(frames, period_ms). See parse_animation(). */
 struct skin_animation {
     int frames;
@@ -392,11 +400,10 @@ struct wps_data
 #endif
 
     bool peak_meter_enabled;
-    /* Set at parse time by %an. Unlike peak_meter_enabled, which the
-     * render pass keeps up to date because a peak meter can be inside a
-     * conditional, this stays true for the life of the skin: an animation
-     * that is only sometimes visible still has to be given the frame rate
-     * to be animated at all. */
+    /* Whether an %an was actually drawn last pass, kept up to date by the
+     * render exactly as peak_meter_enabled is. A skin that only animates
+     * inside a conditional - the volume bar's border while the dial is
+     * armed - then costs nothing at all until the branch is taken. */
     bool animation_enabled;
     bool wps_sb_tag;
     bool show_sb_on_wps;

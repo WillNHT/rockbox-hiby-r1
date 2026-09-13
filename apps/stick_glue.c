@@ -290,6 +290,12 @@ struct overlay_shape
      * entirely, because the gesture now means rotation. */
     bool dial;
     int  dial_deg;    /* where the thumb sits on the ring, degrees      */
+    /* Whether a skin is the thing underneath. A skin can say "the volume
+     * is what your thumb means now" in its own language and in its own
+     * place - on the volume bar, where the user is already looking - so
+     * the overlay draws no ring there. A list has no such language, so it
+     * still gets one. */
+    bool on_skin;
 };
 
 /* How often a moving overlay may ask the screen underneath to repaint. */
@@ -458,6 +464,11 @@ static const struct { short w, h; } bd_size[BD_COUNT] =
 };
 
 static struct canvas_overlay *bd_ov[BD_COUNT];
+/* What each slot is currently covering. Kept here as well as inside the
+ * compositor because the sticky-edge fix has to ask "did the repaint that
+ * just happened cover this one?", and only the caller knows the answer. */
+static short bd_rx[BD_COUNT], bd_ry[BD_COUNT], bd_rw[BD_COUNT], bd_rh[BD_COUNT];
+static bool bd_held[BD_COUNT];
 static bool bd_holding;     /* at least one slot is covering something */
 static bool bd_off;         /* the pool said no; do not keep asking    */
 static bool bd_short;       /* something would not fit this frame      */
@@ -503,6 +514,11 @@ static bool bd_capture(int slot, int x, int y, int w, int h)
         return false;
     }
 
+    bd_rx[slot] = (short)x;
+    bd_ry[slot] = (short)y;
+    bd_rw[slot] = (short)w;
+    bd_rh[slot] = (short)h;
+    bd_held[slot] = true;
     bd_holding = true;
     return true;
 }
@@ -524,8 +540,11 @@ static void bd_restore_all(void)
     if (!bd_holding)
         return;
     for (i = 0; i < BD_COUNT; i++)
-        if (bd_ov[i])
+        if (bd_ov[i] && bd_held[i])
+        {
             canvas_overlay_restore(bd_ov[i]);
+            bd_held[i] = false;
+        }
     canvas_present();
     bd_holding = false;
 }
@@ -538,8 +557,44 @@ static void bd_forget_all(void)
     int i;
     for (i = 0; i < BD_COUNT; i++)
         if (bd_ov[i])
+        {
             canvas_overlay_invalidate(bd_ov[i]);
+            bd_held[i] = false;
+        }
     bd_holding = false;
+}
+
+/* Only the slots the given rectangle actually covered.
+ *
+ * A list repaint is not a screen repaint: it puts its rows back inside its
+ * own viewport and touches nothing else. Forgetting every slot after one
+ * meant the edge lights - which live at the rim, outside any list viewport
+ * - had their saved pixels dropped while their ink stayed on the panel,
+ * and nothing in the system would ever paint over it again. That is the
+ * bar that stuck to the top and bottom of the screen during a scroll.
+ *
+ * So: slots the repaint covered are stale and are dropped; slots it did
+ * not touch are still good and stay, to be put back on the next frame. */
+static void bd_forget_within(int rx, int ry, int rw, int rh)
+{
+    int i;
+    bool any = false;
+
+    for (i = 0; i < BD_COUNT; i++)
+    {
+        if (!bd_ov[i] || !bd_held[i])
+            continue;
+
+        if (bd_rx[i] < rx + rw && bd_rx[i] + bd_rw[i] > rx &&
+            bd_ry[i] < ry + rh && bd_ry[i] + bd_rh[i] > ry)
+        {
+            canvas_overlay_invalidate(bd_ov[i]);
+            bd_held[i] = false;
+        }
+        else
+            any = true;
+    }
+    bd_holding = any;
 }
 
 /* A gesture is over: whatever went wrong during it should not condemn the
@@ -560,6 +615,8 @@ static inline bool bd_capture(int slot, int x, int y, int w, int h)
 { (void)slot; (void)x; (void)y; (void)w; (void)h; return false; }
 static inline void bd_restore_all(void) { }
 static inline void bd_forget_all(void) { }
+static inline void bd_forget_within(int rx, int ry, int rw, int rh)
+{ (void)rx; (void)ry; (void)rw; (void)rh; }
 static inline void bd_gesture_reset(void) { }
 #endif /* HAVE_COMPOSITOR */
 
@@ -964,6 +1021,14 @@ static void overlay_paint(const struct overlay_shape *s)
     {
         int mx, my;
 
+        /* On a skin the dial has no picture of its own. %sd tells the skin
+         * the dial is armed and the skin styles its own volume bar, which
+         * is both where the user is looking and a place that holds still -
+         * a ring drawn round a thumb going in circles was a second thing
+         * to watch, over the top of the one that mattered. */
+        if (s->on_skin)
+            goto flush;
+
         bd_capture(BD_MAIN, s->ox - s->R - 8, s->oy - s->R - 8,
                    2 * (s->R + 8), 2 * (s->R + 8));
         dirty_point(s->ox, s->oy, s->R + 4);
@@ -1072,6 +1137,9 @@ static bool on_a_skin(void)
     return (cached_context & 0xff) == CONTEXT_WPS;
 }
 
+/* Edge detection for the dial, so %sd reaches the screen. */
+static bool dial_was_armed;
+
 static long repaint_interval_ticks(void)
 {
     return on_a_skin() ? MS_TO_TICKS(OVERLAY_REPAINT_SKIN_MS)
@@ -1159,12 +1227,34 @@ static void overlay_update(const struct stick_state *st)
         /* An armed dial gets its own picture: the sector and the
          * deflection mean nothing once the gesture is rotation. */
         overlay.want_s.dial = (phase == STICK_PHASE_DIAL);
+        overlay.want_s.on_skin = on_a_skin();
+
+        /* The moment the dial arms or disarms, ask the skin to repaint.
+         * A skin with no peak meter and no %an redraws only when something
+         * happens to the track, and this is a change the skin is now
+         * responsible for showing - %sd is no use if nothing asks for the
+         * frame that would show it. Edge-triggered: mid-dial the volume is
+         * changing anyway and that repaints on its own. */
+        if (overlay.want_s.dial != dial_was_armed)
+        {
+            dial_was_armed = overlay.want_s.dial;
+            request_repaint();
+        }
         overlay.want_s.dial_deg =
             (int)(stick_atan2_deg64(st->x - st->cx, st->y - st->cy) / 64);
     }
 }
 
-void stick_redraw_overlay(void)
+bool stick_dial_armed(void)
+{
+#ifdef STICK_HAVE_KEYMAP
+    return stick_phase(&live_state) == STICK_PHASE_DIAL;
+#else
+    return false;
+#endif
+}
+
+void stick_redraw_overlay(int rx, int ry, int rw, int rh)
 {
     /* Called from the list once it has finished putting its rows down.
      * Whatever we had drawn is underneath those rows now, so the shape is
@@ -1173,10 +1263,10 @@ void stick_redraw_overlay(void)
     overlay.drawn = false;
     overlay.repair_owed = false;
 
-    /* Everything remembered about what was underneath is a frame out of
-     * date now. Putting it back would scribble old rows over new ones;
-     * forget it instead. */
-    bd_forget_all();
+    /* Only what the list actually repainted is a frame out of date. See
+     * bd_forget_within(): forgetting the rest is what made the edge lights
+     * stick to the screen during a scroll. */
+    bd_forget_within(rx, ry, rw, rh);
 
     if (!overlay.want)
         return;
@@ -1254,9 +1344,13 @@ static void overlay_invalidate(void)
         overlay.repair_owed = true;
     overlay.drawn = false;
 
-    /* Same reason as in stick_redraw_overlay(): a repaint is coming, so
-     * the saved backdrop is about to be wrong. */
-    bd_forget_all();
+    /* A repaint is coming, so the saved backdrop is about to be wrong -
+     * but only where that repaint lands. A skin update is the whole panel,
+     * so everything goes; a list repaints its own viewport and
+     * stick_redraw_overlay() is called afterwards with the rectangle, so
+     * leave that case to the side that knows it. */
+    if (on_a_skin())
+        bd_forget_all();
 }
 
 /* ------------------------------------------------------------------- cues */

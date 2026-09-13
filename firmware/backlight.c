@@ -940,15 +940,28 @@ bool is_backlight_on(bool ignore_always_off)
 /* return value in ticks; 0 means always on, <0 means always off */
 int backlight_get_current_timeout(void)
 {
-    if ((backlight_on_button_hold != 0)
+    bool hold_applies;
+
 #if (defined(HAVE_REMOTE_LCD_AS_MAIN) && defined(HAS_REMOTE_BUTTON_HOLD))
-        && remote_button_hold()
+    hold_applies = remote_button_hold();
 #elif defined(HAS_BUTTON_HOLD)
-        && button_hold()
+    hold_applies = button_hold();
+#elif defined(SOFTLOCK_KEEPS_BACKLIGHT)
+    /* "Backlight On Hold" is about a physical hold switch: a slider you
+     * push before putting the player in a pocket, where blanking the
+     * screen is the whole point. On a device with no such switch this
+     * falls back to is_keys_locked(), and once a software lock feeds that
+     * - which it does here, so the skins can show LOCKED - a deliberate
+     * lock also blanked the panel. Locking input is not the same
+     * instruction as turning the screen off, and it left the user holding
+     * a device whose screen they could not get back without unlocking it
+     * first. */
+    hold_applies = false;
 #else
-        && is_keys_locked()
+    hold_applies = is_keys_locked();
 #endif
-        )
+
+    if (backlight_on_button_hold != 0 && hold_applies)
         return (backlight_on_button_hold == 2) ? 0 : -1;
         /* always on or always off */
     else

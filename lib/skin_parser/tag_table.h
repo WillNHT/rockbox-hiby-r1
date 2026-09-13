@@ -321,6 +321,17 @@ enum skin_token_type {
      * catch that; keeping new tokens at the end means there is nothing to
      * catch. */
     SKIN_TOKEN_ANIMATION_FRAME,
+
+    /* True while the stick's volume dial is armed: the thumb is down and
+     * turning it is the volume. A skin uses this to say so on its own
+     * volume bar, which is where the user is already looking. Appended,
+     * like everything else here - see the note above. */
+    SKIN_TOKEN_STICK_DIAL_ARMED,
+
+    /* The album art, blurred across the background, and mirrored under
+     * itself. See apps/gui/skin_engine/skin_art_fx.c. */
+    SKIN_TOKEN_ALBUMART_BACKDROP,
+    SKIN_TOKEN_ALBUMART_MIRROR,
 };
 
 /*

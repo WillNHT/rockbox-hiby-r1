@@ -532,10 +532,15 @@ static bool handle_power(int held, bool repeat, bool release)
              * one meaning is what makes the rest of the key legible, since
              * everything else on it is a hold. */
             cue();
-            if (audio_status() & AUDIO_STATUS_PLAY)
-                audio_pause();
-            else
+            /* PAUSE first, and not PLAY. audio_status() keeps
+             * AUDIO_STATUS_PLAY set while paused - paused is a *kind* of
+             * playing, with AUDIO_STATUS_PAUSE on top - so testing PLAY
+             * meant the second tap paused an already-paused track and
+             * resume was unreachable. */
+            if (audio_status() & AUDIO_STATUS_PAUSE)
                 audio_resume();
+            else if (audio_status() & AUDIO_STATUS_PLAY)
+                audio_pause();
         }
         return true;
     }

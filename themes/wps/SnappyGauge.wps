@@ -1,9 +1,9 @@
 #
-#   ____ _  _ ____ ___  ___  _   _   ANIMATED
+#   ____ _  _ ____ ___  ___  _   _   GAUGE
 #   [__  |\ | |__| |__] |__]  \_/
 #   ___] | \| |  | |    |      |
 #
-#  Snappy Animated - Snappy V2, in motion.
+#  Snappy Gauge - Snappy V2, in motion.
 #
 #  Everything that moves here comes from something this fork added:
 #
@@ -41,54 +41,7 @@
 %?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>|%Vd(paused)|%Vd(ff)|%Vd(rew)|>
 %?mh<%Vd(locked)|%Vd(volbar)>
 %?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>
-#
-# The volume dial, armed
-# =====================
-# See dial_border() in themes/gen_skins.py.
-%?if(%sd,=,1)<%Vd(vdrim)>
-%?if(%sd,=,1)<%?if(%an(12,60),=,1)<%Vd(vd00)>>
-%?if(%sd,=,1)<%?if(%an(12,60),=,2)<%Vd(vd01)>>
-%?if(%sd,=,1)<%?if(%an(12,60),=,3)<%Vd(vd02)>>
-%?if(%sd,=,1)<%?if(%an(12,60),=,4)<%Vd(vd03)>>
-%?if(%sd,=,1)<%?if(%an(12,60),=,5)<%Vd(vd04)>>
-%?if(%sd,=,1)<%?if(%an(12,60),=,6)<%Vd(vd05)>>
-%?if(%sd,=,1)<%?if(%an(12,60),=,7)<%Vd(vd06)>>
-%?if(%sd,=,1)<%?if(%an(12,60),=,8)<%Vd(vd07)>>
-%?if(%sd,=,1)<%?if(%an(12,60),=,9)<%Vd(vd08)>>
-%?if(%sd,=,1)<%?if(%an(12,60),=,10)<%Vd(vd09)>>
-%?if(%sd,=,1)<%?if(%an(12,60),=,11)<%Vd(vd10)>>
-%?if(%sd,=,1)<%?if(%an(12,60),=,12)<%Vd(vd11)>>
-#
-%Vl(vdrim,27,107,426,42,-)
-%dr(0,0,-,2,D9E021,D9E021)
-%dr(0,40,-,2,D9E021,D9E021)
-%dr(0,0,2,-,D9E021,D9E021)
-%dr(424,0,2,-,D9E021,D9E021)
-#
-%Vl(vd00,30,107,84,3,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd01,114,107,84,3,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd02,198,107,84,3,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd03,282,107,84,3,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd04,366,107,84,3,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd05,450,110,3,36,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd06,366,146,84,3,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd07,282,146,84,3,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd08,198,146,84,3,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd09,114,146,84,3,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd10,30,146,84,3,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd11,27,110,3,36,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
+%?if(%sd,=,1)<%Vd(gauge)>
 #
 # Header
 # ======
@@ -281,6 +234,16 @@ SHF%xd(O,%ps)
 %dr(0,0,-,-,D9E021,0C0D0E)
 %Vl(pu7,30,767,90,3,-)
 %dr(0,0,-,-,D9E021,0C0D0E)
+%?if(%sd,=,0)<%Vd(pm_short)>
+%?if(%sd,=,0)<%Vd(pm_long)>
+%?if(%sd,=,0)<%Vd(paused)>
+%?if(%sd,=,0)<%Vd(rew)>
+%?if(%sd,=,0)<%Vd(ff)>
+%?if(%sd,=,0)<%Vd(q0)>
+%?if(%sd,=,0)<%Vd(q1)>
+%?if(%sd,=,0)<%Vd(q2)>
+%?if(%sd,=,0)<%Vd(q3)>
+%?if(%sd,=,0)<%Vd(q4)>
 #
 # The band
 # ========
@@ -303,21 +266,94 @@ SHF%xd(O,%ps)
 %Vl(ff,30,620,240,46,4)
 %al%>%> FF
 #
-%V(280,614,-30,30,2)
+%Vl(q0,280,614,-30,30,2)
 %ar%fc %fb
 #
-%V(280,644,-30,30,2)
+%Vl(q1,280,644,-30,30,2)
 %ar%?if(%St(party mode),!=,off)<party|%?if(%St(single mode),!=,off)<%St(single mode)|%t(4)%fk kHz;%t(4)%pp of %pe>>
 #
 # Track
 # -----
-%V(30,688,-30,30,2)
+%Vl(q2,30,688,-30,30,2)
 %s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
 #
-%V(30,720,-30,46,4)
+%Vl(q3,30,720,-30,46,4)
 %al%s%?it<%it|%fn>
 #
 # Footer
 # ======
-%V(30,770,-30,30,2)
+%Vl(q4,30,770,-30,30,2)
 %al%pc/%pt%ar%pp/%pe
+#
+# The gauge
+# =========
+# Snappy Animated says "the volume is what your thumb means now" with a rim
+# round the volume bar. This fork says it with the whole screen: while the
+# dial is armed the panel becomes the volume and nothing else, because a
+# gesture that has taken over the meaning of the entire surface may as well
+# say so on the entire surface.
+#
+# Declared last on purpose. A viewport clears its background, so this one
+# covers what came before it - which is exactly what a modal overlay is -
+# and arming or disarming the dial asks the skin for a full update, so the
+# screen underneath comes back the moment the thumb lifts.
+%Vl(gauge,0,0,-,-,5)
+%Vb(0C0D0E)
+#
+%V(0,300,-,70,5)
+%ac%pv
+#
+%V(0,380,-,30,2)
+%acVOLUME
+#
+%Vl(gaugebar,60,440,360,40,-)
+%pv(0,0,-,-,vb,backdrop,vb_backdrop)
+%?if(%sd,=,1)<%?if(%an(16,55),=,1)<%Vd(gg00)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,2)<%Vd(gg01)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,3)<%Vd(gg02)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,4)<%Vd(gg03)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,5)<%Vd(gg04)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,6)<%Vd(gg05)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,7)<%Vd(gg06)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,8)<%Vd(gg07)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,9)<%Vd(gg08)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,10)<%Vd(gg09)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,11)<%Vd(gg10)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,12)<%Vd(gg11)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,13)<%Vd(gg12)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,14)<%Vd(gg13)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,15)<%Vd(gg14)>>
+%?if(%sd,=,1)<%?if(%an(16,55),=,16)<%Vd(gg15)>>
+#
+%Vl(gg00,60,436,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg01,111,436,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg02,162,436,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg03,213,436,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg04,264,436,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg05,315,436,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg06,366,436,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg07,420,440,4,40,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg08,366,480,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg09,315,480,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg10,264,480,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg11,213,480,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg12,162,480,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg13,111,480,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg14,60,480,51,4,-)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(gg15,56,440,4,40,-)
+%dr(0,0,-,-,D9E021,F4F2EE)

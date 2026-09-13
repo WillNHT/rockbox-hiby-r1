@@ -2628,6 +2628,8 @@ const struct settings_list settings[] = {
     * has not asked to rename anything, and a config.cfg carrying one and
     * not the other has to keep working. */
    TEXT_SETTING(0, custom_folder, "custom folder path", "", NULL, NULL),
+   TEXT_SETTING(0, audiobook_folder, "audiobook folder path",
+                "/Audiobooks", NULL, NULL),
    CUSTOM_SETTING(0, root_menu_renamed,
                   LANG_ROCKBOX_TITLE, /* lang string here is never actually used */
                   NULL, "root menu names",

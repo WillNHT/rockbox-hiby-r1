@@ -75,7 +75,16 @@ void stick_draw_overlay(void);
 
 /* Repaints the gesture after a list has redrawn its rows over it. The list
  * calls this at the end of its own draw; nothing else should. */
-void stick_redraw_overlay(void);
+/* Called by the list once its rows are down, with the rectangle it just
+ * repainted. The rectangle matters: a list repaint touches only its own
+ * viewport, and anything the overlay left outside it has to be put back
+ * rather than forgotten. */
+void stick_redraw_overlay(int rx, int ry, int rw, int rh);
+
+/* True while the volume dial is armed - the thumb is down and turning it
+ * changes the volume. What the %sd skin tag reports, so a skin can say so
+ * on its own volume bar instead of the engine drawing a ring. */
+bool stick_dial_armed(void);
 
 /* Read-only view for the lab plugin and, later, the presentation layer. */
 const struct stick_state *stick_get_state(void);

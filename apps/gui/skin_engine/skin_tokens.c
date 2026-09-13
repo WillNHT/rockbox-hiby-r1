@@ -53,6 +53,9 @@
 #include "core_alloc.h"
 #include "tdspeed.h"
 #include "viewport.h"
+#if defined(HAVE_TOUCHSCREEN) && !defined(__PCTOOL__)
+#include "stick_glue.h"
+#endif
 #include "tagcache.h"
 
 #include "wps_internals.h"
@@ -1564,6 +1567,16 @@ const char *get_token_value(struct gui_wps *gwps,
 #else
             return NULL;
 #endif
+        case SKIN_TOKEN_STICK_DIAL_ARMED:
+#if defined(HAVE_TOUCHSCREEN) && !defined(__PCTOOL__)
+            numeric_ret = stick_dial_armed() ? 1 : 0;
+#else
+            numeric_ret = 0;
+#endif
+            itoa_buf(buf, buf_size, numeric_ret);
+            numeric_buf = buf;
+            goto gtv_ret_numeric_tag_info;
+
         case SKIN_TOKEN_ANIMATION_FRAME:
         {
             /* 1..frames, from the tick count. Deliberately read off the
@@ -1581,6 +1594,14 @@ const char *get_token_value(struct gui_wps *gwps,
 
             if (!an || an->frames < 1 || an->period_ms < 1)
                 return NULL;
+
+            /* Set here rather than at parse time. A skin that only
+             * animates inside a conditional - the volume bar's border
+             * while the dial is armed, say - would otherwise be redrawn
+             * at 20 fps for its whole life for the sake of a branch
+             * almost never taken. The peak meter does the same, and for
+             * the same reason. */
+            data->animation_enabled = true;
 
             ms = (long)current_tick * 1000 / HZ;
             numeric_ret = (int)((ms / an->period_ms) % an->frames) + 1;

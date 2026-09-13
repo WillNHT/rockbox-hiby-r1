@@ -325,6 +325,7 @@ static int parse_animation(struct skin_element *element,
                            struct wps_data *wps_data)
 {
     struct skin_animation *an = skin_buffer_alloc(sizeof(*an));
+    (void)wps_data;
 
     if (!an)
         return WPS_ERROR_INVALID_PARAM;
@@ -336,7 +337,27 @@ static int parse_animation(struct skin_element *element,
         return WPS_ERROR_INVALID_PARAM;
 
     token->value.data = PTRTOSKINOFFSET(skin_buffer, an);
-    wps_data->animation_enabled = true;
+    return 0;
+}
+
+static int parse_art_fx(struct skin_element *element,
+                        struct wps_token *token,
+                        struct wps_data *wps_data)
+{
+    struct skin_art_fx *fx = skin_buffer_alloc(sizeof(*fx));
+    (void)wps_data;
+
+    if (!fx)
+        return WPS_ERROR_INVALID_PARAM;
+
+    fx->x = get_param(element, 0)->data.number;
+    fx->y = get_param(element, 1)->data.number;
+    fx->w = get_param(element, 2)->data.number;
+    fx->h = get_param(element, 3)->data.number;
+    fx->a = get_param(element, 4)->data.number;
+    fx->b = get_param(element, 5)->data.number;
+
+    token->value.data = PTRTOSKINOFFSET(skin_buffer, fx);
     return 0;
 }
 
@@ -2538,6 +2559,10 @@ static int skin_element_callback(struct skin_element* element, void* data)
                     break;
                 case SKIN_TOKEN_ANIMATION_FRAME:
                     function = parse_animation;
+                    break;
+                case SKIN_TOKEN_ALBUMART_BACKDROP:
+                case SKIN_TOKEN_ALBUMART_MIRROR:
+                    function = parse_art_fx;
                     break;
                 case SKIN_TOKEN_IMAGE_PRELOAD_DISPLAY:
                 case SKIN_TOKEN_IMAGE_DISPLAY_9SEGMENT:

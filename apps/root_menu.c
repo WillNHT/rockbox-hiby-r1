@@ -127,15 +127,20 @@ static int browser(void* param)
     switch ((intptr_t)param)
     {
         case GO_TO_CUSTOMFOLDER:
-            /* Deliberately not remembered in last_folder: this entry means
-             * "that folder", and a main menu item that lands somewhere
-             * different depending on where the file browser was last is
-             * not a shortcut to anywhere. */
+        case GO_TO_AUDIOBOOKS:
+        {
+            /* Deliberately not remembered in last_folder: these entries
+             * mean "that folder", and a main menu item that lands
+             * somewhere different depending on where the file browser was
+             * last is not a shortcut to anywhere. */
+            const char *want = ((intptr_t)param == GO_TO_AUDIOBOOKS) ?
+                                   global_settings.audiobook_folder :
+                                   global_settings.custom_folder;
             filter = global_settings.dirfilter;
-            if (global_settings.custom_folder[0])
+            if (want[0])
             {
                 size_t n;
-                strmemccpy(folder, global_settings.custom_folder, MAX_PATH);
+                strmemccpy(folder, want, MAX_PATH);
                 /* rockbox_browse() hands .root to set_current_file(), which
                  * reads it as a path *to a file* and splits it at the last
                  * slash - so "/lab" opened "/" with "lab" highlighted. A
@@ -149,6 +154,7 @@ static int browser(void* param)
                 }
             }
             break;
+        }
 
         case GO_TO_FILEBROWSER:
             filter = global_settings.dirfilter;
@@ -517,6 +523,7 @@ static const struct root_items items[] = {
     [GO_TO_SYSTEM_SCREEN] = { miscscrn, &info_menu, &system_menu },
     [GO_TO_SHORTCUTMENU] = { do_shortcut_menu, NULL, NULL },
     [GO_TO_CUSTOMFOLDER] = { browser, (void*)GO_TO_CUSTOMFOLDER, &file_menu },
+    [GO_TO_AUDIOBOOKS]   = { browser, (void*)GO_TO_AUDIOBOOKS,   &file_menu },
 
 };
 //static const int nb_items = sizeof(items)/sizeof(*items);
@@ -535,6 +542,9 @@ MENUITEM_RETURNVALUE(shortcut_menu, ID2P(LANG_SHORTCUTS), GO_TO_SHORTCUTMENU,
  * somewhere to point. */
 MENUITEM_RETURNVALUE(custom_folder_item, ID2P(LANG_CUSTOM_FOLDER),
                         GO_TO_CUSTOMFOLDER, NULL, Icon_Folder);
+
+MENUITEM_RETURNVALUE(audiobooks_item, ID2P(LANG_AUDIOBOOKS),
+                        GO_TO_AUDIOBOOKS, NULL, Icon_Bookmark);
 
 MENUITEM_RETURNVALUE(file_browser, ID2P(LANG_DIR_BROWSER), GO_TO_FILEBROWSER,
                         NULL, Icon_file_view_menu);
@@ -600,6 +610,7 @@ static struct menu_table menu_table[] = {
     { "system_menu", &system_menu_ },
     { "shortcuts", &shortcut_menu },
     { "custom folder", &custom_folder_item },
+    { "audiobooks", &audiobooks_item },
 };
 #define MAX_MENU_ITEMS (sizeof(menu_table) / sizeof(struct menu_table))
 static struct menu_item_ex *root_menu__[MAX_MENU_ITEMS];
@@ -798,6 +809,13 @@ bool root_menu_is_custom_folder(int table_index)
     if (table_index < 0 || table_index >= (int)MAX_MENU_ITEMS)
         return false;
     return menu_table[table_index].item == &custom_folder_item;
+}
+
+bool root_menu_is_audiobooks(int table_index)
+{
+    if (table_index < 0 || table_index >= (int)MAX_MENU_ITEMS)
+        return false;
+    return menu_table[table_index].item == &audiobooks_item;
 }
 
 const char *root_menu_custom_name(const struct menu_item_ex *item)
@@ -1268,6 +1286,7 @@ void root_menu(void)
             case GO_TO_DBBROWSER:
 #endif
             case GO_TO_CUSTOMFOLDER:
+            case GO_TO_AUDIOBOOKS:
             case GO_TO_FILEBROWSER:
             case GO_TO_PLAYLISTS_SCREEN:
                 previous_browser = next_screen;

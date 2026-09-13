@@ -33,6 +33,7 @@
 #include "albumart.h"
 #endif
 #include "settings.h"
+#include "skin_art_fx.h"
 #include "skin_display.h"
 #include "skin_engine.h"
 #include "skin_parser.h"
@@ -187,6 +188,25 @@ static bool do_non_text_tags(struct gui_wps *gwps, struct skin_draw_info *info,
             break;
         case SKIN_TOKEN_UIVIEWPORT_ENABLE:
             sb_set_info_vp(gwps->display->screen_type, token->value.data);
+            break;
+        case SKIN_TOKEN_ALBUMART_BACKDROP:
+        case SKIN_TOKEN_ALBUMART_MIRROR:
+            if (do_refresh)
+            {
+                struct skin_art_fx *fx =
+                        SKINOFFSETTOPTR(skin_buffer, token->value.data);
+                if (fx)
+                {
+                    bool full = (info->refresh_type & SKIN_REFRESH_ALL)
+                                    == SKIN_REFRESH_ALL;
+                    if (token->type == SKIN_TOKEN_ALBUMART_BACKDROP)
+                        skin_art_backdrop(gwps, &skin_vp->vp, fx->x, fx->y,
+                                          fx->w, fx->h, fx->a, fx->b, full);
+                    else
+                        skin_art_mirror(gwps, &skin_vp->vp, fx->x, fx->y,
+                                        fx->w, fx->h, fx->a, fx->b, full);
+                }
+            }
             break;
         case SKIN_TOKEN_PEAKMETER:
             data->peak_meter_enabled = true;
@@ -405,6 +425,10 @@ static void do_tags_in_hidden_conditional(struct skin_element* branch,
             else if (token->type == SKIN_TOKEN_PEAKMETER)
             {
                 data->peak_meter_enabled = false;
+            }
+            else if (token->type == SKIN_TOKEN_ANIMATION_FRAME)
+            {
+                data->animation_enabled = false;
             }
             else if (token->type == SKIN_TOKEN_VIEWPORT_ENABLE)
             {
