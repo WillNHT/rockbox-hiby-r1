@@ -587,6 +587,17 @@ struct menu_item_ex root_menu_;
 static struct menu_callback_with_desc root_menu_desc = {
         item_callback, ID2P(LANG_ROCKBOX_TITLE), Icon_Rockbox };
 
+/* The title over the main menu. A lang id by default; P2STR passes a plain
+ * pointer through untouched, so a user string can simply take its place.
+ * Called from settings_apply() and again whenever the name is edited. */
+void root_menu_apply_title(void)
+{
+    if (global_settings.root_menu_title[0])
+        root_menu_desc.desc = global_settings.root_menu_title;
+    else
+        root_menu_desc.desc = ID2P(LANG_ROCKBOX_TITLE);
+}
+
 static struct menu_table menu_table[] = {
     /* Order here represents the default ordering */
     { "bookmarks", &bookmarks },
@@ -615,6 +626,41 @@ static struct menu_table menu_table[] = {
 #define MAX_MENU_ITEMS (sizeof(menu_table) / sizeof(struct menu_table))
 static struct menu_item_ex *root_menu__[MAX_MENU_ITEMS];
 
+/* Match a config.cfg key against menu_table[].string.
+ *
+ * The loader used to cut the key at its first space - a way of throwing
+ * trailing junk away that predates any table entry containing one. Then
+ * "custom folder" arrived, arrived as "custom", matched nothing, and was
+ * dropped from the menu on every boot; the next settings_save() wrote the
+ * shortened menu back, so the entry did not merely fail to load, it
+ * deleted itself. Space and underscore compare equal, so a config written
+ * in either spelling still loads.
+ */
+static int menu_table_lookup(const char *key)
+{
+    unsigned i;
+
+    if (!key || !*key)
+        return -1;
+
+    for (i = 0; i < MAX_MENU_ITEMS; i++)
+    {
+        const char *a = key, *b = menu_table[i].string;
+
+        while (*a && *b)
+        {
+            char ca = (*a == '_') ? ' ' : *a;
+            char cb = (*b == '_') ? ' ' : *b;
+            if (ca != cb)
+                break;
+            a++; b++;
+        }
+        if (!*b && !*a)
+            return (int)i;
+    }
+    return -1;
+}
+
 struct menu_table *root_menu_get_options(int *nb_options)
 {
     *nb_options = MAX_MENU_ITEMS;
@@ -625,7 +671,8 @@ struct menu_table *root_menu_get_options(int *nb_options)
 void root_menu_load_from_cfg(void* setting, char *value)
 {
     char *next = value, *start, *end;
-    unsigned int menu_item_count = 0, i;
+    unsigned int menu_item_count = 0;
+    int i;
     bool main_menu_added = false;
 
     if (*value == '-')
@@ -647,17 +694,15 @@ void root_menu_load_from_cfg(void* setting, char *value)
             next++;
         }
         start = skip_whitespace(start);
-        if ((end = strchr(start, ' ')))
-            *end = '\0';
-        for (i=0; i<MAX_MENU_ITEMS; i++)
+        end = start + strlen(start);
+        while (end > start && (end[-1] == ' ' || end[-1] == '\t'))
+            *--end = '\0';
+        i = menu_table_lookup(start);
+        if (i >= 0)
         {
-            if (*start && !strcmp(start, menu_table[i].string))
-            {
-                root_menu__[menu_item_count++] = (struct menu_item_ex *)menu_table[i].item;
-                if (menu_table[i].item == &menu_)
-                    main_menu_added = true;
-                break;
-            }
+            root_menu__[menu_item_count++] = (struct menu_item_ex *)menu_table[i].item;
+            if (menu_table[i].item == &menu_)
+                main_menu_added = true;
         }
     }
     if (!main_menu_added)
@@ -843,7 +888,7 @@ void root_menu_names_load_from_cfg(void* setting, char *value)
     while (next)
     {
         char *start = next, *eq;
-        unsigned i;
+        int i;
 
         next = strchr(next, ',');
         if (next)
@@ -857,14 +902,16 @@ void root_menu_names_load_from_cfg(void* setting, char *value)
             continue;
         *eq = '\0';
 
-        for (i = 0; i < MAX_MENU_ITEMS; i++)
         {
-            if (*start && !strcmp(start, menu_table[i].string))
-            {
-                root_menu_set_name((int)i, skip_whitespace(eq + 1));
-                any = true;
-                break;
-            }
+            char *ke = eq;
+            while (ke > start && (ke[-1] == ' ' || ke[-1] == '\t'))
+                *--ke = '\0';
+        }
+        i = menu_table_lookup(start);
+        if (i >= 0)
+        {
+            root_menu_set_name(i, skip_whitespace(eq + 1));
+            any = true;
         }
     }
 

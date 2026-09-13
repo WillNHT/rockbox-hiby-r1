@@ -18407,3 +18407,16 @@
   </voice>
 </phrase>
 <phrase>
+  id: LANG_MAIN_MENU_TITLE
+  desc: the words shown over the main menu
+  user: core
+  <source>
+    *: "Main Menu Title"
+  </source>
+  <dest>
+    *: "Main Menu Title"
+  </dest>
+  <voice>
+    *: "Main Menu Title"
+  </voice>
+</phrase>

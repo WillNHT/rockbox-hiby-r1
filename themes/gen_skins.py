@@ -140,7 +140,15 @@ def dial_border(x, y, w, h, ms=60, stops=12):
 
 def band(y, meter_h=78, h=82):
     """The peak meter, the codec column, and the transport states that
-    share their rectangle."""
+    share their rectangle.
+
+    No paused badge: the two bars drawn over the meter said nothing the
+    stopped meter did not already say, and said it on top of it.
+
+    No playlist position either. It is in the footer, where it belongs;
+    having it alternate with the sample rate as well meant the same
+    "1 of 2279" appeared twice on the panel, in two places, out of phase.
+    """
     return """#
 # The band
 # ========
@@ -153,10 +161,6 @@ def band(y, meter_h=78, h=82):
 %%Vl(pm_long,30,%d,-30,%d,2)
 %%pm(%d)
 #
-%%Vl(paused,30,%d,240,%d,2)
-%%dr(80,12,32,58)
-%%dr(130,12,32,58)
-#
 %%Vl(rew,30,%d,240,46,4)
 %%al%%<%%< REW
 #
@@ -167,10 +171,9 @@ def band(y, meter_h=78, h=82):
 %%ar%%fc %%fb
 #
 %%V(280,%d,-30,30,2)
-%%ar%%?if(%%St(party mode),!=,off)<party|%%?if(%%St(single mode),!=,off)<%%St(single mode)|%%t(4)%%fk kHz;%%t(4)%%pp of %%pe>>""" % (
-        meter_h, h, y, h, meter_h, y, h, meter_h, y, h, y + 18, y + 18,
-        y + 12, y + 42)
-
+%%ar%%?if(%%St(party mode),!=,off)<party|%%?if(%%St(single mode),!=,off)<%%St(single mode)|%%fk kHz>>""" % (
+        meter_h, h, y, h, meter_h, y, h, meter_h,
+        y + 18, y + 18, y + 12, y + 42)
 
 
 def hide_while_armed(lines):
@@ -234,7 +237,7 @@ def snappy_v2():
 %wd""")
     o.append(PRELOAD)
     o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
-    o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>|%Vd(paused)|%Vd(ff)|%Vd(rew)|>")
+    o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>")
     o.append("%?mh<%Vd(locked)|%Vd(volbar)>")
     o.append("%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>")
     o += dial_border(30, 110, 420, 36)
@@ -245,36 +248,36 @@ def snappy_v2():
 # The art, full width. The frame is four rules rather than a bitmap so it
 # costs nothing and inherits the theme's foreground colour. %Cl is
 # viewport-relative, so the inset is 2,2 and not 32,162.
-%Vl(aa,30,160,420,400,-)
-%Cl(2,2,416,396,c,c)
+%Vl(aa,30,150,420,420,-)
+%Cl(2,2,416,416,c,c)
 %dr(0,0,420,2)
-%dr(0,398,-,-)
-%dr(0,2,2,396)
-%dr(418,2,-,396)
+%dr(0,418,-,-)
+%dr(0,2,2,416)
+%dr(418,2,-,416)
 %Cd
 #
 # No cover is not an empty screen. %C is false for a track with no
 # artwork, and the frame above is inside the viewport that goes with it,
 # so without this the whole middle of the panel is nothing at all.
-%Vl(noart,30,160,420,400,-)
+%Vl(noart,30,150,420,420,-)
 %dr(0,0,420,2)
-%dr(0,398,-,-)
-%dr(0,2,2,396)
-%dr(418,2,-,396)
+%dr(0,418,-,-)
+%dr(0,2,2,416)
+%dr(418,2,-,416)
 #
 %Vl(noartlabel,40,340,400,40,2)
 %ac%s%?id<%id|%?ia<%ia|no cover>>""")
-    o.append(band(566))
+    o.append(band(574, 70, 74))
     o.append("""#
 # Track
 # -----
-%V(30,652,-30,30,2)
+%V(30,656,-30,30,2)
 %s%al%id
 #
-%V(30,684,-30,30,2)
+%V(30,688,-30,30,2)
 %s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
 #
-%V(30,716,-30,46,4)
+%V(30,720,-30,46,4)
 %al%s%?it<%it|%fn>
 #
 # Footer
@@ -298,13 +301,20 @@ def snappy_v2():
 # that is a black hole from the header to the peak meter. Matching V2 to
 # the pixel means these skins share one slot between them.
 AX, AY, AS = 30, 150, 420
-AH = 400              # the art box is not square; the mirror wants the rest
-ART_W, ART_H = 416, 396
-MIRROR_Y, MIRROR_H = AY + 402, 46
-BAND_Y = 602
-PULSE_Y, PULSE_H = 767, 3
+AH = 420              # square: a cover is square and the inset is 2 px
+ART_W, ART_H = 416, 416
+MIRROR_Y, MIRROR_H = AY + AH + 2, 40
+BAND_Y = 616
+PULSE_Y, PULSE_H = 766, 3
 PULSE_W = [40, 90, 150, 220, 300, 220, 150, 90]
 SHEEN_MS = 90
+# The sheen sweeps the cover, and stops there. It used to run to y=708,
+# over the peak meter, the codec line, the artist and the title - and
+# those are static viewports, drawn on a full update and never again, so
+# every pass of the sheen took a 26 px bite out of the chrome and nothing
+# put it back. That is the whole of "duration, visualiser, bit rate and
+# playlist are not showing": they were showing, and then they were eaten.
+SHEEN_Y0, SHEEN_STEP, SHEEN_H = AY, 42, 26
 
 
 def animated(gauge=False):
@@ -340,12 +350,16 @@ def animated(gauge=False):
     o.append("%?C<%Vd(bg)>")
     o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
     o.append("%?C<%Vd(mirror)>")
-    o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>|%Vd(paused)|%Vd(ff)|%Vd(rew)|>")
+    o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>")
     o.append("%?mh<%Vd(locked)|%Vd(volbar)>")
     o.append("%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>")
 
     if gauge:
-        o.append("%?if(%sd,=,1)<%Vd(gauge)>")
+        o.append("%?if(%sd,=,1)<%Vd(gauge)>%?if(%sd,=,1)<%Vd(gaugepv)>"
+                 "%?if(%sd,=,1)<%Vd(gaugecap)>%?if(%sd,=,1)<%Vd(gaugebar)>")
+        # Remembered, not appended: see the note where it is filled in.
+        unarmed_slot = len(o)
+        o.append("")
     else:
         o += dial_border(30, 110, 420, 36)
 
@@ -376,8 +390,8 @@ def animated(gauge=False):
         o.append("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%d)>" % (steps, SHEEN_MS, i + 1, i))
     o.append("#")
     for i in range(steps):
-        sy = 150 + i * 62
-        o.append("%%Vl(sh%d,0,%d,-,26,-)" % (i, sy))
+        sy = SHEEN_Y0 + i * SHEEN_STEP
+        o.append("%%Vl(sh%d,%d,%d,%d,%d,-)" % (i, AX, sy, AS, SHEEN_H))
         o.append("%%dr(0,0,-,-,%s,%s)" % (DIM, GROUND))
 
     o.append("""#
@@ -411,7 +425,7 @@ def animated(gauge=False):
 %%Cd
 #
 %%Vl(mirror,%d,%d,%d,%d,-)
-%%Cm(%d,%d,%d,%d,140,0)
+%%Cm(%d,%d,%d,%d,170,0)
 #
 # No cover is not an empty screen. %%C is false for a track with no
 # artwork, and with it the backdrop, the cover and the reflection all go -
@@ -430,17 +444,17 @@ def animated(gauge=False):
 %%Vl(noartlabel,%d,%d,%d,40,2)
 %%ac%%s%%?id<%%id|%%?ia<%%ia|no cover>>""" % (AX, AY, AS, AH, ART_W, ART_H,
                               AX, MIRROR_Y, AS, MIRROR_H,
-                              AX, MIRROR_Y, AS, MIRROR_H,
+                              AX + 2, MIRROR_Y, ART_W, MIRROR_H,
                               AX, AY, AS, AH,
                               AH - 2, AH - 4, AS - 2, AH - 4,
                               AX + 10, AY + AH // 2 - 20, AS - 20))
-    content = [band(BAND_Y), """#
+    content = [band(BAND_Y, 62, 66), """#
 # Track
 # -----
-%V(30,688,-30,30,2)
+%V(30,690,-30,28,2)
 %s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
 #
-%V(30,720,-30,46,4)
+%V(30,718,-30,46,4)
 %al%s%?it<%it|%fn>"""]
 
     o.append("""#
@@ -458,12 +472,20 @@ def animated(gauge=False):
     content.append("""#
 # Footer
 # ======
-%V(30,770,-30,30,2)
+%V(30,768,-30,30,2)
 %al%pc/%pt%ar%pp/%pe""")
 
     if gauge:
         body, enables = hide_while_armed("\n".join(content))
-        o += enables
+        # Into the *default* viewport, at the top of the file, and not here.
+        #
+        # Appended here they land after every declaration in the file, which
+        # puts them inside the last %Vl - one of the pulse viewports, which
+        # is hidden - and a tag inside a hidden viewport is never evaluated.
+        # So every viewport the gauge hides stayed hidden for ever: the
+        # codec column, the artist, the title and the footer were missing
+        # from this skin with the dial never once armed.
+        o[unarmed_slot] = "\n".join(enables)
         o.append(body)
     else:
         o += content
@@ -486,10 +508,13 @@ def animated(gauge=False):
 %Vl(gauge,0,0,-,-,5)
 %Vb(0C0D0E)
 #
-%V(0,300,-,70,5)
+# Labelled, like the panel behind them. A plain %V here is drawn on every
+# full update whatever %sd says, so the reading and its caption sat across
+# the middle of the cover with the dial not armed at all.
+%Vl(gaugepv,0,300,-,70,5)
 %ac%pv
 #
-%V(0,380,-,30,2)
+%Vl(gaugecap,0,380,-,30,2)
 %acVOLUME
 #
 %Vl(gaugebar,60,440,360,40,-)

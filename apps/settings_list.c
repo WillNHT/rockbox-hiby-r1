@@ -2627,6 +2627,10 @@ const struct settings_list settings[] = {
     * because they are separate decisions - a user who rearranges the menu
     * has not asked to rename anything, and a config.cfg carrying one and
     * not the other has to keep working. */
+   /* The words over the main menu. Its own line rather than part of "root
+    * menu names", because that line is keyed by table entry and the title
+    * belongs to no entry. */
+   TEXT_SETTING(0, root_menu_title, "root menu title", "", NULL, NULL),
    TEXT_SETTING(0, custom_folder, "custom folder path", "", NULL, NULL),
    TEXT_SETTING(0, audiobook_folder, "audiobook folder path",
                 "/Audiobooks", NULL, NULL),

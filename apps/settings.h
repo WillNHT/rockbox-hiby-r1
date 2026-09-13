@@ -985,6 +985,8 @@ struct user_settings
      * names themselves live in root_menu.c; this is the flag the custom
      * setting machinery needs to know whether to write the line. */
     bool root_menu_renamed;
+    /* The title over the main menu. Empty means the built-in "Rockbox". */
+    char root_menu_title[24]; /* ROOT_MENU_NAME_MAX */
     /* Where the main menu's custom folder entry points. Empty means the
      * root, which is what an unconfigured entry does rather than refusing
      * to open. */

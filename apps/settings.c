@@ -35,6 +35,7 @@
 #include "crc32.h"
 #include "sound.h"
 #include "settings.h"
+#include "root_menu.h"
 #include "debug.h"
 #include "usb.h"
 #include "backlight.h"
@@ -836,6 +837,7 @@ void sound_settings_apply(void)
 
 void settings_apply(bool read_disk)
 {
+    root_menu_apply_title();
     logf("%s", __func__);
     int rc;
     CHART(">set_codepage");

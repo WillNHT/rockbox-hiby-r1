@@ -40,7 +40,7 @@
 %xl(vb_too_loud,vb_too_loud.bmp)
 %xl(bb_backdrop,bb_backdrop.bmp)
 %?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>
-%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>|%Vd(paused)|%Vd(ff)|%Vd(rew)|>
+%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>
 %?mh<%Vd(locked)|%Vd(volbar)>
 %?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>
 #
@@ -133,62 +133,58 @@ SHF%xd(O,%ps)
 # The art, full width. The frame is four rules rather than a bitmap so it
 # costs nothing and inherits the theme's foreground colour. %Cl is
 # viewport-relative, so the inset is 2,2 and not 32,162.
-%Vl(aa,30,160,420,400,-)
-%Cl(2,2,416,396,c,c)
+%Vl(aa,30,150,420,420,-)
+%Cl(2,2,416,416,c,c)
 %dr(0,0,420,2)
-%dr(0,398,-,-)
-%dr(0,2,2,396)
-%dr(418,2,-,396)
+%dr(0,418,-,-)
+%dr(0,2,2,416)
+%dr(418,2,-,416)
 %Cd
 #
 # No cover is not an empty screen. %C is false for a track with no
 # artwork, and the frame above is inside the viewport that goes with it,
 # so without this the whole middle of the panel is nothing at all.
-%Vl(noart,30,160,420,400,-)
+%Vl(noart,30,150,420,420,-)
 %dr(0,0,420,2)
-%dr(0,398,-,-)
-%dr(0,2,2,396)
-%dr(418,2,-,396)
+%dr(0,418,-,-)
+%dr(0,2,2,416)
+%dr(418,2,-,416)
 #
 %Vl(noartlabel,40,340,400,40,2)
 %ac%s%?id<%id|%?ia<%ia|no cover>>
 #
 # The band
 # ========
-# The meter fills 78 px of an 82 px band. It used to be 24, because the
+# The meter fills 70 px of an 74 px band. It used to be 24, because the
 # engine drew a peak meter one line of the viewport's font tall and
 # nothing else; %pm takes a height now.
-%Vl(pm_short,30,566,240,82,2)
-%pm(78)
+%Vl(pm_short,30,574,240,74,2)
+%pm(70)
 #
-%Vl(pm_long,30,566,-30,82,2)
-%pm(78)
+%Vl(pm_long,30,574,-30,74,2)
+%pm(70)
 #
-%Vl(paused,30,566,240,82,2)
-%dr(80,12,32,58)
-%dr(130,12,32,58)
-#
-%Vl(rew,30,584,240,46,4)
+%Vl(rew,30,592,240,46,4)
 %al%<%< REW
 #
-%Vl(ff,30,584,240,46,4)
+%Vl(ff,30,592,240,46,4)
 %al%>%> FF
 #
-%V(280,578,-30,30,2)
+%V(280,586,-30,30,2)
 %ar%fc %fb
 #
-%V(280,608,-30,30,2)
-%ar%?if(%St(party mode),!=,off)<party|%?if(%St(single mode),!=,off)<%St(single mode)|%t(4)%fk kHz;%t(4)%pp of %pe>>
+%V(280,616,-30,30,2)
+%ar%?if(%St(party mode),!=,off)<party|%?if(%St(single mode),!=,off)<%St(single mode)|%fk kHz>>
 #
 # Track
 # -----
-%V(30,652,-30,30,2)
+%V(30,656,-30,30,2)
 %s%al%id
 #
-%V(30,684,-30,30,2)
+%V(30,688,-30,30,2)
 %s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
 #
-%V(30,716,-30,46,4)
+%V(30,720,-30,46,4)
 %al%s%?it<%it|%fn>
 #
 # Footer

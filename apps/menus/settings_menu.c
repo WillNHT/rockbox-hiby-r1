@@ -832,6 +832,7 @@ MAKE_MENU(settings_menu_item, ID2P(LANG_GENERAL_SETTINGS), 0,
           &altmenu_menu,
           &browse_langs, &voice_settings_menu,
           &main_menu_layout_item,
+          &main_menu_title_item,
           );
 /*    SETTINGS MENU                */
 /***********************************/

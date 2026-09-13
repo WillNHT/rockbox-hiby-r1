@@ -377,5 +377,28 @@ static int main_menu_layout_screen(void)
     return 0;
 }
 
+/* The words over the main menu itself, as opposed to the words on any of
+ * its rows. It is not a row, so it is not part of the layout editor's list
+ * and it is not keyed by table entry in "root menu names" - it is its own
+ * setting, and empty means the built-in title. */
+static int main_menu_title_screen(void)
+{
+    char buf[sizeof(global_settings.root_menu_title)];
+
+    strlcpy(buf, global_settings.root_menu_title, sizeof(buf));
+
+    if (kbd_input(buf, sizeof(buf), NULL) < 0)
+        return 0;
+
+    strlcpy(global_settings.root_menu_title, buf,
+            sizeof(global_settings.root_menu_title));
+    root_menu_apply_title();
+    settings_save();
+    return 0;
+}
+
+MENUITEM_FUNCTION(main_menu_title_item, 0, ID2P(LANG_MAIN_MENU_TITLE),
+                  main_menu_title_screen, NULL, Icon_Rockbox);
+
 MENUITEM_FUNCTION(main_menu_layout_item, 0, ID2P(LANG_MAIN_MENU_LAYOUT),
                   main_menu_layout_screen, NULL, Icon_Submenu_Entered);

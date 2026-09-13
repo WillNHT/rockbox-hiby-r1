@@ -38,7 +38,7 @@
 %?C<%Vd(bg)>
 %?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>
 %?C<%Vd(mirror)>
-%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>|%Vd(paused)|%Vd(ff)|%Vd(rew)|>
+%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>
 %?mh<%Vd(locked)|%Vd(volbar)>
 %?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%Vd(voldb)>
 #
@@ -156,29 +156,29 @@ SHF%xd(O,%ps)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(ch03,345,146,105,4,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch04,450,150,4,100,-)
+%Vl(ch04,450,150,4,105,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch05,450,250,4,100,-)
+%Vl(ch05,450,255,4,105,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch06,450,350,4,100,-)
+%Vl(ch06,450,360,4,105,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch07,450,450,4,100,-)
+%Vl(ch07,450,465,4,105,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch08,345,550,105,4,-)
+%Vl(ch08,345,570,105,4,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch09,240,550,105,4,-)
+%Vl(ch09,240,570,105,4,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch10,135,550,105,4,-)
+%Vl(ch10,135,570,105,4,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch11,30,550,105,4,-)
+%Vl(ch11,30,570,105,4,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch12,26,450,4,100,-)
+%Vl(ch12,26,465,4,105,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch13,26,350,4,100,-)
+%Vl(ch13,26,360,4,105,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch14,26,250,4,100,-)
+%Vl(ch14,26,255,4,105,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch15,26,150,4,100,-)
+%Vl(ch15,26,150,4,105,-)
 %dr(0,0,-,-,D9E021,F4F2EE)
 #
 # The sheen
@@ -198,25 +198,25 @@ SHF%xd(O,%ps)
 %?if(%an(10,90),=,9)<%Vd(sh8)>
 %?if(%an(10,90),=,10)<%Vd(sh9)>
 #
-%Vl(sh0,0,150,-,26,-)
+%Vl(sh0,30,150,420,26,-)
 %dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh1,0,212,-,26,-)
+%Vl(sh1,30,192,420,26,-)
 %dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh2,0,274,-,26,-)
+%Vl(sh2,30,234,420,26,-)
 %dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh3,0,336,-,26,-)
+%Vl(sh3,30,276,420,26,-)
 %dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh4,0,398,-,26,-)
+%Vl(sh4,30,318,420,26,-)
 %dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh5,0,460,-,26,-)
+%Vl(sh5,30,360,420,26,-)
 %dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh6,0,522,-,26,-)
+%Vl(sh6,30,402,420,26,-)
 %dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh7,0,584,-,26,-)
+%Vl(sh7,30,444,420,26,-)
 %dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh8,0,646,-,26,-)
+%Vl(sh8,30,486,420,26,-)
 %dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh9,0,708,-,26,-)
+%Vl(sh9,30,528,420,26,-)
 %dr(0,0,-,-,3A3B3D,0C0D0E)
 #
 # The backdrop
@@ -244,28 +244,28 @@ SHF%xd(O,%ps)
 # Main
 # ====
 # The cover, floating, with its own reflection under it.
-%Vl(aa,30,150,420,400,-)
-%Cl(2,2,416,396,c,c)
+%Vl(aa,30,150,420,420,-)
+%Cl(2,2,416,416,c,c)
 %Cd
 #
-%Vl(mirror,30,552,420,46,-)
-%Cm(30,552,420,46,140,0)
+%Vl(mirror,30,572,420,40,-)
+%Cm(32,572,416,40,170,0)
 #
 # No cover is not an empty screen. %C is false for a track with no
 # artwork, and with it the backdrop, the cover and the reflection all go -
 # so without this the whole middle of the panel is nothing at all. The
 # chase still runs round it, because what it is saying is "this is
 # playing", and that is still true.
-%Vl(noart,30,150,420,400,-)
+%Vl(noart,30,150,420,420,-)
 %dr(0,0,-,2)
-%dr(0,398,-,2)
-%dr(0,2,2,396)
-%dr(418,2,2,396)
+%dr(0,418,-,2)
+%dr(0,2,2,416)
+%dr(418,2,2,416)
 #
 # The label is its own viewport. Rules and text in one viewport fight over
 # where the line sits, and the frame came out a fifth of its height with
 # the caption stranded below it.
-%Vl(noartlabel,40,330,400,40,2)
+%Vl(noartlabel,40,340,400,40,2)
 %ac%s%?id<%id|%?ia<%ia|no cover>>
 #
 # The pulse
@@ -281,59 +281,55 @@ SHF%xd(O,%ps)
 %?if(%an(8,110),=,7)<%Vd(pu6)>
 %?if(%an(8,110),=,8)<%Vd(pu7)>
 #
-%Vl(pu0,30,767,40,3,-)
+%Vl(pu0,30,766,40,3,-)
 %dr(0,0,-,-,D9E021,0C0D0E)
-%Vl(pu1,30,767,90,3,-)
+%Vl(pu1,30,766,90,3,-)
 %dr(0,0,-,-,D9E021,0C0D0E)
-%Vl(pu2,30,767,150,3,-)
+%Vl(pu2,30,766,150,3,-)
 %dr(0,0,-,-,D9E021,0C0D0E)
-%Vl(pu3,30,767,220,3,-)
+%Vl(pu3,30,766,220,3,-)
 %dr(0,0,-,-,D9E021,0C0D0E)
-%Vl(pu4,30,767,300,3,-)
+%Vl(pu4,30,766,300,3,-)
 %dr(0,0,-,-,D9E021,0C0D0E)
-%Vl(pu5,30,767,220,3,-)
+%Vl(pu5,30,766,220,3,-)
 %dr(0,0,-,-,D9E021,0C0D0E)
-%Vl(pu6,30,767,150,3,-)
+%Vl(pu6,30,766,150,3,-)
 %dr(0,0,-,-,D9E021,0C0D0E)
-%Vl(pu7,30,767,90,3,-)
+%Vl(pu7,30,766,90,3,-)
 %dr(0,0,-,-,D9E021,0C0D0E)
 #
 # The band
 # ========
-# The meter fills 78 px of an 82 px band. It used to be 24, because the
+# The meter fills 62 px of an 66 px band. It used to be 24, because the
 # engine drew a peak meter one line of the viewport's font tall and
 # nothing else; %pm takes a height now.
-%Vl(pm_short,30,602,240,82,2)
-%pm(78)
+%Vl(pm_short,30,616,240,66,2)
+%pm(62)
 #
-%Vl(pm_long,30,602,-30,82,2)
-%pm(78)
+%Vl(pm_long,30,616,-30,66,2)
+%pm(62)
 #
-%Vl(paused,30,602,240,82,2)
-%dr(80,12,32,58)
-%dr(130,12,32,58)
-#
-%Vl(rew,30,620,240,46,4)
+%Vl(rew,30,634,240,46,4)
 %al%<%< REW
 #
-%Vl(ff,30,620,240,46,4)
+%Vl(ff,30,634,240,46,4)
 %al%>%> FF
 #
-%V(280,614,-30,30,2)
+%V(280,628,-30,30,2)
 %ar%fc %fb
 #
-%V(280,644,-30,30,2)
-%ar%?if(%St(party mode),!=,off)<party|%?if(%St(single mode),!=,off)<%St(single mode)|%t(4)%fk kHz;%t(4)%pp of %pe>>
+%V(280,658,-30,30,2)
+%ar%?if(%St(party mode),!=,off)<party|%?if(%St(single mode),!=,off)<%St(single mode)|%fk kHz>>
 #
 # Track
 # -----
-%V(30,688,-30,30,2)
+%V(30,690,-30,28,2)
 %s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
 #
-%V(30,720,-30,46,4)
+%V(30,718,-30,46,4)
 %al%s%?it<%it|%fn>
 #
 # Footer
 # ======
-%V(30,770,-30,30,2)
+%V(30,768,-30,30,2)
 %al%pc/%pt%ar%pp/%pe

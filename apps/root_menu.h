@@ -105,6 +105,9 @@ const char *root_menu_custom_name(const struct menu_item_ex *item);
  * items currently hidden. */
 #define ROOT_MENU_MAX_ITEMS   16
 #define ROOT_MENU_NAME_MAX    24
+/* Point the main menu's title at global_settings.root_menu_title, or
+ * back at LANG_ROCKBOX_TITLE when that is empty. */
+void root_menu_apply_title(void);
 int  root_menu_item_count(void);
 void root_menu_get_layout(unsigned char *order, int *visible_count);
 void root_menu_set_layout(const unsigned char *order, int visible_count);
