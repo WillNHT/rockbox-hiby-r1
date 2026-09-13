@@ -41,6 +41,10 @@
  * Six table lookups per blended pixel; 2.2 KiB of tables. */
 #define HAVE_GAMMA_AWARE_TEXT
 
+/* PNG album art (apps/recorder/png_load.c). The decoder is ~600 lines on
+ * top of firmware/common/inflate.c, which was already in the build. */
+#define HAVE_PNG
+
 #define LCD_DEPTH  16   /* 65536 colours */
 #define LCD_PIXELFORMAT RGB565 /* rgb565 */
 
