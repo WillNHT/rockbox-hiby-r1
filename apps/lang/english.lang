@@ -18420,3 +18420,59 @@
     *: "Main Menu Title"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_HOLD_SKIP
+  desc: in Playback -> Fast-Forward/Rewind: what holding Prev/Next does
+  user: core
+  <source>
+    *: "Hold Prev/Next"
+  </source>
+  <dest>
+    *: "Hold Prev/Next"
+  </dest>
+  <voice>
+    *: "Hold Prev/Next"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HOLD_SKIP_CONTINUOUS
+  desc: Hold Prev/Next option: keep skipping tracks
+  user: core
+  <source>
+    *: "Continuous Skip"
+  </source>
+  <dest>
+    *: "Continuous Skip"
+  </dest>
+  <voice>
+    *: "Continuous Skip"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HOLD_SKIP_SEEK
+  desc: Hold Prev/Next option: fast-forward/rewind in the track
+  user: core
+  <source>
+    *: "Seek"
+  </source>
+  <dest>
+    *: "Seek"
+  </dest>
+  <voice>
+    *: "Seek"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HOLD_SKIP_DELAY
+  desc: in Playback -> Fast-Forward/Rewind: seconds held per skip
+  user: core
+  <source>
+    *: "Hold Skip Delay"
+  </source>
+  <dest>
+    *: "Hold Skip Delay"
+  </dest>
+  <voice>
+    *: "Hold Skip Delay"
+  </voice>
+</phrase>

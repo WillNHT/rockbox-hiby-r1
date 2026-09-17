@@ -2541,6 +2541,11 @@ const struct settings_list settings[] = {
 #endif
     OFFON_SETTING(0, prevent_skip, LANG_PREVENT_SKIPPING, false, "prevent track skip", NULL),
     OFFON_SETTING(0, rewind_across_tracks, LANG_REWIND_ACROSS_TRACKS, true, "rewind across tracks", NULL),
+    CHOICE_SETTING(0, hold_skip, LANG_HOLD_SKIP, HOLD_SKIP_CONTINUOUS,
+                   "hold prev next", "skip,seek", NULL, 2,
+                   ID2P(LANG_HOLD_SKIP_CONTINUOUS), ID2P(LANG_HOLD_SKIP_SEEK)),
+    INT_SETTING(F_TIME_SETTING, hold_skip_delay, LANG_HOLD_SKIP_DELAY, 3,
+                "hold skip delay", UNIT_SEC, 1, 5, 1, NULL, NULL, NULL),
 #ifdef HAVE_PITCHCONTROL
     OFFON_SETTING(0, pitch_mode_semitone, LANG_SEMITONE, false,
                   "Semitone pitch change", NULL),

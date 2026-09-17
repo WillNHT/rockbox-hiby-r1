@@ -64,10 +64,12 @@ MENUITEM_SETTING(shuffle_item, &global_settings.playlist_shuffle, NULL);
 MENUITEM_SETTING(repeat_mode, &global_settings.repeat_mode, NULL);
 MENUITEM_SETTING(play_selected, &global_settings.play_selected, NULL);
 
+MENUITEM_SETTING(hold_skip, &global_settings.hold_skip, NULL);
+MENUITEM_SETTING(hold_skip_delay, &global_settings.hold_skip_delay, NULL);
 MENUITEM_SETTING(ff_rewind_accel, &global_settings.ff_rewind_accel, NULL);
 MENUITEM_SETTING(ff_rewind_min_step, &global_settings.ff_rewind_min_step, NULL);
 MAKE_MENU(ff_rewind_settings_menu, ID2P(LANG_WIND_MENU), 0, Icon_NOICON,
-          &ff_rewind_min_step, &ff_rewind_accel);
+          &hold_skip, &hold_skip_delay, &ff_rewind_min_step, &ff_rewind_accel);
 #ifdef HAVE_DISK_STORAGE
 static int buffermargin_callback(int action,
                                  const struct menu_item_ex *this_item,

@@ -60,6 +60,12 @@ enum {
     BOOKMARK_RECENT_ONLY_ASK = 4,
 };
 
+/* What holding Prev/Next does in the WPS */
+enum {
+    HOLD_SKIP_CONTINUOUS = 0,
+    HOLD_SKIP_SEEK,
+};
+
 /* Most recent bookmark */
 enum {
     BOOKMARK_ONE_PER_PLAYLIST = 2,
@@ -726,6 +732,8 @@ struct user_settings
     int album_art; /* switch off album art display or choose preferred source */
 #endif
     bool rewind_across_tracks;
+    int hold_skip;       /* HOLD_SKIP_CONTINUOUS or HOLD_SKIP_SEEK */
+    int hold_skip_delay; /* seconds a held Prev/Next waits per skip */
 
     /* playlist viewer settings */
     bool playlist_viewer_icons; /* display icons on viewer */

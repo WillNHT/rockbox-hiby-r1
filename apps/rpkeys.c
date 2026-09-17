@@ -654,6 +654,11 @@ static bool handle_volume(int button, bool repeat, bool release)
 
 /* next/prev: the press seeks, the hold changes track.
  *
+ * With Hold Prev/Next = Continuous Skip the hold keeps changing track: one
+ * track per hold_skip_delay seconds for as long as the key stays down, the
+ * one in progress playing on in between. With Seek it is the single
+ * change after TAP_MAX_TICKS it always was.
+ *
  * The seek happens on the press, not on the release. Waiting for the finger
  * to come up so the two could be told apart put a visible delay in front of
  * every skip - the one thing a transport key must not have. Holding still
@@ -688,10 +693,17 @@ static bool handle_skip(int idx, int dir, bool repeat, bool release)
         return true;
     }
 
+    bool continuous = global_settings.hold_skip == HOLD_SKIP_CONTINUOUS;
+    long threshold = continuous ? global_settings.hold_skip_delay * HZ
+                                : TAP_MAX_TICKS;
+
     if (skipper[idx].down_tick && !skipper[idx].consumed &&
-        now - skipper[idx].down_tick >= TAP_MAX_TICKS)
+        now - skipper[idx].down_tick >= threshold)
     {
-        skipper[idx].consumed = true;
+        if (continuous)
+            skipper[idx].down_tick = now;   /* the next one counts from here */
+        else
+            skipper[idx].consumed = true;
         cue();
         seek_forget();          /* a new track: nothing to chain from */
         if (dir > 0)
