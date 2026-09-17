@@ -32,6 +32,7 @@
 %xl(vb_too_loud,vb_too_loud.bmp)
 %?mv(1.5)<%Vd(vol)|%Vd(status)%?Lt<%Vd(title)|%Vd(no_title)>>
 %?if(%cs, =, 21)<%Vd(USB)%VI(USB)|%?mp<%VI(main_l)%Vd(main_l)|%VI(main)%Vd(main)>>
+%?if(%cs, =, 21)<|%?mp<|%?C<%Vd(npart)|%Vd(npnote)>>>
 #
 # ---------
 # Margins
@@ -96,7 +97,21 @@
 %Vl(main,30,-104,-30,-60,-)
 %dr(0,24,-,2)
 #
-%Vl(main,30,-60,-60,-,3)
+# The cover of what is playing, the height of the title line, left of it.
+# 34 px is its own album-art size, so buffering scales a copy for it; the
+# WPS keeps its big one.
+%Vl(npart,30,-60,34,34,-)
+%Cl(0,0,34,34,c,c)
+%Cd
+#
+# No cover: a note, drawn, because the fonts here have no note glyph.
+%Vl(npnote,30,-60,34,34,-)
+%dr(0,0,-,-,3A3B3D,3A3B3D)
+%dr(8,20,12,9)
+%dr(18,6,3,20)
+%dr(18,6,10,4)
+#
+%Vl(main,72,-60,-60,-,3)
 %al%s%?it<%it|%fn>
 #
 %Vl(main,-60,-60,-30,-,-)

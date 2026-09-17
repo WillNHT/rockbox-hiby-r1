@@ -90,27 +90,33 @@
 #
 # Header
 # ======
+# The corner box. Whatever is in it - clock, volume, sleep timer - draws
+# an inverted line inside this, in the same colour, so the box is the same
+# size whichever it is and lines up with the battery column.
+%V(30,26,124,56,-)
+%dr(0,0,-,-,F4F2EE,F4F2EE)
+#
 # Sleep timer
-%Vl(sleep,30,30,110,62,2)
+%Vl(sleep,30,27,124,54,2)
 %Vs(invert)%ac%bs
 %aczzz...
 #
 # Volume (percent of the -70..-10 dB scale)
-%Vl(voldb,30,30,110,62,4)
+%Vl(voldb,30,33,124,48,4)
 %Vs(invert)%ac%pv
 #
 # The clock has the box the rest of the time. The volume number is worth
 # the corner only while it is changing - the bar says the rest, all the
 # time, and a number that never moves is a number nobody reads.
-%Vl(clock,30,30,110,62,3)
+%Vl(clock,30,33,124,48,4)
 %Vs(invert)%ac%cH:%cM
 #
 # Shuffle
-%V(174,28,94,22,2)
+%V(178,28,94,22,2)
 SHF%xd(O,%ps)
 #
 # Repeat
-%V(174,58,94,22,2)
+%V(178,58,94,22,2)
 %?mm<RPT%xd(Ob)|RPT%xd(O)|RP1%xd(O)|RND%xd(O)|A-B%xd(O)>
 #
 # Battery bar
