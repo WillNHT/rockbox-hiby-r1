@@ -19414,3 +19414,87 @@
     *: "Cascade"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_LIBRARY_VIEW
+  desc: theme settings: how albums, tracks, playlists and audiobooks are laid out
+  user: core
+  <source>
+    *: "Library View"
+  </source>
+  <dest>
+    *: "Library View"
+  </dest>
+  <voice>
+    *: "Library View"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LIBRARY_VIEW_CLASSIC
+  desc: library view: the plain text list
+  user: core
+  <source>
+    *: "Classic"
+  </source>
+  <dest>
+    *: "Classic"
+  </dest>
+  <voice>
+    *: "Classic"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LIBRARY_VIEW_THUMBS
+  desc: library view: a line per item with a small cover
+  user: core
+  <source>
+    *: "Thumbnails"
+  </source>
+  <dest>
+    *: "Thumbnails"
+  </dest>
+  <voice>
+    *: "Thumbnails"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LIBRARY_VIEW_SHELVES
+  desc: library view: a large card per item
+  user: core
+  <source>
+    *: "Shelves"
+  </source>
+  <dest>
+    *: "Shelves"
+  </dest>
+  <voice>
+    *: "Shelves"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LIBRARY_VIEW_GRID
+  desc: library view: two covers per row
+  user: core
+  <source>
+    *: "Grid"
+  </source>
+  <dest>
+    *: "Grid"
+  </dest>
+  <voice>
+    *: "Grid"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LIBRARY_VIEW_CAROUSEL
+  desc: library view: one large cover with its neighbours
+  user: core
+  <source>
+    *: "Carousel"
+  </source>
+  <dest>
+    *: "Carousel"
+  </dest>
+  <voice>
+    *: "Carousel"
+  </voice>
+</phrase>

@@ -342,6 +342,12 @@ enum skin_token_type {
      * skin_art_vinyl() in apps/gui/skin_engine/skin_art_fx.c. Appended,
      * like everything else here - see the note above. */
     SKIN_TOKEN_ALBUMART_VINYL,
+
+    /* %Cp(x, y, size) - the cover of the playlist that is playing, square;
+     * %?CP<...|...> - whether there is one. See apps/playlist_cover.c.
+     * Appended, like everything else here - see the note above. */
+    SKIN_TOKEN_PLAYLIST_COVER,
+    SKIN_TOKEN_PLAYLIST_COVER_FOUND,
 };
 
 /*

@@ -100,6 +100,13 @@ struct list_putlineinfo_t {
 };
 
 typedef void list_draw_item(struct list_putlineinfo_t *list_info);
+
+struct gui_synclist;
+/* Draws every item of the list, in place of the row-by-row drawing, into
+ * vp (the area under the title). Returns false to fall back to rows.
+ * This is what lays a list out as covers - see apps/gui/coverview.c. */
+typedef bool list_draw_list(struct screen *display,
+                            struct gui_synclist *list, struct viewport *vp);
 /*
  * Voice callback
  *  - selected_item : an integer that tells the number of the item to speak
@@ -174,6 +181,8 @@ struct gui_synclist
     list_get_name *callback_get_item_name;
     list_speak_item *callback_speak_item;
     list_draw_item *callback_draw_item;
+    list_draw_list *callback_draw_list;
+    void *draw_list_data;       /* for callback_draw_list's own use */
 
     /* The data that will be passed to the callback function YOU implement */
     void * data;

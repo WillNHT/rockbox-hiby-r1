@@ -85,6 +85,10 @@ struct tagentry {
 
 static struct tagentry* tagtree_get_entry(struct tree_context *c, int id);
 
+/* The tag the loaded listing is made of, for the cover views; -1 for
+ * menus. */
+static int list_tag = -1;
+
 #define SEARCHSTR_SIZE 256
 
 enum table {
@@ -1632,6 +1636,7 @@ static int retrieve_entries(struct tree_context *c, int offset, bool init)
         tag = tag_filename;
     }
 
+    list_tag = tag;
     if (!tagcache_search(&tcs, tag))
         return -1;
 
@@ -2059,6 +2064,7 @@ int tagtree_load(struct tree_context* c)
     {
         case TABLE_ROOT:
             logf( "root...");
+            list_tag = -1;
             count = load_root(c);
             break;
 
@@ -2371,6 +2377,43 @@ int tagtree_get_filename(struct tree_context* c, char *buf, int buflen)
     tagcache_search_finish(&tcs);
 
     return 0;
+}
+
+bool tagtree_lists_covers(struct tree_context *c)
+{
+    (void)c;
+    /* Albums and tracks. Artists would go here too, once they have
+     * pictures of their own. */
+    return list_tag == tag_album || list_tag == tag_title ||
+           list_tag == tag_filename;
+}
+
+bool tagtree_get_cover_file(struct tree_context *c, int item,
+                            char *buf, int buflen)
+{
+    struct tagcache_search tcs;
+    struct tagentry *entry;
+    bool found = false;
+
+    if (item < c->special_entry_count || item >= c->filesindir)
+        return false;
+    entry = tagtree_get_entry(c, item);
+    if (!entry)
+        return false;
+
+    if (!tagcache_search(&tcs, tag_filename))
+        return false;
+    if (entry->newtable == TABLE_PLAYTRACK)
+        found = tagcache_retrieve(&tcs, entry->extraseek, tcs.type,
+                                  buf, buflen);
+    else if (list_tag == tag_album)
+    {
+        /* an album's cover is its first track's */
+        if (tagcache_search_add_filter(&tcs, tag_album, entry->extraseek))
+            found = tagcache_get_next(&tcs, buf, buflen);
+    }
+    tagcache_search_finish(&tcs);
+    return found;
 }
 
 int tagtree_get_custom_action(struct tree_context* c)
