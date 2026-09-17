@@ -1,0 +1,33 @@
+name: Conventional PR title
+
+# The release on master is versioned from the merge commit, and a merge
+# commit's body is the pull request title (tools/release/next-version.sh).
+# So the title is what has to be conventional: it decides major, minor or
+# patch for everything in the branch.
+#
+#   feat: ...            minor
+#   fix(stick): ...      patch
+#   feat!: ...           major (minor while the version is 0.x)
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  title:
+    runs-on: ubuntu-latest
+    name: PR title is a Conventional Commit
+    steps:
+    - name: Check
+      env:
+        TITLE: ${{ github.event.pull_request.title }}
+      run: |
+        types='build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test|theme'
+        if printf '%s\n' "$TITLE" | grep -Eq "^($types)(\([^)]+\))?!?: .+"; then
+          echo "OK: $TITLE"
+        else
+          echo "::error::PR title must look like 'type(scope): summary', with type one of: ${types//|/, }"
+          echo "Got: $TITLE"
+          exit 1
+        fi

@@ -3,9 +3,16 @@ name: HiBy R1 release
 # Produces files that go straight onto the player, attached to a GitHub
 # Release instead of buried in a double-zipped Actions artifact.
 #
-#   push a tag v*        -> a versioned release
-#   push to master       -> the rolling "nightly" prerelease is replaced
-#   manual dispatch      -> nightly, unless a tag is given
+#   push to master       -> the next semantic version, worked out from the
+#                           Conventional Commit messages (and PR titles)
+#                           since the last vX.Y.Z tag - see
+#                           tools/release/next-version.sh - is tagged and
+#                           released
+#   push a tag v*        -> that tag is released
+#   manual dispatch      -> the given tag, or the next version if blank
+#
+# The version is baked into the firmware (make VERSION=...), so the
+# player's System > Rockbox Info shows the release it came from.
 on:
   push:
     tags: ['v*']
@@ -13,19 +20,53 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to create (blank = nightly prerelease)'
+        description: 'Release tag to create (blank = next semantic version)'
         required: false
         type: string
 
 permissions:
   contents: write
 
+# One release at a time, in order: two merges in quick succession must not
+# both compute the same "next" version, and a queued run must not be
+# cancelled, or its changes would never be released under their own number.
 concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: true
+  group: release
+  cancel-in-progress: false
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    name: Pick version
+    outputs:
+      tag: ${{ steps.pick.outputs.tag }}
+      bump: ${{ steps.pick.outputs.bump }}
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+    - name: Pick
+      id: pick
+      env:
+        INPUT_TAG: ${{ inputs.tag }}
+      run: |
+        if [ "$GITHUB_REF_TYPE" = tag ]; then
+          echo "tag=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
+          echo "bump=manual" >> $GITHUB_OUTPUT
+        elif [ -n "$INPUT_TAG" ]; then
+          echo "tag=$INPUT_TAG" >> $GITHUB_OUTPUT
+          echo "bump=manual" >> $GITHUB_OUTPUT
+        else
+          sh tools/release/next-version.sh | tee next.txt
+          . ./next.txt
+          echo "tag=$next" >> $GITHUB_OUTPUT
+          echo "bump=$bump" >> $GITHUB_OUTPUT
+          echo "### $previous -> $next ($bump)" >> $GITHUB_STEP_SUMMARY
+        fi
+
   build:
+    needs: version
+    if: needs.version.outputs.bump != 'none'
     strategy:
       fail-fast: true
       matrix:
@@ -73,19 +114,21 @@ jobs:
         key: ${{ runner.os }}-toolchain-y-${{ hashFiles('tools/rockboxdev.sh') }}
 
     - name: Build
+      env:
+        VERSION: ${{ needs.version.outputs.tag }}
       run: |
         export PATH=/tmp/local/bin:$PATH
         mkdir build && cd build
         ../tools/configure --target=hibyr1 --type=${{ matrix.type }}
-        make -j$(nproc)
+        make -j$(nproc) VERSION="$VERSION"
         mkdir ../out
         if [ "${{ matrix.type }}" = B ]; then
           cp bootloader.r1 ../out/
         else
           # fontzip first: with rockbox.zip already present, its NODEPS rule
           # would consider the target up to date and write nothing.
-          make fontzip
-          make zip
+          make fontzip VERSION="$VERSION"
+          make zip VERSION="$VERSION"
           cp rockbox.zip ../out/rockbox-hibyr1.zip
           cp rockbox-fonts.zip ../out/rockbox-hibyr1-fonts.zip
         fi
@@ -97,6 +140,8 @@ jobs:
         if-no-files-found: error
 
   themes:
+    needs: version
+    if: needs.version.outputs.bump != 'none'
     runs-on: ubuntu-latest
     name: Package themes
     steps:
@@ -140,9 +185,40 @@ jobs:
         name: patched-firmware
         path: out/*
 
+  # Everything the card needs in one archive: unzip it over the root of
+  # the SD card and the player has a complete, themed Rockbox with no
+  # other downloads. The separate zips stay for people who want less.
+  bundle:
+    needs: [version, build, themes]
+    runs-on: ubuntu-latest
+    name: Bundle SD card
+    steps:
+    - uses: actions/download-artifact@v7
+      with:
+        path: parts
+        merge-multiple: true
+    - name: Bundle
+      env:
+        TAG: ${{ needs.version.outputs.tag }}
+      run: |
+        mkdir -p card out
+        # Themes last, so their fonts and .cfg files win over anything of
+        # the same name in the base install.
+        for z in rockbox-hibyr1.zip rockbox-hibyr1-fonts.zip rockbox-hibyr1-themes.zip; do
+          unzip -oq "parts/$z" -d card
+        done
+        echo "$TAG" > card/.rockbox/fork-version.txt
+        (cd card && zip -qr "../out/rockbox-hibyr1-$TAG-sdcard.zip" .rockbox)
+        ls -l out
+    - uses: actions/upload-artifact@v7
+      with:
+        name: rockbox-hibyr1-${{ needs.version.outputs.tag }}-sdcard
+        path: out/*
+        if-no-files-found: error
+
   publish:
-    needs: [build, themes, patched-firmware]
-    if: always() && needs.build.result == 'success' && needs.themes.result == 'success'
+    needs: [version, build, themes, bundle, patched-firmware]
+    if: always() && needs.bundle.result == 'success'
     runs-on: ubuntu-latest
     name: Publish release
     steps:
@@ -154,26 +230,18 @@ jobs:
     - name: Checksums
       run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
 
-    - name: Pick release
-      id: rel
-      env:
-        INPUT_TAG: ${{ inputs.tag }}
-      run: |
-        if [ "$GITHUB_REF_TYPE" = tag ]; then
-          echo "tag=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
-        elif [ -n "$INPUT_TAG" ]; then
-          echo "tag=$INPUT_TAG" >> $GITHUB_OUTPUT
-        else
-          echo "tag=nightly" >> $GITHUB_OUTPUT
-        fi
-
     - name: Write notes
+      env:
+        TAG: ${{ needs.version.outputs.tag }}
       run: |
         cat > notes.md <<EOF
         Built from \`${GITHUB_SHA::10}\`.
 
+        **Install or upgrade:** unzip \`rockbox-hibyr1-${TAG}-sdcard.zip\` over the root of the SD card. It holds the firmware, fonts and this fork's themes; nothing else is needed on the card.
+
         | File | Put it where |
         |---|---|
+        | \`rockbox-hibyr1-${TAG}-sdcard.zip\` | The three zips below in one archive. Unzip to the card root. |
         | \`rockbox-hibyr1.zip\` | Unzip to the root of the SD card (creates \`.rockbox/\`). |
         | \`rockbox-hibyr1-fonts.zip\` | Optional. Unzip to the card root, over the above. |
         | \`rockbox-hibyr1-themes.zip\` | Optional. This fork's themes; unzip to the card root, then pick one under Theme Settings. |
@@ -187,14 +255,12 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
         GH_REPO: ${{ github.repository }}
-        TAG: ${{ steps.rel.outputs.tag }}
+        TAG: ${{ needs.version.outputs.tag }}
       run: |
-        if [ "$TAG" = nightly ]; then
-          # Rolling prerelease: drop the old one and move the tag to this commit.
-          gh release delete nightly --yes --cleanup-tag || true
-          gh release create nightly dist/* --target "$GITHUB_SHA" --prerelease \
-            --title "Nightly ($(date -u +%Y-%m-%d) ${GITHUB_SHA::7})" --notes-file notes.md
-        elif gh release view "$TAG" >/dev/null 2>&1; then
+        # gh creates the tag on $GITHUB_SHA when it does not exist yet. A
+        # tag made with the workflow's own token starts no workflow run, so
+        # this does not loop back into the tag trigger.
+        if gh release view "$TAG" >/dev/null 2>&1; then
           gh release upload "$TAG" dist/* --clobber
         else
           gh release create "$TAG" dist/* --target "$GITHUB_SHA" \
