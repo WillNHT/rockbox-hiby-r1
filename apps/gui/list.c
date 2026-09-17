@@ -205,6 +205,8 @@ void gui_synclist_init(struct gui_synclist * gui_list,
     gui_list->callback_get_item_name = callback_get_item_name;
     gui_list->callback_speak_item = NULL;
     gui_list->callback_draw_item = NULL;
+    gui_list->callback_draw_list = NULL;
+    gui_list->draw_list_data = NULL;
     gui_list->nb_items = 0;
     gui_list->selected_item = 0;
     gui_synclist_init_display_settings(gui_list);

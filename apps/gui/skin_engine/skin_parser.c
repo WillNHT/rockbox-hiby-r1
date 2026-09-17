@@ -404,6 +404,23 @@ static int parse_art_fx(struct skin_element *element,
     return 0;
 }
 
+static int parse_playlist_cover(struct skin_element *element,
+                                struct wps_token *token,
+                                struct wps_data *wps_data)
+{
+    struct skin_art_fx *fx = skin_buffer_alloc(sizeof(*fx));
+    (void)wps_data;
+
+    if (!fx)
+        return WPS_ERROR_INVALID_PARAM;
+    memset(fx, 0, sizeof(*fx));
+    fx->x = get_param(element, 0)->data.number;
+    fx->y = get_param(element, 1)->data.number;
+    fx->w = fx->h = get_param(element, 2)->data.number;
+    token->value.data = PTRTOSKINOFFSET(skin_buffer, fx);
+    return 0;
+}
+
 static int parse_image_display(struct skin_element *element,
                                struct wps_token *token,
                                struct wps_data *wps_data)
@@ -2634,6 +2651,9 @@ static int skin_element_callback(struct skin_element* element, void* data)
                     break;
                 case SKIN_TOKEN_ALBUMART_VINYL:
                     function = parse_vinyl;
+                    break;
+                case SKIN_TOKEN_PLAYLIST_COVER:
+                    function = parse_playlist_cover;
                     break;
                 case SKIN_TOKEN_IMAGE_PRELOAD_DISPLAY:
                 case SKIN_TOKEN_IMAGE_DISPLAY_9SEGMENT:

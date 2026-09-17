@@ -53,6 +53,8 @@
 #include "list.h"
 #include "wps.h"
 #include "strmemccpy.h"
+#include "playlist_cover.h"
+#include "gui/covers.h"
 
 #define MAX_LINE 1024
 
@@ -209,6 +211,18 @@ static bool do_non_text_tags(struct gui_wps *gwps, struct skin_draw_info *info,
                 }
             }
             break;
+#if defined(HAVE_COVER_VIEWS) && !defined(__PCTOOL__)
+        case SKIN_TOKEN_PLAYLIST_COVER:
+            if (do_refresh)
+            {
+                struct skin_art_fx *fx =
+                        SKINOFFSETTOPTR(skin_buffer, token->value.data);
+                char path[MAX_PATH];
+                if (fx && playlist_cover_current(path, sizeof(path)))
+                    cover_draw(gwps->display, path, fx->x, fx->y, fx->w);
+            }
+            break;
+#endif
         case SKIN_TOKEN_ALBUMART_VINYL:
             if (do_refresh)
             {

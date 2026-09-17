@@ -76,6 +76,7 @@
 #endif
 #include "abdb.h"
 #include "audiobooks.h"
+#include "gui/coverview.h"
 
 #define LIST_LINES      3       /* lines a book row takes */
 #define MAX_THUMB       128
@@ -510,6 +511,55 @@ static void draw_book_row(struct list_putlineinfo_t *li)
 
 static int book_page(int book);
 
+#ifdef HAVE_COVER_VIEWS
+/* The library views: one list item per book, laid out by coverview.c. */
+static bool book_draw_cover(struct screen *d, int item, void *data,
+                            int x, int y, int size)
+{
+    (void)data;
+    const struct ab_book *b = ab_db_book(book_order[item]);
+    return b && coverview_draw_path_cover(d, ab_db_str(b, AB_S_COVER),
+                                          x, y, size);
+}
+
+static const char *book_title_name(int item, void *data, char *buf,
+                                   size_t size)
+{
+    (void)data;
+    const struct ab_book *b = ab_db_book(book_order[item]);
+    if (!b)
+        return "";
+    title_text(b, buf, size);
+    return buf;
+}
+
+static const char *book_subtitle(int item, void *data, char *buf, size_t size)
+{
+    (void)data;
+    const struct ab_book *b = ab_db_book(book_order[item]);
+    if (!b)
+        return NULL;
+    char progress[64];
+    progress_text(b, progress, sizeof progress);
+    snprintf(buf, size, "%s - %s", or_unknown(ab_db_str(b, AB_S_AUTHOR)),
+             progress);
+    return buf;
+}
+
+static const struct coverview_source book_covers =
+{
+    .draw_cover = book_draw_cover,
+    .subtitle = book_subtitle,
+};
+
+static bool use_coverview(void)
+{
+    return global_settings.library_view != COVERVIEW_CLASSIC;
+}
+#else
+static inline bool use_coverview(void) { return false; }
+#endif
+
 /* Returns a GO_TO_* value to leave the Audiobooks screens with, or 0. */
 static int book_list_screen(const char *title, enum list_kind kind,
                             enum ab_str field, const char *value)
@@ -526,14 +576,29 @@ static int book_list_screen(const char *title, enum list_kind kind,
     strmemccpy(title_buf, title, sizeof title_buf);
     int selected = 0;
 
+    /* lines per book in the list */
+    const int per = use_coverview() ? 1 : LIST_LINES;
+
     while (1)
     {
-        gui_synclist_init(&lists, book_row_name, NULL, false, LIST_LINES, NULL);
-        lists.callback_draw_item = draw_book_row;
+#ifdef HAVE_COVER_VIEWS
+        if (per == 1)
+        {
+            gui_synclist_init(&lists, book_title_name, NULL, false, 1, NULL);
+            coverview_attach(&lists, &book_covers,
+                             global_settings.library_view);
+        }
+        else
+#endif
+        {
+            gui_synclist_init(&lists, book_row_name, NULL, false,
+                              LIST_LINES, NULL);
+            lists.callback_draw_item = draw_book_row;
+        }
         gui_synclist_set_title(&lists, title_buf, Icon_Book);
         gui_synclist_set_icon_callback(&lists, NULL);
-        gui_synclist_set_nb_items(&lists, count * LIST_LINES);
-        gui_synclist_select_item(&lists, selected * LIST_LINES);
+        gui_synclist_set_nb_items(&lists, count * per);
+        gui_synclist_select_item(&lists, selected * per);
         gui_synclist_draw(&lists);
         gui_synclist_speak_item(&lists);
 
@@ -542,7 +607,7 @@ static int book_list_screen(const char *title, enum list_kind kind,
         while (!redo)
         {
             list_do_action(CONTEXT_TREE, HZ, &lists, &action);
-            selected = gui_synclist_get_sel_pos(&lists) / LIST_LINES;
+            selected = gui_synclist_get_sel_pos(&lists) / per;
             switch (action)
             {
                 case ACTION_STD_OK:

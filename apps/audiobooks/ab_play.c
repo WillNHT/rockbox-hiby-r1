@@ -47,6 +47,7 @@
 #endif
 #include "abdb.h"
 #include "audiobooks.h"
+#include "gui/covers.h"
 
 #define SAVE_INTERVAL   (60 * HZ)
 
@@ -448,6 +449,9 @@ void audiobooks_init(void)
     ab_progress_load();
     ab_db_load();
     audiobooks_ui_init();
+#ifdef HAVE_COVER_VIEWS
+    covers_init();
+#endif
     w.last_save = current_tick;
     queue_init(&ab_queue, false);
     create_thread(ab_thread, ab_stack, sizeof(ab_stack), 0, ab_thread_name
