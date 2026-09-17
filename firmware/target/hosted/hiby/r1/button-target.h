@@ -39,11 +39,6 @@
 #define BUTTON_PLAY                 0x00000400
 #define BUTTON_MAIN                ((BUTTON_POWER|BUTTON_RIGHT|BUTTON_LEFT|BUTTON_UP|BUTTON_DOWN)|(BUTTON_PREV|BUTTON_NEXT|BUTTON_PLAY))
 
-/* Physical keys pressed on a dimmed or dark screen only wake it; the press
- * is dropped. Bluetooth remote keys are not in here: a remote is used with
- * the player in a pocket, where the screen state is beside the point. */
-#define BUTTON_WAKE_SWALLOWS     (BUTTON_POWER|BUTTON_RIGHT|BUTTON_LEFT|BUTTON_UP|BUTTON_DOWN)
-
 
 /* Touchscreen virtual buttons */
 #define BUTTON_TOPLEFT      0x00001000
@@ -70,8 +65,5 @@
 #define POWEROFF_COUNT 290
 
 int button_map_with_id(int keycode, int id);
-
-/* While input is locked a tap on a dark screen stays dark. */
-void button_set_touch_wake(bool enable);
 
 #endif /* _BUTTON_TARGET_H_ */

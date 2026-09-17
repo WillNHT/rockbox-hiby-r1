@@ -251,7 +251,7 @@ void lcd_layers_compose(bool on)
  * *_base by its driver. */
 void lcd_update(void)
 {
-#ifdef HAVE_LCD_TRANSITIONS
+#if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
     if (lcd_transition_hold())
         return;
 #endif
@@ -267,7 +267,7 @@ void lcd_update(void)
 
 void lcd_update_rect(int x, int y, int width, int height)
 {
-#ifdef HAVE_LCD_TRANSITIONS
+#if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
     if (lcd_transition_hold())
         return;
 #endif

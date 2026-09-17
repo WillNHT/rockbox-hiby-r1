@@ -40,6 +40,9 @@
 #include "backlight.h"
 #endif
 #endif /* HAVE_SCROLLWHEEL */
+#ifdef BUTTON_TOUCH_WAKES
+#include "backlight.h"
+#endif
 
 /* TODO:  HAVE_SCROLLWHEEL is a hack.  Instead of posting the exact number
    of clicks, instead do it similar to the ipod clickwheel and post
@@ -225,6 +228,18 @@ int button_read_device(BDATA)
                 if(size == (int)sizeof(event)) {
                     switch(event.type) {
                     case EV_KEY: {
+#ifdef BUTTON_TOUCH_WAKES
+                        /* A tap on a dimmed or dark screen wakes it and goes
+                         * no further. The release finds it lit and only
+                         * marks the touch as up. */
+                        if (event.code == BTN_TOUCH && event.value &&
+                            !is_backlight_lit())
+                        {
+                            if (button_touch_wake_enabled())
+                                backlight_on();
+                            break;
+                        }
+#endif
 #ifdef BUTTON_NEED_DEV_INPUT_ID
                         int bmap = button_map_with_id(event.code, i);
 #else

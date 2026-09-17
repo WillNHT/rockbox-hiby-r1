@@ -626,6 +626,20 @@ void button_set_flip(bool flip)
 }
 #endif /* HAVE_LCD_FLIP */
 
+#ifdef BUTTON_TOUCH_WAKES
+static bool touch_wake = true;
+
+void button_set_touch_wake(bool enable)
+{
+    touch_wake = enable;
+}
+
+bool button_touch_wake_enabled(void)
+{
+    return touch_wake;
+}
+#endif
+
 #ifdef HAVE_BACKLIGHT
 void set_backlight_filter_keypress(bool value)
 {
