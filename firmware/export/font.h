@@ -138,4 +138,31 @@ int font_getstringsize(const unsigned char *str, int *w, int *h, int fontnumber)
 int font_get_width(struct font* ft, ucschar_t ch);
 const unsigned char * font_get_bits(struct font* ft, ucschar_t ch);
 
+/* Emoji: pictures drawn in place of glyphs no font has.
+ *
+ * The firmware only knows where a picture goes and how wide it is; what
+ * the pictures are and where they come from is the provider's business
+ * (apps/emoji.c). A picture is a square as tall as the line's font, so a
+ * string measures the same whether or not a provider is registered for
+ * everything else in it. */
+struct emoji_ops
+{
+    /* Does an emoji start at s (a NUL-terminated codepoint string)?
+     * Returns a picture id >= 0 and the number of codepoints it covers in
+     * *len, or -1. */
+    int (*match)(const ucschar_t *s, int *len);
+    /* Draw picture id as a size x size square at x,y of the current main
+     * LCD viewport, leaving out its first ofs columns. */
+    void (*draw)(int id, int x, int y, int size, int ofs);
+};
+void font_set_emoji_ops(const struct emoji_ops *ops);
+const struct emoji_ops *font_get_emoji_ops(void);
+
+/* Codepoints that only steer how their neighbours look (variation
+ * selectors, the zero width joiner) and never take room of their own. */
+static inline bool font_is_zero_width(ucschar_t ch)
+{
+    return ch == 0x200d || ch == 0xfe0e || ch == 0xfe0f;
+}
+
 #endif

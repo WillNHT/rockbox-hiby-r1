@@ -1137,17 +1137,58 @@ const unsigned char* font_get_bits(struct font* pf, ucschar_t char_code)
  * maxbytes = -1 ignores maxbytes and relies on NULL terminator (\0)
  *  to terminate the string
  */
+static const struct emoji_ops *emoji_ops = NULL;
+
+void font_set_emoji_ops(const struct emoji_ops *ops)
+{
+    emoji_ops = ops;
+}
+
+const struct emoji_ops *font_get_emoji_ops(void)
+{
+    return emoji_ops;
+}
+
+/* The longest codepoint sequence one emoji picture can stand for. */
+#define EMOJI_LOOKAHEAD 10
+
 int font_getstringnsize(const unsigned char *str, size_t maxbytes, int *w, int *h, int fontnum)
 {
     struct font* pf = font_get(fontnum);
     font_lock( fontnum, true );
-    ucschar_t ch;
+    const struct emoji_ops *eops = emoji_ops;
+    const unsigned char *end = maxbytes == (size_t)-1 ?
+                               NULL : str + maxbytes;
     int width = 0;
-    size_t b = maxbytes - 1;
 
-    for (str = utf8decode(str, &ch); ch != 0 && b < maxbytes; str = utf8decode(str, &ch), b--)
+    while (*str && (!end || str < end))
     {
-        if (IS_DIACRITIC(ch))
+        ucschar_t ch;
+        const unsigned char *next = utf8decode(str, &ch);
+
+        if (eops && ch >= 0x80)
+        {
+            /* Emoji can be sequences, so look a few codepoints ahead. */
+            ucschar_t seq[EMOJI_LOOKAHEAD + 1];
+            const unsigned char *p = str;
+            const unsigned char *ends[EMOJI_LOOKAHEAD];
+            int n = 0, len;
+            while (n < EMOJI_LOOKAHEAD && *p && (!end || p < end))
+            {
+                p = utf8decode(p, &seq[n]);
+                ends[n++] = p;
+            }
+            seq[n] = 0;
+            if (n > 0 && eops->match(seq, &len) >= 0 && len > 0 && len <= n)
+            {
+                width += pf->height;
+                str = ends[len - 1];
+                continue;
+            }
+        }
+        str = next;
+
+        if (IS_DIACRITIC(ch) || font_is_zero_width(ch))
             continue;
 
         /* get proportional width and glyph bits*/

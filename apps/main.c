@@ -78,6 +78,8 @@
 #include "bootchart.h"
 #include "logdiskf.h"
 #include "bootdata.h"
+#include "emoji.h"
+#include "audiobooks/audiobooks.h"
 #if defined(HAVE_DEVICEDATA)
 #include "devicedata.h"
 #endif
@@ -470,6 +472,9 @@ static void init(void)
     filetype_init();
     playlist_init();
     shortcuts_init();
+    if (global_settings.emoji_enabled)
+        emoji_init();
+    audiobooks_init();
 
     audio_init();
     talk_announce_voice_invalid(); /* notify user w/ voice prompt if voice file invalid */
@@ -782,6 +787,9 @@ static void init(void)
     filetype_init();
 
     shortcuts_init();
+    if (global_settings.emoji_enabled)
+        emoji_init();
+    audiobooks_init();
 
     CHART(">audio_init");
     audio_init();
