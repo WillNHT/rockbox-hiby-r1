@@ -244,6 +244,10 @@ static void button_tick(void)
     static bool post = false;
 #ifdef HAVE_BACKLIGHT
     static bool skip_release = false;
+#ifdef BUTTON_WAKE_SWALLOWS
+    /* this press woke the screen: drop it, its repeats and its release */
+    static bool wake_swallow = false;
+#endif
 #ifdef HAVE_REMOTE_LCD
     static bool skip_remote_release = false;
 #endif
@@ -404,6 +408,13 @@ static void button_tick(void)
                     !(btn & BUTTON_TOUCHSCREEN);
 #endif
 #endif
+#ifdef BUTTON_WAKE_SWALLOWS
+                if (repeat && wake_swallow)
+                {
+                    post = false;
+                }
+                else
+#endif
                 if (repeat)
                 {
                     /* Only post repeat events if the queue is empty,
@@ -443,7 +454,22 @@ static void button_tick(void)
                     }
                     else
 #endif
+#ifdef BUTTON_WAKE_SWALLOWS
+                    /* A key that lands on a dimmed or dark screen only
+                     * wakes it, whatever the first-keypress setting says. */
+                    if ((btn & BUTTON_WAKE_SWALLOWS) && !is_backlight_lit())
                     {
+                        skip_release = true;
+                        wake_swallow = true;
+                        backlight_on();
+                        buttonlight_on();
+                    }
+                    else
+#endif
+                    {
+#ifdef BUTTON_WAKE_SWALLOWS
+                        wake_swallow = false;
+#endif
                         skip_release = keypress_filter_fn(btn, data);
                         if (trigger_backlight)
                         {

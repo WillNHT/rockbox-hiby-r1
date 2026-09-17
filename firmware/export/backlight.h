@@ -31,6 +31,8 @@
 #endif
 
 bool is_backlight_on(bool ignore_always_off);
+/* Full brightness; dimmed is not lit. */
+bool is_backlight_lit(void);
 
 #ifdef HAVE_BACKLIGHT_DIM_IDLE
 /* What the panel drops to when the backlight timeout expires, instead of

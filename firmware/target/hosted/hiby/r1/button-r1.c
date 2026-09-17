@@ -35,6 +35,13 @@
  *   /dev/input/event4: dynamic input devices start at 4 and increment (Bluetooth AVRCP remote control)
  */
 
+static bool touch_wake = true;
+
+void button_set_touch_wake(bool enable)
+{
+    touch_wake = enable;
+}
+
 int hw_button_map(int keycode)
 {
     switch(keycode)
@@ -52,10 +59,14 @@ int hw_button_map(int keycode)
     case BTN_TOUCH:
         {
 #ifdef HAVE_BACKLIGHT
-            if (is_backlight_on(true)) {
+            if (is_backlight_lit()) {
                 return BUTTON_TOUCH;
             }
-            // Ignore
+            /* A tap on a dimmed or dark screen wakes it and goes no
+             * further. Only the press gets here with the light out; the
+             * release finds it lit and just marks the touch as up. */
+            if (touch_wake)
+                backlight_on();
             return 0;
 #else
             return BUTTON_TOUCH;

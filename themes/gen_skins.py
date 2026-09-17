@@ -361,11 +361,8 @@ def snappy_v2(vinyl=False):
     o.append("""#
 # Track
 # -----
-%V(30,656,-30,30,2)
-%s%al%id
-#
 %V(30,688,-30,30,2)
-%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
+%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>%?id< - %id|>
 #
 %V(30,720,-30,46,4)
 %al%s%?it<%it|%fn>
@@ -602,7 +599,7 @@ def animated(gauge=False):
 # -----
 %V(30,690,-30,28,2)
 %Vt(0)
-%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
+%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>%?id< - %id|>
 #
 %V(30,718,-30,46,4)
 %Vt(0)

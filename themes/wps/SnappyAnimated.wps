@@ -899,7 +899,7 @@ SHF%xd(O,%ps)
 # -----
 %V(30,690,-30,28,2)
 %Vt(0)
-%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
+%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>%?id< - %id|>
 #
 %V(30,718,-30,46,4)
 %Vt(0)
