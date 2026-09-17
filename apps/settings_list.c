@@ -543,6 +543,30 @@ static int32_t getlang_time_unit_0_is_off(int value, int unit)
 }
 
 #if defined(HAVE_BACKLIGHT) || defined(HAVE_LCD_SLEEP_SETTING)
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+static const char* formatter_dim_level(char *buffer, size_t buffer_size,
+                                       int val, const char *unit)
+{
+    (void)unit;
+    if (val == 0)
+        return str(LANG_OFF);
+    snprintf(buffer, buffer_size, "%d.%d %%", val / 10, val % 10);
+    return buffer;
+}
+
+static int32_t getlang_dim_level(int value, int unit)
+{
+    (void)unit;
+    if (value == 0)
+        return LANG_OFF;
+    return TALK_ID(value / 10, UNIT_PERCENT);
+}
+
+static const int backlight_off_times[] = {0, 10, 20, 30, 45, 60, 90, 120,
+                                          180, 240, 300, 600, 900, 1200,
+                                          1500, 1800};
+#endif
+
 static const char* formatter_time_unit_0_is_always(char *buffer, size_t buffer_size,
                                     int val, const char *unit)
 {
@@ -1540,10 +1564,25 @@ const struct settings_list settings[] = {
      * "blank it", so the old behaviour is still reachable. The default is
      * a dim but readable panel: on a player the point of the screen is
      * what is playing, and having to wake it to read that is backwards. */
-    INT_SETTING(F_NO_WRAP, dim_brightness, LANG_DIM_BRIGHTNESS,
-                10, "dim brightness", UNIT_INT,
-                0, MAX_BRIGHTNESS_SETTING, 1,
-                NULL, NULL, backlight_set_dim_brightness),
+    /* In tenths of a percent: the bottom of the range is where the steps
+     * matter, and whole percent was too coarse there. 0.5 % steps give
+     * 200 of them. */
+    INT_SETTING(F_NO_WRAP, dim_level, LANG_DIM_BRIGHTNESS,
+                100, "dim level", UNIT_PERCENT,
+                0, 1000, 5,
+                formatter_dim_level, getlang_dim_level,
+                backlight_set_dim_brightness),
+    INT_SETTING(F_DEPRECATED, dim_brightness, LANG_DIM_BRIGHTNESS,
+                -1, "dim brightness", UNIT_INT,
+                -1, MAX_BRIGHTNESS_SETTING, 1,
+                NULL, NULL, NULL),
+    TABLE_SETTING_LIST(F_TIME_SETTING, backlight_off_timeout,
+                       LANG_BACKLIGHT_OFF_TIMEOUT, 0,
+                       "backlight off timeout", NULL, UNIT_SEC,
+                       formatter_time_unit_0_is_off,
+                       getlang_time_unit_0_is_off,
+                       backlight_set_off_timeout,
+                       16, backlight_off_times),
 #endif
     /* backlight fading */
 #if defined(HAVE_BACKLIGHT_FADING_INT_SETTING)

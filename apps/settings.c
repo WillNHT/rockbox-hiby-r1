@@ -917,6 +917,17 @@ void settings_apply(bool read_disk)
 #endif /* HAVE_REMOTE_LCD */
 #ifdef HAVE_BACKLIGHT_BRIGHTNESS
     backlight_set_brightness(global_settings.brightness);
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+    /* An old config.cfg says "dim brightness: N" in whole percent; it is
+       read once, carried over, and not written again. 0 stays "go dark". */
+    if (global_settings.dim_brightness >= 0)
+    {
+        global_settings.dim_level = global_settings.dim_brightness * 10;
+        global_settings.dim_brightness = -1;
+    }
+    backlight_set_dim_brightness(global_settings.dim_level);
+    backlight_set_off_timeout(global_settings.backlight_off_timeout);
+#endif
 #endif
 #ifdef HAVE_BACKLIGHT
     backlight_set_timeout(global_settings.backlight_timeout);

@@ -18728,3 +18728,17 @@
     *: "Update database now?"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_BACKLIGHT_OFF_TIMEOUT
+  desc: in Settings -> General -> Display -> LCD: time from dimming to off
+  user: core
+  <source>
+    *: "Screen Off After Dim"
+  </source>
+  <dest>
+    *: "Screen Off After Dim"
+  </dest>
+  <voice>
+    *: "Screen Off After Dim"
+  </voice>
+</phrase>

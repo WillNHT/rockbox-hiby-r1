@@ -50,6 +50,13 @@ void backlight_hw_brightness(int val)
     sim_backlight(normalize_backlight(val));
 }
 
+#ifdef HAVE_BACKLIGHT_FINE_BRIGHTNESS
+void backlight_hw_brightness_fine(int permille)
+{
+    sim_backlight(permille / 10);
+}
+#endif
+
 #endif /* HAVE_BACKLIGHT_BRIGHTNESS */
 
 

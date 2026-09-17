@@ -107,6 +107,9 @@
 /* The idle timeout dims the panel instead of blanking it, to a level the
  * user chooses. See do_backlight_off() in firmware/backlight.c. */
 #define HAVE_BACKLIGHT_DIM_IDLE
+/* backlight_hw_brightness_fine(): tenths of a percent, scaled to the
+ * driver's own max_brightness, for dim levels finer than 1 %. */
+#define HAVE_BACKLIGHT_FINE_BRIGHTNESS
 
 /* This device has no hold switch, and its lock is a software one the user
  * asks for with a key. Locking input must not also blank the screen. See

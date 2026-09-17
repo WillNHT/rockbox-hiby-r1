@@ -36,8 +36,15 @@ bool is_backlight_on(bool ignore_always_off);
 /* What the panel drops to when the backlight timeout expires, instead of
  * going dark. Below MIN_BRIGHTNESS_SETTING means "go dark", which is what
  * every other target does. */
+/* level is in tenths of a percent (0..1000). */
 void backlight_set_dim_brightness(int level);
 int  backlight_get_dim_brightness(void);
+/* Seconds from dimming to off; 0 = stay dimmed. */
+void backlight_set_off_timeout(int seconds);
+#endif
+#ifdef HAVE_BACKLIGHT_FINE_BRIGHTNESS
+/* permille of the panel's range (target) */
+void backlight_hw_brightness_fine(int permille);
 #endif
 void backlight_on_ignore(bool value, int timeout);
 void backlight_on(void);

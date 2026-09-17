@@ -847,9 +847,16 @@ struct user_settings
 #ifdef HAVE_BACKLIGHT_BRIGHTNESS
     int brightness;
 #ifdef HAVE_BACKLIGHT_DIM_IDLE
-    /* Where the panel sits once the backlight timeout expires. Zero is
-     * "go dark", the way every other target behaves. */
+    /* Where the panel sits once the backlight timeout expires, in tenths
+     * of a percent of the panel's range. Zero is "go dark", the way every
+     * other target behaves. */
+    int dim_level;
+    /* The old whole-percent setting, read from an old config.cfg and
+     * converted once by settings_apply(); -1 when there is nothing to
+     * convert. Never written. */
     int dim_brightness;
+    /* Seconds from dimming to off; 0 = stay dimmed. */
+    int backlight_off_timeout;
 #endif
 #endif
 
