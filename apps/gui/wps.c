@@ -64,6 +64,7 @@
 #include "wps.h"
 #include "statusbar-skinned.h"
 #include "skin_engine/wps_internals.h"
+#include "skin_engine/skin_art_fx.h"
 #include "open_plugin.h"
 
 #ifdef USB_ENABLE_AUDIO
@@ -570,6 +571,9 @@ static void gwps_leave_wps(bool theme_enabled)
     {
         struct gui_wps *gwps = skin_get_gwps(WPS, i);
         gwps->display->scroll_stop();
+        /* The album-art backdrop belongs to this screen; the next one must
+         * not clear its rows onto the cover. */
+        skin_art_fx_leave();
         if (theme_enabled)
         {
 #ifdef HAVE_BACKDROP_IMAGE

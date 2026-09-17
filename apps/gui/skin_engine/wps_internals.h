@@ -164,6 +164,8 @@ struct draw_rectangle {
     int16_t height;
     unsigned start_colour;
     unsigned end_colour;
+    /* 0..100; 100 is the old opaque fill */
+    uint8_t alpha;
 };
 
 struct align_pos {
@@ -212,6 +214,12 @@ struct skin_viewport {
 #if (LCD_DEPTH > 1) || (defined(HAVE_REMOTE_LCD) && (LCD_REMOTE_DEPTH > 1))
     bool output_to_backdrop_buffer;
     bool fgbg_changed;
+    /* %Vt(veil): 0..100, how much of this viewport's own background
+     * colour is laid over what is beneath it when the viewport clears.
+     * -1 means the tag was not used and the old behaviour stands - copy
+     * the backdrop if there is one, fill the background if there is not.
+     * See skin_layer.c. */
+    int8_t clear_veil;
 #ifdef HAVE_LCD_COLOR
     struct gradient_config start_gradient;
 #endif

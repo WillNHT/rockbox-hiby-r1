@@ -332,6 +332,11 @@ enum skin_token_type {
      * itself. See apps/gui/skin_engine/skin_art_fx.c. */
     SKIN_TOKEN_ALBUMART_BACKDROP,
     SKIN_TOKEN_ALBUMART_MIRROR,
+
+    /* %Vt(veil) - how opaque this viewport's own background is over
+     * whatever is beneath it. See apps/gui/skin_engine/skin_layer.c.
+     * Appended, like everything else here - see the note above. */
+    SKIN_TOKEN_VIEWPORT_TRANSPARENCY,
 };
 
 /*

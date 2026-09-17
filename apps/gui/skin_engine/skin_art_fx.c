@@ -17,12 +17,10 @@
  *
  * Where the output goes matters more than how it is drawn. A skin viewport
  * clears its own background, so anything painted full-screen and early is
- * wiped by the next viewport that sits on top of it. The backdrop buffer
- * is the one surface that survives that, because a viewport clear *is* a
- * copy from it - which is why %Cb belongs inside a %VB viewport and says
- * so if it is not. The reflection is the opposite case: it is a small
- * thing under the art, it wants to be over the backdrop, and it is drawn
- * straight to the screen.
+ * wiped by the next viewport that sits on top of it. So %Cb does not paint:
+ * it composes the blur, the cover and the reflection into a buffer that
+ * becomes the LCD backdrop, the one surface a viewport clear restores
+ * rather than wipes. See the backdrop section below.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -49,6 +47,8 @@
 #include "skin_art_fx.h"
 #include "skin_engine.h"
 #include "wps_internals.h"
+#include "core_alloc.h"
+#include "misc.h"
 
 /* The art as the buffering layer holds it: RGB565, at whatever size %Cl
  * asked for.
@@ -94,9 +94,9 @@ static struct bitmap *art_bitmap(struct gui_wps *gwps)
 
 /* A canvas view of whatever framebuffer this viewport is writing to.
  *
- * Not the LCD's: inside a %VB viewport that is the backdrop buffer, and
- * the whole point of %Cb is that it writes there. vp->buffer is where the
- * skin engine has already pointed it.
+ * Only %Cm uses this now, and only when there is no album-art backdrop to
+ * compose into. Inside a %VB viewport vp->buffer is the skin's backdrop
+ * buffer, which is where the skin engine has already pointed it.
  *
  * Coordinates below are absolute (vp->x/vp->y are added by the caller),
  * because a backdrop buffer is the size of the panel whatever the
@@ -195,14 +195,7 @@ static void scale_cover(struct canvas_surface *dst, int dx, int dy,
  * every refresh would be absurd, so it is polled and skipped: the work
  * happens on the frame where the handle changes, and that frame asks for a
  * full update so the viewports above re-clear onto the new backdrop. */
-static int backdrop_handle = -1;
 static int mirror_handle = -1;
-
-void skin_art_fx_reset(void)
-{
-    backdrop_handle = -1;
-    mirror_handle = -1;
-}
 
 /* Whether this effect has anything to do this pass.
  *
@@ -230,75 +223,339 @@ static bool fx_should_draw(bool full, int handle, int *last)
     return false;
 }
 
-bool skin_art_backdrop(struct gui_wps *gwps, struct viewport *vp,
-                       int x, int y, int w, int h,
-                       int radius, int veil_pct, bool full)
+/* ------------------------------------------------------------ backdrop
+ *
+ * The blurred cover is not painted onto the panel. It is rendered once per
+ * picture into a buffer of its own, and that buffer is handed to the LCD
+ * driver as its *backdrop* - the same mechanism a theme's backdrop .bmp
+ * uses, and the only real transparency Rockbox has.
+ *
+ * With a backdrop set, two things change everywhere at once, with no skin
+ * or viewport knowing about it:
+ *
+ *   - clear_viewport() copies the backdrop instead of filling a colour, so
+ *     every viewport's rectangle *is* the picture underneath it;
+ *   - text drawn in the ordinary solid mode takes its background pixels
+ *     from the backdrop, so the glyph lands on the cover and not on a box.
+ *
+ * The buffer holds the whole picture layer, not only the blur: the sharp
+ * cover (%Cd, at the place %Cl put it) and its reflection (%Cm) are
+ * composed into it as well. Anything that moves over the cover - a sheen,
+ * a %Vt viewport - clears back to the cover rather than to a blurred copy
+ * of it. %Cd still draws on the panel as well; %Cm does not while the
+ * backdrop is live, because the clear that precedes it already put the
+ * reflection there.
+ *
+ * Why the skin's own %X/%VB backdrop machinery is not used: those buffers
+ * are loaded from a file at parse time and shared between skins by name.
+ * This one changes with every track and belongs to one skin.
+ *
+ * Memory: the buffer is reserved when the skin is *loaded* (see
+ * skin_art_fx_reserve()), never while rendering. The audio buffer holds
+ * every free byte (core_alloc_maximum), so an allocation mid-render makes
+ * it shrink - which stops playback, resets the buffering layer, and leaves
+ * any album-art bitmap pointer taken beforehand pointing at nothing. That
+ * was a segfault in scale_cover() the moment the first cover arrived.
+ */
+
+static int      bd_hid = -1;          /* buflib handle of the buffer       */
+static fb_data *bd_buf;
+static const struct wps_data *bd_owner;
+static int      bd_x, bd_y, bd_w, bd_h, bd_radius, bd_veil;
+static unsigned bd_ground;
+static int      bd_rendered_for = -1; /* art handle the buffer shows       */
+static bool     bd_active;            /* the LCD is showing bd_buf         */
+
+/* Where %Cd put the cover on the panel, in absolute coordinates: the
+ * viewport origin is only known while rendering, so it is noted then. */
+static bool     bd_cover;
+static int      bd_cover_vx, bd_cover_vy;
+
+/* %Cm, composed into the buffer while it is active. */
+static bool     bd_mirror;
+static int      bd_mx, bd_my, bd_mw, bd_mh, bd_mtop, bd_mbottom;
+
+static int bd_move(int handle, void *current, void *new)
 {
-    struct canvas_surface fb;
-    struct canvas_rect r;
-    struct bitmap *bmp = art_bitmap(gwps);
-    int handle = art_handle(gwps);
-    canvas_px *scratch;
-    size_t scratch_px;
+    (void)handle;
+    if (bd_buf == current)
+        bd_buf = new;
+    /* The driver holds a raw pointer; it has to follow the block. */
+    if (bd_active)
+        screens[SCREEN_MAIN].backdrop_show((char *)bd_buf);
+    return BUFLIB_CB_OK;
+}
 
-    if (!bmp || !target_surface(gwps->display, vp, &fb))
-        return false;
+static struct buflib_callbacks bd_ops = { bd_move, NULL, NULL };
 
-    if (!fx_should_draw(full, handle, &backdrop_handle))
+bool skin_art_fx_reserve(void)
+{
+    if (bd_hid > 0)
         return true;
-    if (w <= 0) w = fb.w - x;
-    if (h <= 0) h = fb.h - y;
-
-    r.x = x; r.y = y; r.w = w; r.h = h;
-
-    scale_cover(&fb, x, y, w, h, bmp);
-
-    if (radius > 0)
+    bd_hid = core_alloc_ex(LCD_BACKDROP_BYTES, &bd_ops);
+    if (bd_hid <= 0)
     {
-        scratch = canvas_scratch(w, h, &scratch_px);
-        if (scratch)
-            canvas_blur(&fb, &r, radius, scratch, scratch_px);
+        bd_hid = -1;
+        return false;
+    }
+    bd_buf = core_get_data(bd_hid);
+    return true;
+}
+
+static void bd_set_active(bool on)
+{
+    if (on && !bd_buf)
+        on = false;
+    if (bd_active == on)
+        return;
+    bd_active = on;
+    screens[SCREEN_MAIN].backdrop_show(on ? (char *)bd_buf : NULL);
+}
+
+void skin_art_fx_reset(const struct wps_data *data)
+{
+    if (data != bd_owner)
+        return;
+    mirror_handle = -1;
+    bd_owner = NULL;
+    bd_rendered_for = -1;
+    bd_cover = false;
+    bd_mirror = false;
+    bd_set_active(false);
+}
+
+void skin_art_fx_leave(void)
+{
+    bd_set_active(false);
+}
+
+/* The cover as %Cd draws it: cropped to the %Cl box and aligned in it.
+ * Mirrors draw_album_art() in skin_display.c. */
+static void bd_draw_cover(struct canvas_surface *surf,
+                          const struct skin_albumart *aa,
+                          const struct bitmap *bmp)
+{
+    int x = bd_cover_vx + aa->x;
+    int y = bd_cover_vy + aa->y;
+    int w = bmp->width, h = bmp->height;
+    int sstride = STRIDE_MAIN(bmp->width, bmp->height);
+    const fb_data *sp = (const fb_data *)bmp->data;
+    int row, col;
+
+    if (aa->width > 0)
+    {
+        w = MIN(bmp->width, aa->width);
+        if (aa->xalign & WPS_ALBUMART_ALIGN_RIGHT)
+            x += aa->width - w;
+        else if (aa->xalign & WPS_ALBUMART_ALIGN_CENTER)
+            x += (aa->width - w) / 2;
+    }
+    if (aa->height > 0)
+    {
+        h = MIN(bmp->height, aa->height);
+        if (aa->yalign & WPS_ALBUMART_ALIGN_BOTTOM)
+            y += aa->height - h;
+        else if (aa->yalign & WPS_ALBUMART_ALIGN_CENTER)
+            y += (aa->height - h) / 2;
     }
 
-    /* The veil. A cover thrown across the background at full strength is a
-     * background you cannot read text on, and the answer is not to dim the
-     * text. veil_pct is how much of the viewport's own background colour
-     * goes over the top, so the theme's ground is what the picture fades
-     * into and a theme keeps its palette. */
-    if (veil_pct > 0)
+    for (row = 0; row < h; row++)
     {
-        /* Blended by hand rather than with canvas_fill_a(), which is not
-         * the function its name suggests: it fills the rectangle solid and
-         * then writes `alpha` into the surface's *alpha plane*, which is
-         * for building a layer to composite later. On a surface with no
-         * alpha plane - the framebuffer - that is a solid fill and the
-         * picture underneath is simply gone. It was, too: the backdrop
-         * came out flat black at every veil setting and perfect at zero. */
-        unsigned a = (unsigned)veil_pct * 255 / 100;
-        canvas_px veil = (canvas_px)vp->bg_pattern;
-        int px, py;
+        canvas_px *d;
+        const fb_data *s;
 
+        if (y + row < 0 || y + row >= surf->h)
+            continue;
+        d = canvas_at(surf, 0, y + row);
+        s = sp + (size_t)row * sstride;
+        for (col = 0; col < w; col++)
+        {
+            if (x + col < 0 || x + col >= surf->w)
+                continue;
+            d[x + col] = (canvas_px)s[col];
+        }
+    }
+}
+
+static bool bd_render(struct gui_wps *gwps, int handle)
+{
+    struct canvas_surface surf;
+    struct canvas_rect r;
+    struct bitmap *bmp;
+    canvas_px *scratch = NULL;
+    size_t scratch_px = 0;
+    int w, h, px, py;
+
+    if (!bd_buf)
+        return false;
+
+    w = bd_w > 0 ? bd_w : LCD_WIDTH  - bd_x;
+    h = bd_h > 0 ? bd_h : LCD_HEIGHT - bd_y;
+    if (bd_radius > 0)
+        scratch = canvas_scratch(w, h, &scratch_px);
+
+    /* Every pointer below is taken after the last call that could have
+     * touched buflib, and nothing between here and the end allocates. */
+    bmp = art_bitmap(gwps);
+    if (!bmp)
+        return false;
+    bd_buf = core_get_data(bd_hid);
+
+    canvas_surface_init(&surf, (canvas_px *)bd_buf, NULL,
+                        LCD_WIDTH, LCD_HEIGHT, LCD_WIDTH);
+
+    /* The ground everywhere, then the picture where the tag asked for it,
+     * so a backdrop rectangle smaller than the panel still leaves a clean
+     * edge rather than whatever the buffer held last. */
+    r.x = 0; r.y = 0; r.w = LCD_WIDTH; r.h = LCD_HEIGHT;
+    canvas_fill(&surf, &r, (canvas_px)bd_ground);
+
+    r.x = bd_x; r.y = bd_y; r.w = w; r.h = h;
+    scale_cover(&surf, bd_x, bd_y, w, h, bmp);
+
+    if (scratch)
+        canvas_blur(&surf, &r, bd_radius, scratch, scratch_px);
+
+    if (bd_veil > 0)
+    {
+        unsigned a = (unsigned)bd_veil * 255 / 100;
         if (a > 255)
             a = 255;
 
         for (py = 0; py < h; py++)
         {
             canvas_px *row;
-            if (y + py < 0 || y + py >= fb.h)
+            if (bd_y + py < 0 || bd_y + py >= LCD_HEIGHT)
                 continue;
-            row = canvas_at(&fb, x, y + py);
-            if (!row)
-                continue;
+            row = canvas_at(&surf, 0, bd_y + py);
             for (px = 0; px < w; px++)
             {
-                if (x + px < 0 || x + px >= fb.w)
+                int ax = bd_x + px;
+                if (ax < 0 || ax >= LCD_WIDTH)
                     continue;
-                row[px] = canvas_blend_px(row[px], veil, a);
+                row[ax] = canvas_blend_px(row[ax], (canvas_px)bd_ground, a);
             }
         }
     }
 
+    if (bd_cover)
+    {
+        struct skin_albumart *aa =
+            SKINOFFSETTOPTR(get_skin_buffer(gwps->data), gwps->data->albumart);
+        if (aa)
+            bd_draw_cover(&surf, aa, bmp);
+    }
+
+    if (bd_mirror)
+    {
+        struct canvas_surface art;
+        struct canvas_rect srect;
+
+        canvas_surface_init(&art, (canvas_px *)bmp->data, NULL,
+                            bmp->width, bmp->height,
+                            STRIDE_MAIN(bmp->width, bmp->height));
+        srect.x = 0;
+        srect.w = MIN(bd_mw > 0 ? bd_mw : bmp->width, bmp->width);
+        srect.h = MIN(bd_mh > 0 ? bd_mh : bmp->height / 3, bmp->height);
+        srect.y = bmp->height - srect.h;
+        canvas_reflect(&surf, bd_mx, bd_my, &art, &srect, srect.h,
+                       (unsigned)bd_mtop, (unsigned)bd_mbottom);
+    }
+
+    bd_rendered_for = handle;
     return true;
+}
+
+fb_data *skin_art_backdrop_buffer(void)
+{
+    return bd_active ? bd_buf : NULL;
+}
+
+void skin_art_fx_prepare(struct gui_wps *gwps)
+{
+    int handle;
+
+    if (!gwps || !bd_owner || gwps->data != bd_owner)
+    {
+        /* Another skin is rendering. If it is the statusbar drawn over the
+         * owner's screen, the backdrop stays; anywhere else it goes, or a
+         * list would clear its rows onto the last cover. */
+        if (get_current_activity() != ACTIVITY_WPS)
+            bd_set_active(false);
+        return;
+    }
+
+    handle = art_handle(gwps);
+    if (handle < 0)
+    {
+        bd_set_active(false);
+        return;
+    }
+
+    if (handle != bd_rendered_for)
+    {
+        if (!bd_render(gwps, handle))
+        {
+            bd_set_active(false);
+            return;
+        }
+        /* The picture changed underneath every viewport, and only a full
+         * update makes all of them clear onto it again. */
+        skin_request_full_update(WPS);
+    }
+
+    bd_set_active(true);
+}
+
+/* Something the backdrop is composed from changed: render it again at the
+ * start of the next pass, which is a full one so every viewport re-clears. */
+static void bd_invalidate(void)
+{
+    bd_rendered_for = -1;
+    skin_request_full_update(WPS);
+}
+
+bool skin_art_backdrop(struct gui_wps *gwps, struct viewport *vp,
+                       int x, int y, int w, int h,
+                       int radius, int veil_pct, bool full)
+{
+    (void)full;
+
+    /* The tag only says what the backdrop should be. The work is done in
+     * skin_art_fx_prepare(), before the first viewport of each pass,
+     * because a backdrop set halfway down the viewport list is a backdrop
+     * the viewports above it never cleared onto. */
+    if (bd_owner != gwps->data || bd_x != x || bd_y != y ||
+        bd_w != w || bd_h != h || bd_radius != radius ||
+        bd_veil != veil_pct || bd_ground != vp->bg_pattern)
+    {
+        if (bd_owner != gwps->data)
+        {
+            bd_cover = false;
+            bd_mirror = false;
+        }
+        bd_owner  = gwps->data;
+        bd_x = x; bd_y = y; bd_w = w; bd_h = h;
+        bd_radius = radius;
+        bd_veil   = veil_pct;
+        bd_ground = vp->bg_pattern;
+        bd_invalidate();
+    }
+
+    return art_handle(gwps) >= 0;
+}
+
+void skin_art_note_cover(struct gui_wps *gwps, struct viewport *vp)
+{
+    if (!gwps || gwps->data != bd_owner)
+        return;
+    if (!bd_cover || bd_cover_vx != vp->x || bd_cover_vy != vp->y)
+    {
+        bd_cover = true;
+        bd_cover_vx = vp->x;
+        bd_cover_vy = vp->y;
+        bd_invalidate();
+    }
 }
 
 bool skin_art_mirror(struct gui_wps *gwps, struct viewport *vp,
@@ -307,8 +564,24 @@ bool skin_art_mirror(struct gui_wps *gwps, struct viewport *vp,
 {
     struct canvas_surface fb, art;
     struct canvas_rect srect;
-    struct bitmap *bmp = art_bitmap(gwps);
+    struct bitmap *bmp;
 
+    /* While this skin's backdrop is live the reflection is part of it. */
+    if (gwps->data == bd_owner)
+    {
+        if (!bd_mirror || bd_mx != x || bd_my != y || bd_mw != w ||
+            bd_mh != h || bd_mtop != top || bd_mbottom != bottom)
+        {
+            bd_mirror = true;
+            bd_mx = x; bd_my = y; bd_mw = w; bd_mh = h;
+            bd_mtop = top; bd_mbottom = bottom;
+            bd_invalidate();
+        }
+        if (bd_active)
+            return true;
+    }
+
+    bmp = art_bitmap(gwps);
     if (!bmp || !target_surface(gwps->display, vp, &fb))
         return false;
 

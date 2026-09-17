@@ -27,6 +27,7 @@
 #include "settings.h"
 #include "wps_internals.h"
 #include "skin_engine.h"
+#include "skin_art_fx.h"
 
 #if !defined(__PCTOOL__) && defined(HAVE_BACKDROP_IMAGE)
 
@@ -270,7 +271,9 @@ void skin_backdrop_show(int backdrop_id)
 {
     if (backdrop_id < 0)
     {
-        screens[0].backdrop_show(NULL);
+        /* No backdrop of the skin's own: the album-art backdrop, if the
+         * skin being drawn has one live, otherwise none. */
+        screens[0].backdrop_show((char *)skin_art_backdrop_buffer());
         current_lcd_backdrop[0] = -1;
         return;
     }
@@ -279,6 +282,17 @@ void skin_backdrop_show(int backdrop_id)
 #else /* HAVE_REMOTE_LCD */
     enum screen_type screen = backdrops[backdrop_id].screen;
 #endif
+
+    /* A skin that asked for the album-art backdrop (%Cb) gets it over the
+     * theme's backdrop image: the skin is the more specific request, and
+     * the theme's picture would otherwise sit behind every viewport while
+     * the cover backdrop is rendered into a buffer nobody shows. */
+    if (screen == SCREEN_MAIN && skin_art_backdrop_buffer())
+    {
+        screens[screen].backdrop_show((char *)skin_art_backdrop_buffer());
+        current_lcd_backdrop[screen] = backdrop_id;
+        return;
+    }
 
     if ((backdrops[backdrop_id].loaded == false) ||
         (backdrops[backdrop_id].name[0] == '-' &&

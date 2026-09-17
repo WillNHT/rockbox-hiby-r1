@@ -64,6 +64,9 @@
 
 #include "wps_internals.h"
 #include "skin_engine.h"
+#ifndef __PCTOOL__
+#include "skin_art_fx.h"
+#endif
 #include "settings.h"
 #include "settings_list.h"
 #include "rbpaths.h"
@@ -356,6 +359,14 @@ static int parse_art_fx(struct skin_element *element,
     fx->h = get_param(element, 3)->data.number;
     fx->a = get_param(element, 4)->data.number;
     fx->b = get_param(element, 5)->data.number;
+
+#ifndef __PCTOOL__
+    /* Reserve the backdrop now, while the skin loads. Allocating it on the
+     * first frame that has a cover makes the audio buffer shrink under the
+     * track that is playing - see skin_art_fx.c. */
+    if (token->type == SKIN_TOKEN_ALBUMART_BACKDROP)
+        skin_art_fx_reserve();
+#endif
 
     token->value.data = PTRTOSKINOFFSET(skin_buffer, fx);
     return 0;
@@ -728,6 +739,7 @@ static int parse_drawrectangle( struct skin_element *element,
 
     rect->start_colour = curr_vp->vp.fg_pattern;
     rect->end_colour = curr_vp->vp.fg_pattern;
+    rect->alpha = 100;
 
     if (element->params_count > 4)
     {
@@ -741,6 +753,16 @@ static int parse_drawrectangle( struct skin_element *element,
         if (!parse_color(curr_screen, get_param_text(element, 5),
                     &rect->end_colour))
             return -1;
+    }
+    /* %dr(x,y,w,h,start,end,alpha): blend over what is already there
+     * rather than paint over it. Only meaningful if the viewport cleared
+     * to something worth seeing through to - see skin_layer.c. */
+    if (element->params_count > 6)
+    {
+        int a = get_param(element, 6)->data.number;
+        if (a < 0) a = 0;
+        if (a > 100) a = 100;
+        rect->alpha = (uint8_t)a;
     }
     token->value.data = PTRTOSKINOFFSET(skin_buffer, rect);
 
@@ -2318,6 +2340,7 @@ static int convert_viewport(struct wps_data *data, struct skin_element* element)
 
 #if (LCD_DEPTH > 1) || (defined(HAVE_REMOTE_LCD) && (LCD_REMOTE_DEPTH > 1))
     skin_vp->output_to_backdrop_buffer = false;
+    skin_vp->clear_veil = -1; /* no %Vt: the old opaque clear */
 #endif
 #ifdef HAVE_LCD_COLOR
     skin_vp->start_gradient.start = global_settings.lss_color;
@@ -2537,6 +2560,19 @@ static int skin_element_callback(struct skin_element* element, void* data)
                     backdrop_filename = BACKDROP_BUFFERNAME;
                     wps_data->use_extra_framebuffer = true;
                     break;
+                case SKIN_TOKEN_VIEWPORT_TRANSPARENCY:
+                {
+                    /* %Vt(veil): 0..100 percent of this viewport's own
+                     * background laid over the backdrop when it clears.
+                     * Clamped rather than rejected - a skin asking for
+                     * 120% means opaque, and failing the whole parse over
+                     * it drops the user to the failsafe WPS. */
+                    int veil = get_param(element, 0)->data.number;
+                    if (veil < 0) veil = 0;
+                    if (veil > 100) veil = 100;
+                    curr_vp->clear_veil = (int8_t)veil;
+                    break;
+                }
 #endif
 #ifdef HAVE_LCD_COLOR
                 case SKIN_TOKEN_VIEWPORT_GRADIENT_SETUP:
@@ -2685,6 +2721,9 @@ bool skin_data_load(enum screen_type screen, struct wps_data *wps_data,
         return false;
 
     skin_data_reset(wps_data);
+#ifndef __PCTOOL__
+    skin_art_fx_reset(wps_data);
+#endif
     wps_data->wps_loaded = false;
     curr_screen = screen;
     curr_line = NULL;

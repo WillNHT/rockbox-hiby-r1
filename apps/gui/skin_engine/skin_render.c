@@ -36,6 +36,7 @@
 #include "skin_art_fx.h"
 #include "skin_display.h"
 #include "skin_engine.h"
+#include "skin_layer.h"
 #include "skin_parser.h"
 #include "tag_table.h"
 #include "skin_scan.h"
@@ -220,6 +221,17 @@ static bool do_non_text_tags(struct gui_wps *gwps, struct skin_draw_info *info,
                 struct draw_rectangle *rect =
                         SKINOFFSETTOPTR(skin_buffer, token->value.data);
                 if (!rect) break;
+                /* Translucent: blend over whatever the viewport's clear
+                 * restored rather than paint over it. Falls through to the
+                 * opaque paths when it cannot (no colour depth to blend
+                 * in, or fully opaque anyway). */
+                if (rect->alpha < 100 &&
+                    skin_layer_fillrect(gwps->display, &skin_vp->vp,
+                                        rect->x, rect->y,
+                                        rect->width, rect->height,
+                                        rect->start_colour, rect->end_colour,
+                                        rect->alpha))
+                    break;
 #ifdef HAVE_LCD_COLOR
                 if (rect->start_colour != rect->end_colour &&
                     gwps->display->screen_type == SCREEN_MAIN)
@@ -329,6 +341,9 @@ static bool do_non_text_tags(struct gui_wps *gwps, struct skin_draw_info *info,
                     }
 #endif
                     aa->draw_handle = handle;
+                    /* The backdrop carries the cover too, so anything that
+                     * clears over it clears back to the cover. */
+                    skin_art_note_cover(gwps, &skin_vp->vp);
                 }
             }
             break;
@@ -463,7 +478,7 @@ static void do_tags_in_hidden_conditional(struct skin_element* branch,
                             }
 
                             gwps->display->set_viewport_ex(&skin_viewport->vp, VP_FLAG_VP_SET_CLEAN);
-                            gwps->display->clear_viewport();
+                            skin_layer_clear_viewport(gwps->display, skin_viewport);
                             gwps->display->set_viewport_ex(&info->skin_vp->vp, VP_FLAG_VP_SET_CLEAN);
 
                             if (skin_viewport->output_to_backdrop_buffer)
@@ -473,7 +488,7 @@ static void do_tags_in_hidden_conditional(struct skin_element* branch,
                             }
 #else
                             gwps->display->set_viewport_ex(&skin_viewport->vp, VP_FLAG_VP_SET_CLEAN);
-                            gwps->display->clear_viewport();
+                            skin_layer_clear_viewport(gwps->display, skin_viewport);
                             gwps->display->set_viewport_ex(&info->skin_vp->vp, VP_FLAG_VP_SET_CLEAN);
 #endif
                             skin_viewport->hidden_flags |= VP_DRAW_HIDDEN;
@@ -905,12 +920,31 @@ void skin_render(struct gui_wps *gwps, unsigned refresh_mode)
     int old_refresh_mode = refresh_mode;
     skin_buffer = get_skin_buffer(gwps->data);
 
+    /* Settle the album-art backdrop before anything clears onto it. */
+    skin_art_fx_prepare(gwps);
+
     /* Framebuffer is likely dirty */
     if ((refresh_mode&SKIN_REFRESH_ALL) == SKIN_REFRESH_ALL)
     {
         /* should already be the default buffer */
         struct viewport * first_vp = display->set_viewport_ex(NULL, 0);
-        if ((first_vp->flags & VP_FLAG_VP_SET_CLEAN) == VP_FLAG_VP_DIRTY &&
+        bool dirty = (first_vp->flags & VP_FLAG_VP_SET_CLEAN) == VP_FLAG_VP_DIRTY;
+
+        /* A skin that composes its own backdrop - %VB, or the album-art
+         * backdrop %Cb builds - needs this clear every full pass, not only when something else happened to leave
+         * the default viewport dirty.
+         *
+         * The clear is a copy from the backdrop buffer, and it is the only
+         * thing that paints the gaps *between* viewports from it - a
+         * labelled viewport only ever restores its own rectangle. Without
+         * it the backdrop shows through where viewports sit and is missing
+         * everywhere else, which is what made %VB look unusable.
+         *
+         * skin_render() marks the default viewport clean at the end of
+         * every pass (see the bottom of this function), so the flag can
+         * never survive to the next one's check on its own. */
+        if ((dirty || data->use_extra_framebuffer ||
+             skin_art_backdrop_buffer() != NULL) &&
             get_current_activity() == ACTIVITY_WPS) /* only clear if in WPS */
         {
             display->clear_viewport();
@@ -947,6 +981,14 @@ void skin_render(struct gui_wps *gwps, unsigned refresh_mode)
         {
             skin_backdrop_set_buffer(-1, skin_viewport);
             skin_backdrop_show(data->backdrop_id);
+            /* %Vt(100) is opaque all the way through. Its clear honours
+             * that by itself, but every text line fills its own background
+             * too, and a line fill copies from the backdrop whenever one is
+             * set - so without this the ground has a stripe of cover
+             * behind each line of text. The next viewport puts the
+             * backdrop back at the top of this loop. */
+            if (skin_viewport->clear_veil >= 100)
+                display->backdrop_show(NULL);
         }
 #endif
 
@@ -970,7 +1012,7 @@ void skin_render(struct gui_wps *gwps, unsigned refresh_mode)
 
         if ((vp_refresh_mode&SKIN_REFRESH_ALL) == SKIN_REFRESH_ALL)
         {
-            display->clear_viewport();
+            skin_layer_clear_viewport(display, skin_viewport);
         }
         /* render */
         if (viewport->children_count)

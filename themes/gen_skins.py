@@ -59,11 +59,13 @@ SHF%xd(O,%ps)
 #
 # Volume bar
 %Vl(volbar,30,110,-30,36,-)
+%Vt(0)
 %pv(0,0,-,-,vb,backdrop,vb_backdrop)
 %?if(%pv, >, 0)<%pv(0,0,-,-,vb_too_loud,backdrop,vb_backdrop)>
 #
 # Locked
 %Vl(locked,30,106,-30,44,4)
+%Vt(0)
 %acLOCKED%Vs(invert)"""
 
 PRELOAD = """%Fl(2,24-GeistMono-SemiBold.fnt)
@@ -109,6 +111,11 @@ def march(name, x, y, w, h, stops, ms, thick=3, colour=None, tail=None):
     vp = []
     for i, (bx, by, bw, bh) in enumerate(box):
         vp.append("%%Vl(%s%02d,%d,%d,%d,%d,-)" % (name, i, bx, by, bw, bh))
+        # %Vt(0): clear to the layer underneath rather than to the
+        # viewport background. On a skin with a backdrop (%Cb, a
+        # theme .bmp, %VB) that is the picture; on one without it there is no layer and skin_layer.c
+        # falls back to the opaque clear this always did.
+        vp.append("%Vt(0)")
         vp.append("%%dr(0,0,-,-,%s,%s)" % (colour, tail))
     return en, vp
 
@@ -162,21 +169,27 @@ def band(y, meter_h=78, h=82):
 # engine drew a peak meter one line of the viewport's font tall and
 # nothing else; %%pm takes a height now.
 %%Vl(pm_short,30,%d,240,%d,2)
+%%Vt(0)
 %%pm(%d)
 #
 %%Vl(pm_long,30,%d,-30,%d,2)
+%%Vt(0)
 %%pm(%d)
 #
 %%Vl(rew,30,%d,240,46,4)
+%%Vt(0)
 %%al%%<%%< REW
 #
 %%Vl(ff,30,%d,240,46,4)
+%%Vt(0)
 %%al%%>%%> FF
 #
 %%V(280,%d,-30,30,2)
+%%Vt(0)
 %%ar%%fc %%fb
 #
 %%V(280,%d,-30,30,2)
+%%Vt(0)
 %%ar%%?if(%%St(party mode),!=,off)<party|%%?if(%%St(single mode),!=,off)<%%St(single mode)|%%fk kHz>>""" % (
         meter_h, h, y, h, meter_h, y, h, meter_h,
         y + 18, y + 18, y + 12, y + 42)
@@ -290,6 +303,7 @@ def snappy_v2():
 # Footer
 # ======
 %V(30,768,-30,30,2)
+%Vt(0)
 %al%pc/%pt%ar%pp/%pe""")
     return "\n".join(o) + "\n"
 
@@ -342,9 +356,11 @@ def animated(gauge=False):
 #    something. It costs nothing while it is not being drawn, so the dial
 #    border below is free until the dial is armed.
 #  * %%Cb draws the cover scaled to cover the panel, blurred, with a veil
-#    of the theme's ground over it - into the *backdrop buffer*, which is
-#    the one surface a later viewport's clear restores rather than wipes.
-#    That is what %%VB is for and why it is the first viewport in the file.
+#    of the theme's ground over it - into the LCD *backdrop*, the one
+#    surface a later viewport's clear restores rather than wipes. The sharp
+#    cover and its reflection are composed into it too.
+#  * %%Vt(0) makes a viewport clear to that backdrop instead of to a colour,
+#    and %%dr takes an opacity - that is how chrome sits on the picture.
 #  * %%Cm mirrors the bottom of the cover under itself, fading out.
 #  * %%dr with two colours goes through gradient_fillrect.
 #
@@ -354,17 +370,18 @@ def animated(gauge=False):
 #
 %%wd""" % (name.upper().replace("SNAPPY ", ""), name))
     o.append(PRELOAD)
-    o.append("%?C<%Vd(bg)>")
+    o.append("%Vd(bg)")
     o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
     o.append("%?C<%Vd(mirror)>")
     o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>")
-    # With a cover, the volume bar is drawn inside the backdrop viewport
-    # instead of in one of its own: a viewport clears its background, and a
-    # black box across the top of a blurred cover is exactly what that
-    # looks like. There is no transparent viewport in the skin language, so
-    # the bar has to be drawn by something that is already painting the
-    # picture underneath it.
-    o.append("%?mh<%Vd(locked)|%?C<|%Vd(volbar)>>")
+    # The volume bar is a viewport of its own again. It used to be drawn
+    # inside the backdrop viewport when there was a cover, because a
+    # viewport clears its background and a black box across the top of a
+    # blurred cover is exactly what that looks like - there was no
+    # transparent viewport in the skin language to put it in. %Vt(0) is
+    # that viewport, so the special case is gone and the bar is one thing
+    # in one place whether or not the track has artwork.
+    o.append("%?mh<%Vd(locked)|%Vd(volbar)>")
     o.append("%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|"
              "%?mv(1.5)<%Vd(voldb)|%Vd(clock)>>")
 
@@ -374,39 +391,60 @@ def animated(gauge=False):
         # Remembered, not appended: see the note where it is filled in.
         unarmed_slot = len(o)
         o.append("")
-    else:
+    # Every enable for something that moves goes here, in the default
+    # viewport. Placed next to its own viewports it lands inside whichever
+    # %Vl was declared last - "locked", hidden while unlocked - and a tag
+    # inside a hidden viewport is never evaluated, so the chase and the
+    # sheen were never switched on at all.
+    steps = 10
+    en, vp = march("ch", AX, AY, AS, AH, 16, 70, thick=4)
+    o += ["%%?mp<|%s|||||>" % e for e in en]
+    for i in range(steps):
+        o.append("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%d)>" % (steps, SHEEN_MS, i + 1, i))
+    for i in range(len(PULSE_W)):
+        o.append("%%?if(%%an(%d,110),=,%d)<%%Vd(pu%d)>" % (len(PULSE_W), i + 1, i))
+
+    if not gauge:
+        # Its enables come first in what it returns, then its viewports -
+        # so it goes last among the enables.
         o += dial_border(30, 110, 420, 36)
 
     o.append(HEADER)
 
-    # the chase around the art
-    en, vp = march("ch", AX, AY, AS, AH, 16, 70, thick=4)
-    o.append("""#
+    # Moving parts are collected here and emitted after the backdrop
+    # viewport: viewports draw in file order, and the backdrop viewport's
+    # full-update redraw (the cover, on the panel) would otherwise land on
+    # top of them.
+    moving = []
+    moving.append("""#
 # The chase
 # =========
 # A bright segment running clockwise around the cover, one stop per frame,
 # and only while something is playing: a still screen with a light running
 # round it looks like it is doing something when it is not.""")
-    o += ["%%?mp<|%s|||||>" % e for e in en]
-    o.append("#")
-    o += vp
+    moving.append("#")
+    moving += vp
 
     # the sheen: a translucent band sweeping down the panel
-    o.append("""#
+    moving.append("""#
 # The sheen
 # =========
 # A soft band sweeping down the panel. The backdrop cannot move - it is
 # rendered once into the backdrop buffer and re-rendering it every frame
 # would be a 480x800 scale and blur at 20 fps - so the movement goes over
-# the top of it instead, which costs one gradient-filled rectangle.""")
-    steps = 10
-    for i in range(steps):
-        o.append("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%d)>" % (steps, SHEEN_MS, i + 1, i))
-    o.append("#")
+# the top of it instead, which costs one blended rectangle.
+#
+# %%Vt(0) and the seventh parameter of %%dr are what make it a sheen
+# rather than a bar. The clear restores the backdrop buffer - the cover -
+# and the rectangle is then blended over it at a quarter opacity. Without
+# the first the band is a black box eating the cover; without the second
+# it is a painted grey stripe.""")
+    moving.append("#")
     for i in range(steps):
         sy = SHEEN_Y0 + i * SHEEN_STEP
-        o.append("%%Vl(sh%d,%d,%d,%d,%d,-)" % (i, AX, sy, AS, SHEEN_H))
-        o.append("%%dr(0,0,-,-,%s,%s)" % (DIM, GROUND))
+        moving.append("%%Vl(sh%d,%d,%d,%d,%d,-)" % (i, AX, sy, AS, SHEEN_H))
+        moving.append("%Vt(0)")
+        moving.append("%%dr(0,0,-,-,%s,%s,26)" % (INK, GROUND))
 
     o.append("""#
 # The backdrop
@@ -421,27 +459,40 @@ def animated(gauge=False):
 # whenever a skin has real viewports after it, so a %%Cb in an unlabelled
 # %%V(0,0,-,-,-) is parsed, is reached, and is silently never refreshed.
 #
-# Straight to the panel rather than into the backdrop buffer via %%VB. The
-# buffer looks like the right home - a viewport clear copies from it, so
-# the picture would survive every later viewport - but nothing makes the
-# *gaps between* viewports repaint from it: that whole-screen clear only
-# happens when the default viewport is dirty, and skin_render() marks it
-# clean at the end of every pass. Drawing here and letting later viewports
-# punch their own panels out of it is what actually works.
+# Nothing here is drawn to the panel. %%Cb composes the blur, the cover
+# (%%Cl/%%Cd) and the reflection (%%Cm) into a buffer that becomes the LCD
+# backdrop - the one surface a later viewport's clear restores rather than
+# wipes, and the whole of what "transparent" means in this engine
+# (apps/gui/skin_engine/skin_art_fx.c, skin_layer.c). Every %%Vt(0)
+# viewport on this screen clears back to that picture, sharp cover
+# included, which is why the sheen can run over the cover.
+#
+# skin_render() repaints the gaps between viewports from the backdrop on
+# every full update while it is live; before it did, the picture showed
+# only where some viewport happened to clear.
+#
+# Things that change on their own stay out: the volume bar is a viewport
+# of its own, because composed into the backdrop it would be a stale bar
+# repainted only when the cover changes.
+#
+# Enabled unconditionally rather than behind %%?C. With no cover there is
+# no backdrop, and the viewport's own clear to the theme's ground is what
+# the screen should show; the veiled viewports fall back to that too.
 %%Vl(bg,0,0,-,-,-)
 %%Cb(0,0,480,800,26,55)
-%%pv(30,110,420,36,vb,backdrop,vb_backdrop)
-%%?if(%%pv, >, 0)<%%pv(30,110,420,36,vb_too_loud,backdrop,vb_backdrop)>
+%%Cl(%d,%d,%d,%d,c,c)
+%%Cd
+%%Cm(%d,%d,%d,%d,170,0)
 #
 # Main
 # ====
-# The cover, floating, with its own reflection under it.
-%%Vl(aa,%d,%d,%d,%d,-)
-%%Cl(2,2,%d,%d,c,c)
-%%Cd
+# The cover and its reflection are drawn in the backdrop viewport above.
+# These two stay as one-pixel stubs only because the default viewport
+# still names them and a %%Vd naming a viewport that does not exist fails
+# the parse and drops the user to the failsafe WPS.
+%%Vl(aa,%d,%d,1,1,-)
 #
-%%Vl(mirror,%d,%d,%d,%d,-)
-%%Cm(%d,%d,%d,%d,170,0)
+%%Vl(mirror,%d,%d,1,1,-)
 #
 # No cover is not an empty screen. %%C is false for a track with no
 # artwork, and with it the backdrop, the cover and the reflection all go -
@@ -449,6 +500,7 @@ def animated(gauge=False):
 # chase still runs round it, because what it is saying is "this is
 # playing", and that is still true.
 %%Vl(noart,%d,%d,%d,%d,-)
+%%Vt(0)
 %%dr(0,0,-,2)
 %%dr(0,%d,-,2)
 %%dr(0,2,2,%d)
@@ -458,19 +510,24 @@ def animated(gauge=False):
 # where the line sits, and the frame came out a fifth of its height with
 # the caption stranded below it.
 %%Vl(noartlabel,%d,%d,%d,40,2)
-%%ac%%s%%?id<%%id|%%?ia<%%ia|no cover>>""" % (AX, AY, AS, AH, ART_W, ART_H,
-                              AX, MIRROR_Y, AS, MIRROR_H,
+%%Vt(0)
+%%ac%%s%%?id<%%id|%%?ia<%%ia|no cover>>""" % (AX + 2, AY + 2, ART_W, ART_H,
                               AX + 2, MIRROR_Y, ART_W, MIRROR_H,
+                              AX, AY,
+                              AX, MIRROR_Y,
                               AX, AY, AS, AH,
                               AH - 2, AH - 4, AS - 2, AH - 4,
                               AX + 10, AY + AH // 2 - 20, AS - 20))
+    o += moving
     content = [band(BAND_Y, 62, 66), """#
 # Track
 # -----
 %V(30,690,-30,28,2)
+%Vt(0)
 %s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
 #
 %V(30,718,-30,46,4)
+%Vt(0)
 %al%s%?it<%it|%fn>"""]
 
     o.append("""#
@@ -478,17 +535,17 @@ def animated(gauge=False):
 # =========
 # An accent rule under the title, breathing. Eight widths, and the two
 # colours make it a gradient rather than a flat bar.""")
-    for i in range(len(PULSE_W)):
-        o.append("%%?if(%%an(%d,110),=,%d)<%%Vd(pu%d)>" % (len(PULSE_W), i + 1, i))
     o.append("#")
     for i, pw in enumerate(PULSE_W):
         o.append("%%Vl(pu%d,30,%d,%d,%d,-)" % (i, PULSE_Y, pw, PULSE_H))
+        o.append("%Vt(0)")
         o.append("%%dr(0,0,-,-,%s,%s)" % (ACCENT, GROUND))
 
     content.append("""#
 # Footer
 # ======
 %V(30,768,-30,30,2)
+%Vt(0)
 %al%pc/%pt%ar%pp/%pe""")
 
     if gauge:
@@ -523,17 +580,23 @@ def animated(gauge=False):
 # screen underneath comes back the moment the thumb lifts.
 %Vl(gauge,0,0,-,-,5)
 %Vb(0C0D0E)
+# %Vt(100): a plain clear copies the backdrop, and the backdrop is the
+# cover. A modal wants the ground, solid.
+%Vt(100)
 #
 # Labelled, like the panel behind them. A plain %V here is drawn on every
 # full update whatever %sd says, so the reading and its caption sat across
 # the middle of the cover with the dial not armed at all.
 %Vl(gaugepv,0,300,-,70,5)
+%Vt(100)
 %ac%pv
 #
 %Vl(gaugecap,0,380,-,30,2)
+%Vt(100)
 %acVOLUME
 #
 %Vl(gaugebar,60,440,360,40,-)
+%Vt(100)
 %pv(0,0,-,-,vb,backdrop,vb_backdrop)""")
         en, vp = march("gg", 60, 440, 360, 40, 16, 55, thick=4)
         o += ["%%?if(%%sd,=,1)<%s>" % e for e in en]

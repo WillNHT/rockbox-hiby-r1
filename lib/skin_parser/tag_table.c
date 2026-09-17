@@ -78,6 +78,7 @@ static const struct tag_info legal_tags[] =
     TAG(SKIN_TOKEN_VIEWPORT_TEXTSTYLE,     "Vs" , "S|s", SKIN_REFRESH_STATIC),
     TAG(SKIN_TOKEN_VIEWPORT_GRADIENT_SETUP,"Vg" , "SS|s", SKIN_REFRESH_STATIC|NOBREAK),
     TAG(SKIN_TOKEN_VIEWPORT_DRAWONBG,      "VB" , "", SKIN_REFRESH_STATIC|NOBREAK),
+    TAG(SKIN_TOKEN_VIEWPORT_TRANSPARENCY,  "Vt" , "I", SKIN_REFRESH_STATIC|NOBREAK),
 
     TAG(SKIN_TOKEN_VIEWPORT_CONDITIONAL,   "Vl" , "S[IP][IP][ip][ip]i", 0),
     TAG(SKIN_TOKEN_UIVIEWPORT_LOAD,        "Vi" , "s[IP][IP][ip][ip]i", 0),
@@ -266,7 +267,7 @@ static const struct tag_info legal_tags[] =
     TAG(SKIN_TOKEN_VAR_TIMEOUT,   "vl",   "S|D", SKIN_REFRESH_DYNAMIC),
 
     TAG(SKIN_TOKEN_SUBSTRING,     "ss",   "IiT|s", SKIN_REFRESH_DYNAMIC),
-    TAG(SKIN_TOKEN_DRAWRECTANGLE, "dr",   "[IP][IP][ip][ip]|ss", SKIN_REFRESH_STATIC),
+    TAG(SKIN_TOKEN_DRAWRECTANGLE, "dr",   "[IP][IP][ip][ip]|ssi", SKIN_REFRESH_STATIC),
     TAG(SKIN_TOKEN_UNKNOWN,       ""  ,   "", 0)
     /* Keep this here to mark the end of the table */
 };

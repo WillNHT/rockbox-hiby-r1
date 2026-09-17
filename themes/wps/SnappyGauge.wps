@@ -13,9 +13,11 @@
 #    something. It costs nothing while it is not being drawn, so the dial
 #    border below is free until the dial is armed.
 #  * %Cb draws the cover scaled to cover the panel, blurred, with a veil
-#    of the theme's ground over it - into the *backdrop buffer*, which is
-#    the one surface a later viewport's clear restores rather than wipes.
-#    That is what %VB is for and why it is the first viewport in the file.
+#    of the theme's ground over it - into the LCD *backdrop*, the one
+#    surface a later viewport's clear restores rather than wipes. The sharp
+#    cover and its reflection are composed into it too.
+#  * %Vt(0) makes a viewport clear to that backdrop instead of to a colour,
+#    and %dr takes an opacity - that is how chrome sits on the picture.
 #  * %Cm mirrors the bottom of the cover under itself, fading out.
 #  * %dr with two colours goes through gradient_fillrect.
 #
@@ -35,11 +37,11 @@
 %xl(vb_backdrop,vb_backdrop.bmp)
 %xl(vb_too_loud,vb_too_loud.bmp)
 %xl(bb_backdrop,bb_backdrop.bmp)
-%?C<%Vd(bg)>
+%Vd(bg)
 %?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>
 %?C<%Vd(mirror)>
 %?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>
-%?mh<%Vd(locked)|%?C<|%Vd(volbar)>>
+%?mh<%Vd(locked)|%Vd(volbar)>
 %?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|%?mv(1.5)<%Vd(voldb)|%Vd(clock)>>
 %?if(%sd,=,1)<%Vd(gauge)>%?if(%sd,=,1)<%Vd(gaugepv)>%?if(%sd,=,1)<%Vd(gaugecap)>%?if(%sd,=,1)<%Vd(gaugebar)>
 %?if(%sd,=,0)<%Vd(pm_short)>
@@ -51,6 +53,40 @@
 %?if(%sd,=,0)<%Vd(q2)>
 %?if(%sd,=,0)<%Vd(q3)>
 %?if(%sd,=,0)<%Vd(q4)>
+%?mp<|%?if(%an(16,70),=,1)<%Vd(ch00)>|||||>
+%?mp<|%?if(%an(16,70),=,2)<%Vd(ch01)>|||||>
+%?mp<|%?if(%an(16,70),=,3)<%Vd(ch02)>|||||>
+%?mp<|%?if(%an(16,70),=,4)<%Vd(ch03)>|||||>
+%?mp<|%?if(%an(16,70),=,5)<%Vd(ch04)>|||||>
+%?mp<|%?if(%an(16,70),=,6)<%Vd(ch05)>|||||>
+%?mp<|%?if(%an(16,70),=,7)<%Vd(ch06)>|||||>
+%?mp<|%?if(%an(16,70),=,8)<%Vd(ch07)>|||||>
+%?mp<|%?if(%an(16,70),=,9)<%Vd(ch08)>|||||>
+%?mp<|%?if(%an(16,70),=,10)<%Vd(ch09)>|||||>
+%?mp<|%?if(%an(16,70),=,11)<%Vd(ch10)>|||||>
+%?mp<|%?if(%an(16,70),=,12)<%Vd(ch11)>|||||>
+%?mp<|%?if(%an(16,70),=,13)<%Vd(ch12)>|||||>
+%?mp<|%?if(%an(16,70),=,14)<%Vd(ch13)>|||||>
+%?mp<|%?if(%an(16,70),=,15)<%Vd(ch14)>|||||>
+%?mp<|%?if(%an(16,70),=,16)<%Vd(ch15)>|||||>
+%?if(%an(10,90),=,1)<%Vd(sh0)>
+%?if(%an(10,90),=,2)<%Vd(sh1)>
+%?if(%an(10,90),=,3)<%Vd(sh2)>
+%?if(%an(10,90),=,4)<%Vd(sh3)>
+%?if(%an(10,90),=,5)<%Vd(sh4)>
+%?if(%an(10,90),=,6)<%Vd(sh5)>
+%?if(%an(10,90),=,7)<%Vd(sh6)>
+%?if(%an(10,90),=,8)<%Vd(sh7)>
+%?if(%an(10,90),=,9)<%Vd(sh8)>
+%?if(%an(10,90),=,10)<%Vd(sh9)>
+%?if(%an(8,110),=,1)<%Vd(pu0)>
+%?if(%an(8,110),=,2)<%Vd(pu1)>
+%?if(%an(8,110),=,3)<%Vd(pu2)>
+%?if(%an(8,110),=,4)<%Vd(pu3)>
+%?if(%an(8,110),=,5)<%Vd(pu4)>
+%?if(%an(8,110),=,6)<%Vd(pu5)>
+%?if(%an(8,110),=,7)<%Vd(pu6)>
+%?if(%an(8,110),=,8)<%Vd(pu7)>
 #
 # Header
 # ======
@@ -87,105 +123,14 @@ SHF%xd(O,%ps)
 #
 # Volume bar
 %Vl(volbar,30,110,-30,36,-)
+%Vt(0)
 %pv(0,0,-,-,vb,backdrop,vb_backdrop)
 %?if(%pv, >, 0)<%pv(0,0,-,-,vb_too_loud,backdrop,vb_backdrop)>
 #
 # Locked
 %Vl(locked,30,106,-30,44,4)
+%Vt(0)
 %acLOCKED%Vs(invert)
-#
-# The chase
-# =========
-# A bright segment running clockwise around the cover, one stop per frame,
-# and only while something is playing: a still screen with a light running
-# round it looks like it is doing something when it is not.
-%?mp<|%?if(%an(16,70),=,1)<%Vd(ch00)>|||||>
-%?mp<|%?if(%an(16,70),=,2)<%Vd(ch01)>|||||>
-%?mp<|%?if(%an(16,70),=,3)<%Vd(ch02)>|||||>
-%?mp<|%?if(%an(16,70),=,4)<%Vd(ch03)>|||||>
-%?mp<|%?if(%an(16,70),=,5)<%Vd(ch04)>|||||>
-%?mp<|%?if(%an(16,70),=,6)<%Vd(ch05)>|||||>
-%?mp<|%?if(%an(16,70),=,7)<%Vd(ch06)>|||||>
-%?mp<|%?if(%an(16,70),=,8)<%Vd(ch07)>|||||>
-%?mp<|%?if(%an(16,70),=,9)<%Vd(ch08)>|||||>
-%?mp<|%?if(%an(16,70),=,10)<%Vd(ch09)>|||||>
-%?mp<|%?if(%an(16,70),=,11)<%Vd(ch10)>|||||>
-%?mp<|%?if(%an(16,70),=,12)<%Vd(ch11)>|||||>
-%?mp<|%?if(%an(16,70),=,13)<%Vd(ch12)>|||||>
-%?mp<|%?if(%an(16,70),=,14)<%Vd(ch13)>|||||>
-%?mp<|%?if(%an(16,70),=,15)<%Vd(ch14)>|||||>
-%?mp<|%?if(%an(16,70),=,16)<%Vd(ch15)>|||||>
-#
-%Vl(ch00,30,146,105,4,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch01,135,146,105,4,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch02,240,146,105,4,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch03,345,146,105,4,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch04,450,150,4,105,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch05,450,255,4,105,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch06,450,360,4,105,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch07,450,465,4,105,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch08,345,570,105,4,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch09,240,570,105,4,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch10,135,570,105,4,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch11,30,570,105,4,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch12,26,465,4,105,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch13,26,360,4,105,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch14,26,255,4,105,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(ch15,26,150,4,105,-)
-%dr(0,0,-,-,D9E021,F4F2EE)
-#
-# The sheen
-# =========
-# A soft band sweeping down the panel. The backdrop cannot move - it is
-# rendered once into the backdrop buffer and re-rendering it every frame
-# would be a 480x800 scale and blur at 20 fps - so the movement goes over
-# the top of it instead, which costs one gradient-filled rectangle.
-%?if(%an(10,90),=,1)<%Vd(sh0)>
-%?if(%an(10,90),=,2)<%Vd(sh1)>
-%?if(%an(10,90),=,3)<%Vd(sh2)>
-%?if(%an(10,90),=,4)<%Vd(sh3)>
-%?if(%an(10,90),=,5)<%Vd(sh4)>
-%?if(%an(10,90),=,6)<%Vd(sh5)>
-%?if(%an(10,90),=,7)<%Vd(sh6)>
-%?if(%an(10,90),=,8)<%Vd(sh7)>
-%?if(%an(10,90),=,9)<%Vd(sh8)>
-%?if(%an(10,90),=,10)<%Vd(sh9)>
-#
-%Vl(sh0,30,150,420,26,-)
-%dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh1,30,192,420,26,-)
-%dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh2,30,234,420,26,-)
-%dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh3,30,276,420,26,-)
-%dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh4,30,318,420,26,-)
-%dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh5,30,360,420,26,-)
-%dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh6,30,402,420,26,-)
-%dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh7,30,444,420,26,-)
-%dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh8,30,486,420,26,-)
-%dr(0,0,-,-,3A3B3D,0C0D0E)
-%Vl(sh9,30,528,420,26,-)
-%dr(0,0,-,-,3A3B3D,0C0D0E)
 #
 # The backdrop
 # ============
@@ -199,27 +144,40 @@ SHF%xd(O,%ps)
 # whenever a skin has real viewports after it, so a %Cb in an unlabelled
 # %V(0,0,-,-,-) is parsed, is reached, and is silently never refreshed.
 #
-# Straight to the panel rather than into the backdrop buffer via %VB. The
-# buffer looks like the right home - a viewport clear copies from it, so
-# the picture would survive every later viewport - but nothing makes the
-# *gaps between* viewports repaint from it: that whole-screen clear only
-# happens when the default viewport is dirty, and skin_render() marks it
-# clean at the end of every pass. Drawing here and letting later viewports
-# punch their own panels out of it is what actually works.
+# Nothing here is drawn to the panel. %Cb composes the blur, the cover
+# (%Cl/%Cd) and the reflection (%Cm) into a buffer that becomes the LCD
+# backdrop - the one surface a later viewport's clear restores rather than
+# wipes, and the whole of what "transparent" means in this engine
+# (apps/gui/skin_engine/skin_art_fx.c, skin_layer.c). Every %Vt(0)
+# viewport on this screen clears back to that picture, sharp cover
+# included, which is why the sheen can run over the cover.
+#
+# skin_render() repaints the gaps between viewports from the backdrop on
+# every full update while it is live; before it did, the picture showed
+# only where some viewport happened to clear.
+#
+# Things that change on their own stay out: the volume bar is a viewport
+# of its own, because composed into the backdrop it would be a stale bar
+# repainted only when the cover changes.
+#
+# Enabled unconditionally rather than behind %?C. With no cover there is
+# no backdrop, and the viewport's own clear to the theme's ground is what
+# the screen should show; the veiled viewports fall back to that too.
 %Vl(bg,0,0,-,-,-)
 %Cb(0,0,480,800,26,55)
-%pv(30,110,420,36,vb,backdrop,vb_backdrop)
-%?if(%pv, >, 0)<%pv(30,110,420,36,vb_too_loud,backdrop,vb_backdrop)>
+%Cl(32,152,416,416,c,c)
+%Cd
+%Cm(32,572,416,40,170,0)
 #
 # Main
 # ====
-# The cover, floating, with its own reflection under it.
-%Vl(aa,30,150,420,420,-)
-%Cl(2,2,416,416,c,c)
-%Cd
+# The cover and its reflection are drawn in the backdrop viewport above.
+# These two stay as one-pixel stubs only because the default viewport
+# still names them and a %Vd naming a viewport that does not exist fails
+# the parse and drops the user to the failsafe WPS.
+%Vl(aa,30,150,1,1,-)
 #
-%Vl(mirror,30,572,420,40,-)
-%Cm(32,572,416,40,170,0)
+%Vl(mirror,30,572,1,1,-)
 #
 # No cover is not an empty screen. %C is false for a track with no
 # artwork, and with it the backdrop, the cover and the reflection all go -
@@ -227,6 +185,7 @@ SHF%xd(O,%ps)
 # chase still runs round it, because what it is saying is "this is
 # playing", and that is still true.
 %Vl(noart,30,150,420,420,-)
+%Vt(0)
 %dr(0,0,-,2)
 %dr(0,418,-,2)
 %dr(0,2,2,416)
@@ -236,36 +195,136 @@ SHF%xd(O,%ps)
 # where the line sits, and the frame came out a fifth of its height with
 # the caption stranded below it.
 %Vl(noartlabel,40,340,400,40,2)
+%Vt(0)
 %ac%s%?id<%id|%?ia<%ia|no cover>>
+#
+# The chase
+# =========
+# A bright segment running clockwise around the cover, one stop per frame,
+# and only while something is playing: a still screen with a light running
+# round it looks like it is doing something when it is not.
+#
+%Vl(ch00,30,146,105,4,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch01,135,146,105,4,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch02,240,146,105,4,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch03,345,146,105,4,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch04,450,150,4,105,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch05,450,255,4,105,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch06,450,360,4,105,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch07,450,465,4,105,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch08,345,570,105,4,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch09,240,570,105,4,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch10,135,570,105,4,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch11,30,570,105,4,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch12,26,465,4,105,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch13,26,360,4,105,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch14,26,255,4,105,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+%Vl(ch15,26,150,4,105,-)
+%Vt(0)
+%dr(0,0,-,-,D9E021,F4F2EE)
+#
+# The sheen
+# =========
+# A soft band sweeping down the panel. The backdrop cannot move - it is
+# rendered once into the backdrop buffer and re-rendering it every frame
+# would be a 480x800 scale and blur at 20 fps - so the movement goes over
+# the top of it instead, which costs one blended rectangle.
+#
+# %%Vt(0) and the seventh parameter of %%dr are what make it a sheen
+# rather than a bar. The clear restores the backdrop buffer - the cover -
+# and the rectangle is then blended over it at a quarter opacity. Without
+# the first the band is a black box eating the cover; without the second
+# it is a painted grey stripe.
+#
+%Vl(sh0,30,150,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,26)
+%Vl(sh1,30,192,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,26)
+%Vl(sh2,30,234,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,26)
+%Vl(sh3,30,276,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,26)
+%Vl(sh4,30,318,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,26)
+%Vl(sh5,30,360,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,26)
+%Vl(sh6,30,402,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,26)
+%Vl(sh7,30,444,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,26)
+%Vl(sh8,30,486,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,26)
+%Vl(sh9,30,528,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,26)
 #
 # The pulse
 # =========
 # An accent rule under the title, breathing. Eight widths, and the two
 # colours make it a gradient rather than a flat bar.
-%?if(%an(8,110),=,1)<%Vd(pu0)>
-%?if(%an(8,110),=,2)<%Vd(pu1)>
-%?if(%an(8,110),=,3)<%Vd(pu2)>
-%?if(%an(8,110),=,4)<%Vd(pu3)>
-%?if(%an(8,110),=,5)<%Vd(pu4)>
-%?if(%an(8,110),=,6)<%Vd(pu5)>
-%?if(%an(8,110),=,7)<%Vd(pu6)>
-%?if(%an(8,110),=,8)<%Vd(pu7)>
 #
 %Vl(pu0,30,766,40,3,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,0C0D0E)
 %Vl(pu1,30,766,90,3,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,0C0D0E)
 %Vl(pu2,30,766,150,3,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,0C0D0E)
 %Vl(pu3,30,766,220,3,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,0C0D0E)
 %Vl(pu4,30,766,300,3,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,0C0D0E)
 %Vl(pu5,30,766,220,3,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,0C0D0E)
 %Vl(pu6,30,766,150,3,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,0C0D0E)
 %Vl(pu7,30,766,90,3,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,0C0D0E)
 #
 # The band
@@ -274,34 +333,43 @@ SHF%xd(O,%ps)
 # engine drew a peak meter one line of the viewport's font tall and
 # nothing else; %pm takes a height now.
 %Vl(pm_short,30,616,240,66,2)
+%Vt(0)
 %pm(62)
 #
 %Vl(pm_long,30,616,-30,66,2)
+%Vt(0)
 %pm(62)
 #
 %Vl(rew,30,634,240,46,4)
+%Vt(0)
 %al%<%< REW
 #
 %Vl(ff,30,634,240,46,4)
+%Vt(0)
 %al%>%> FF
 #
 %Vl(q0,280,628,-30,30,2)
+%Vt(0)
 %ar%fc %fb
 #
 %Vl(q1,280,658,-30,30,2)
+%Vt(0)
 %ar%?if(%St(party mode),!=,off)<party|%?if(%St(single mode),!=,off)<%St(single mode)|%fk kHz>>
 #
 # Track
 # -----
 %Vl(q2,30,690,-30,28,2)
+%Vt(0)
 %s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
 #
 %Vl(q3,30,718,-30,46,4)
+%Vt(0)
 %al%s%?it<%it|%fn>
 #
 # Footer
 # ======
 %Vl(q4,30,768,-30,30,2)
+%Vt(0)
 %al%pc/%pt%ar%pp/%pe
 #
 # The gauge
@@ -318,17 +386,23 @@ SHF%xd(O,%ps)
 # screen underneath comes back the moment the thumb lifts.
 %Vl(gauge,0,0,-,-,5)
 %Vb(0C0D0E)
+# %Vt(100): a plain clear copies the backdrop, and the backdrop is the
+# cover. A modal wants the ground, solid.
+%Vt(100)
 #
 # Labelled, like the panel behind them. A plain %V here is drawn on every
 # full update whatever %sd says, so the reading and its caption sat across
 # the middle of the cover with the dial not armed at all.
 %Vl(gaugepv,0,300,-,70,5)
+%Vt(100)
 %ac%pv
 #
 %Vl(gaugecap,0,380,-,30,2)
+%Vt(100)
 %acVOLUME
 #
 %Vl(gaugebar,60,440,360,40,-)
+%Vt(100)
 %pv(0,0,-,-,vb,backdrop,vb_backdrop)
 %?if(%sd,=,1)<%?if(%an(16,55),=,1)<%Vd(gg00)>>
 %?if(%sd,=,1)<%?if(%an(16,55),=,2)<%Vd(gg01)>>
@@ -348,34 +422,50 @@ SHF%xd(O,%ps)
 %?if(%sd,=,1)<%?if(%an(16,55),=,16)<%Vd(gg15)>>
 #
 %Vl(gg00,60,436,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg01,111,436,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg02,162,436,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg03,213,436,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg04,264,436,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg05,315,436,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg06,366,436,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg07,420,440,4,40,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg08,366,480,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg09,315,480,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg10,264,480,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg11,213,480,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg12,162,480,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg13,111,480,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg14,60,480,51,4,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 %Vl(gg15,56,440,4,40,-)
+%Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
