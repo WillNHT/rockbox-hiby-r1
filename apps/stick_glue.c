@@ -425,6 +425,8 @@ static void dirty_point(int x, int y, int pad)
  * cannot provide them every call here reports failure and the old
  * ask-for-a-repaint path runs unchanged. */
 
+static void dirty_flush(void);
+
 #if defined(HAVE_LCD_LAYERS)
 /* The overlay has a layer of its own (firmware/drivers/lcd-layers.c), which
  * is what all of the above was working around. It never touches the
@@ -638,8 +640,6 @@ static bool bd_active(void)
 }
 
 /* Put every slot back and push the result. This is the erase. */
-static void dirty_flush(void);
-
 static void bd_restore_all(void)
 {
     int i;

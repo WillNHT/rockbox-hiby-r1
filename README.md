@@ -80,7 +80,9 @@ Available in the [Development Build](#development-builds):
 
 ## Development Builds
 
-Builds of this fork come from its own [GitHub Actions workflow](https://github.com/WillNHT/rockbox-hiby-r1/actions/workflows/build.yml). The base mod's builds are in [bahusoid's workflow](https://github.com/bahusoid/rockbox/actions/workflows/build.yml?query=branch%3AMod25.12.07). Select the most recent successful run and download the build from the "Artifacts" section (at the bottom of the page). Ignore debug files. Note that the artifact is double-zipped.
+Ready-to-install files for the R1 are on the [Releases page](https://github.com/WillNHT/rockbox-hiby-r1/releases): tagged versions, plus a `nightly` prerelease rebuilt on every push to `master`. Each release carries `rockbox-hibyr1.zip` (unzip to the SD card root), optional fonts and themes zips, `bootloader.r1`, and a patched stock firmware `r1_rb.upt` for installing the bootloader. To cut a release, push a tag: `git tag v1.0 && git push origin v1.0`.
+
+Per-commit test builds come from the [build workflow](https://github.com/WillNHT/rockbox-hiby-r1/actions/workflows/build.yml). The base mod's builds are in [bahusoid's workflow](https://github.com/bahusoid/rockbox/actions/workflows/build.yml?query=branch%3AMod25.12.07). Select the most recent successful run and download the build from the "Artifacts" section (at the bottom of the page). Ignore debug files. Note that the artifact is double-zipped.
 
 These builds do not include extra resources like fonts or audiobook config. For the best experience, install a [full release of the base mod](https://github.com/bahusoid/rockbox/releases) first, then update with a development build.
 
