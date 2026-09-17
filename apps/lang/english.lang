@@ -18742,3 +18742,549 @@
     *: "Screen Off After Dim"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_AB_CONTINUE
+  desc: audiobooks: resume the last book
+  user: core
+  <source>
+    *: "Continue Listening"
+  </source>
+  <dest>
+    *: "Continue Listening"
+  </dest>
+  <voice>
+    *: "Continue Listening"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_LIBRARY
+  desc: audiobooks: all books
+  user: core
+  <source>
+    *: "Library"
+  </source>
+  <dest>
+    *: "Library"
+  </dest>
+  <voice>
+    *: "Library"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_AUTHORS
+  desc: audiobooks: books by author
+  user: core
+  <source>
+    *: "Authors"
+  </source>
+  <dest>
+    *: "Authors"
+  </dest>
+  <voice>
+    *: "Authors"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_SERIES
+  desc: audiobooks: books by series
+  user: core
+  <source>
+    *: "Series"
+  </source>
+  <dest>
+    *: "Series"
+  </dest>
+  <voice>
+    *: "Series"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_NARRATORS
+  desc: audiobooks: books by narrator
+  user: core
+  <source>
+    *: "Narrators"
+  </source>
+  <dest>
+    *: "Narrators"
+  </dest>
+  <voice>
+    *: "Narrators"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_RECENT
+  desc: audiobooks: newest books first
+  user: core
+  <source>
+    *: "Recently Added"
+  </source>
+  <dest>
+    *: "Recently Added"
+  </dest>
+  <voice>
+    *: "Recently Added"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_IN_PROGRESS
+  desc: audiobooks: started, not finished
+  user: core
+  <source>
+    *: "In Progress"
+  </source>
+  <dest>
+    *: "In Progress"
+  </dest>
+  <voice>
+    *: "In Progress"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_FINISHED
+  desc: audiobooks: finished books
+  user: core
+  <source>
+    *: "Finished"
+  </source>
+  <dest>
+    *: "Finished"
+  </dest>
+  <voice>
+    *: "Finished"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_RESCAN
+  desc: audiobooks: scan the library folder again
+  user: core
+  <source>
+    *: "Rescan Library"
+  </source>
+  <dest>
+    *: "Rescan Library"
+  </dest>
+  <voice>
+    *: "Rescan Library"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_SETTINGS
+  desc: audiobooks: settings menu
+  user: core
+  <source>
+    *: "Audiobook Settings"
+  </source>
+  <dest>
+    *: "Audiobook Settings"
+  </dest>
+  <voice>
+    *: "Audiobook Settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_RESUME
+  desc: audiobooks: book page action
+  user: core
+  <source>
+    *: "Resume"
+  </source>
+  <dest>
+    *: "Resume"
+  </dest>
+  <voice>
+    *: "Resume"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_PLAY
+  desc: audiobooks: book page action for an unstarted book
+  user: core
+  <source>
+    *: "Play"
+  </source>
+  <dest>
+    *: "Play"
+  </dest>
+  <voice>
+    *: "Play"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_START_OVER
+  desc: audiobooks: book page action
+  user: core
+  <source>
+    *: "Start Over"
+  </source>
+  <dest>
+    *: "Start Over"
+  </dest>
+  <voice>
+    *: "Start Over"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_CHAPTERS
+  desc: audiobooks: book page action
+  user: core
+  <source>
+    *: "Chapters"
+  </source>
+  <dest>
+    *: "Chapters"
+  </dest>
+  <voice>
+    *: "Chapters"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_BOOKMARKS
+  desc: audiobooks: book page action
+  user: core
+  <source>
+    *: "Bookmarks"
+  </source>
+  <dest>
+    *: "Bookmarks"
+  </dest>
+  <voice>
+    *: "Bookmarks"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_MARK_FINISHED
+  desc: audiobooks: book page action
+  user: core
+  <source>
+    *: "Mark as Finished"
+  </source>
+  <dest>
+    *: "Mark as Finished"
+  </dest>
+  <voice>
+    *: "Mark as Finished"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_MARK_UNFINISHED
+  desc: audiobooks: book page action
+  user: core
+  <source>
+    *: "Mark as Not Finished"
+  </source>
+  <dest>
+    *: "Mark as Not Finished"
+  </dest>
+  <voice>
+    *: "Mark as Not Finished"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_END_OF_CHAPTER
+  desc: audiobooks: sleep timer choice
+  user: core
+  <source>
+    *: "End of Chapter"
+  </source>
+  <dest>
+    *: "End of Chapter"
+  </dest>
+  <voice>
+    *: "End of Chapter"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_SCANNING
+  desc: audiobooks: scan progress
+  user: core
+  <source>
+    *: "Scanning audiobooks"
+  </source>
+  <dest>
+    *: "Scanning audiobooks"
+  </dest>
+  <voice>
+    *: "Scanning audiobooks"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_EMPTY
+  desc: audiobooks: nothing in the library
+  user: core
+  <source>
+    *: "No audiobooks found"
+  </source>
+  <dest>
+    *: "No audiobooks found"
+  </dest>
+  <voice>
+    *: "No audiobooks found"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_REWIND_AFTER
+  desc: audiobooks settings: pause length that triggers a rewind
+  user: core
+  <source>
+    *: "Rewind After a Pause Of"
+  </source>
+  <dest>
+    *: "Rewind After a Pause Of"
+  </dest>
+  <voice>
+    *: "Rewind After a Pause Of"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_REWIND_AMOUNT
+  desc: audiobooks settings: how far to rewind
+  user: core
+  <source>
+    *: "Rewind By"
+  </source>
+  <dest>
+    *: "Rewind By"
+  </dest>
+  <voice>
+    *: "Rewind By"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_FINISHED_AT
+  desc: audiobooks settings: percent that counts as finished
+  user: core
+  <source>
+    *: "Mark Finished At"
+  </source>
+  <dest>
+    *: "Mark Finished At"
+  </dest>
+  <voice>
+    *: "Mark Finished At"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_WPS
+  desc: audiobooks settings: while-playing screen for books
+  user: core
+  <source>
+    *: "Audiobook WPS"
+  </source>
+  <dest>
+    *: "Audiobook WPS"
+  </dest>
+  <voice>
+    *: "Audiobook WPS"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_SAME_AS_MUSIC
+  desc: audiobooks settings: book WPS follows the music one
+  user: core
+  <source>
+    *: "Same as Music"
+  </source>
+  <dest>
+    *: "Same as Music"
+  </dest>
+  <voice>
+    *: "Same as Music"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_AUTOSCAN
+  desc: audiobooks settings: scan when the library changed
+  user: core
+  <source>
+    *: "Scan at Startup"
+  </source>
+  <dest>
+    *: "Scan at Startup"
+  </dest>
+  <voice>
+    *: "Scan at Startup"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_LEFT
+  desc: audiobooks: time remaining, after a duration
+  user: core
+  <source>
+    *: "left"
+  </source>
+  <dest>
+    *: "left"
+  </dest>
+  <voice>
+    *: "left"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_NARRATOR
+  desc: audiobooks: book page field
+  user: core
+  <source>
+    *: "Narrator"
+  </source>
+  <dest>
+    *: "Narrator"
+  </dest>
+  <voice>
+    *: "Narrator"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_AUTHOR
+  desc: audiobooks: book page field
+  user: core
+  <source>
+    *: "Author"
+  </source>
+  <dest>
+    *: "Author"
+  </dest>
+  <voice>
+    *: "Author"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_LENGTH
+  desc: audiobooks: book page field
+  user: core
+  <source>
+    *: "Length"
+  </source>
+  <dest>
+    *: "Length"
+  </dest>
+  <voice>
+    *: "Length"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_PROGRESS
+  desc: audiobooks: book page field
+  user: core
+  <source>
+    *: "Progress"
+  </source>
+  <dest>
+    *: "Progress"
+  </dest>
+  <voice>
+    *: "Progress"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_UNKNOWN
+  desc: audiobooks: missing author, series or narrator
+  user: core
+  <source>
+    *: "Unknown"
+  </source>
+  <dest>
+    *: "Unknown"
+  </dest>
+  <voice>
+    *: "Unknown"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_SPEED
+  desc: audiobooks: book page action, playback speed
+  user: core
+  <source>
+    *: "Playback Speed"
+  </source>
+  <dest>
+    *: "Playback Speed"
+  </dest>
+  <voice>
+    *: "Playback Speed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_FOLDER
+  desc: audiobooks settings: the library folder
+  user: core
+  <source>
+    *: "Library Folder"
+  </source>
+  <dest>
+    *: "Library Folder"
+  </dest>
+  <voice>
+    *: "Library Folder"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_FOLDER_HINT
+  desc: audiobooks settings: how to change the library folder
+  user: core
+  <source>
+    *: "Change it from a folder's context menu in Files"
+  </source>
+  <dest>
+    *: "Change it from a folder's context menu in Files"
+  </dest>
+  <voice>
+    *: "Change it from a folder's context menu in Files"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_BOOK_FINISHED
+  desc: audiobooks: shown on a finished book
+  user: core
+  <source>
+    *: "Finished"
+  </source>
+  <dest>
+    *: "Finished"
+  </dest>
+  <voice>
+    *: "Finished"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_DESCRIPTION
+  desc: audiobooks: book page field
+  user: core
+  <source>
+    *: "Description"
+  </source>
+  <dest>
+    *: "Description"
+  </dest>
+  <voice>
+    *: "Description"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AB_FILES
+  desc: audiobooks: book page field, number of files
+  user: core
+  <source>
+    *: "Files"
+  </source>
+  <dest>
+    *: "Files"
+  </dest>
+  <voice>
+    *: "Files"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_EMOJI
+  desc: display settings: colour emoji in text
+  user: core
+  <source>
+    *: "Emoji"
+  </source>
+  <dest>
+    *: "Emoji"
+  </dest>
+  <voice>
+    *: "Emoji"
+  </voice>
+</phrase>

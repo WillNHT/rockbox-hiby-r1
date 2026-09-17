@@ -66,6 +66,7 @@
 #include "skin_engine/wps_internals.h"
 #include "skin_engine/skin_art_fx.h"
 #include "open_plugin.h"
+#include "audiobooks/audiobooks.h"
 
 #ifdef USB_ENABLE_AUDIO
 #include "usbstack/usb_audio.h"
@@ -135,6 +136,7 @@ void wps_do_action(enum wps_do_action_type action, bool updatewps)
 
     if (action == WPS_PLAY) /* unpause_action */
     {
+        audiobooks_before_resume();
         audio_resume();
     }
     else /* WPS_PAUSE pause_action */
@@ -860,6 +862,19 @@ long gui_wps_show(void)
 #if !defined(HAVE_SW_POWEROFF)
                 call_storage_idle_notifys(true);
 #endif
+            }
+        }
+
+        /* A book and a song can want different WPSes. Leave with the one
+         * that is loaded, then come back with the other. */
+        {
+            bool book = state->id3 && audiobooks_is_book(state->id3->path);
+            if (book != skin_wps_book_mode())
+            {
+                if (!restore)
+                    gwps_leave_wps(true);
+                skin_set_wps_book_mode(book, false);
+                restore = true;
             }
         }
 

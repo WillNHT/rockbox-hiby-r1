@@ -421,6 +421,10 @@ static void LCDFN(putsxyofs)(int x, int y, int ofs, const unsigned char *str)
 #endif
         bmp_part_fn = LCDFN(mono_bmp_part_helper);
 
+#if defined(MAIN_LCD) && defined(HAVE_LCD_COLOR)
+    const struct emoji_ops *eops = font_get_emoji_ops();
+#endif
+
     rtl_next_non_diac_width = 0;
     last_non_diacritic_width = 0;
     /* Mark diacritic and rtl flags for each character */
@@ -433,6 +437,35 @@ static void LCDFN(putsxyofs)(int x, int y, int ofs, const unsigned char *str)
 
         if (x >= vp->width)
             break;
+
+        if (font_is_zero_width(*ucs))
+            continue;
+
+#if defined(MAIN_LCD) && defined(HAVE_LCD_COLOR)
+        if (eops && *ucs >= 0x80)
+        {
+            int len;
+            int id = eops->match(ucs, &len);
+            if (id >= 0 && len > 0)
+            {
+                /* A picture a line tall; the same width
+                 * font_getstringnsize() counted. */
+                width = pf->height;
+                ucs += len - 1;
+                last_non_diacritic_width = width;
+                rtl_next_non_diac_width = 0;
+                if (ofs >= width)
+                {
+                    ofs -= width;
+                    continue;
+                }
+                eops->draw(id, x, y, width, ofs);
+                x += width - ofs;
+                ofs = 0;
+                continue;
+            }
+        }
+#endif
 
         is_diac = IS_DIACRITIC_RTL(*ucs, &is_rtl);
 

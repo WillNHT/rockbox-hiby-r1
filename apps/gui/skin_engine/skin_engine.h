@@ -87,6 +87,11 @@ void skin_unload_all(void);
 
 bool skin_do_full_update(enum skinnable_screens skin, enum screen_type screen);
 void skin_request_full_update(enum skinnable_screens skin);
+/* While a book plays the WPS can be a different one (Audiobook WPS).
+ * Switching unloads the WPS so the next use loads the right file; force
+ * does so even when the file did not change (the setting did). */
+bool skin_wps_book_mode(void);
+void skin_set_wps_book_mode(bool on, bool force);
 void skin_request_update_locked(bool locked);
 
 bool dbg_skin_engine(void);

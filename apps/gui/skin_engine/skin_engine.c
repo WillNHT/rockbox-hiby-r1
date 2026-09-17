@@ -49,6 +49,8 @@ void playback_release_aa_slot(int slot);
 char* wps_default_skin(enum screen_type screen);
 char* default_radio_skin(enum screen_type screen);
 static bool skins_initialised = false;
+/* A book is playing: the WPS is global_settings.audiobook_wps. */
+static bool wps_book_mode = false;
 
 static char* get_skin_filename(char *buf, size_t buf_size,
                                enum skinnable_screens skin, enum screen_type screen);
@@ -273,6 +275,8 @@ static char* get_skin_filename(char *buf, size_t buf_size,
 #endif
             {
                 setting = global_settings.wps_file;
+                if (wps_book_mode && global_settings.audiobook_wps[0])
+                    setting = global_settings.audiobook_wps;
                 ext = "wps";
             }
             break;
@@ -318,6 +322,34 @@ struct gui_wps *skin_get_gwps(enum skinnable_screens skin, enum screen_type scre
         cpu_boost(false);
     }
     return &skins[skin][screen].gui_wps;
+}
+
+bool skin_wps_book_mode(void)
+{
+    return wps_book_mode;
+}
+
+void skin_set_wps_book_mode(bool on, bool force)
+{
+    if (on == wps_book_mode && !force)
+        return;
+
+    /* Only a change of file needs a reload. */
+    char before[MAX_PATH], after[MAX_PATH];
+    get_skin_filename(before, sizeof before, WPS, SCREEN_MAIN);
+    wps_book_mode = on;
+    get_skin_filename(after, sizeof after, WPS, SCREEN_MAIN);
+    if (!force && !strcmp(before, after))
+        return;
+
+    FOR_NB_SCREENS(i)
+    {
+        if (!skins[WPS][i].data.wps_loaded)
+            continue;
+        skin_reset_buffers(WPS, i);
+        gui_skin_reset(&skins[WPS][i]);
+        skins[WPS][i].gui_wps.display = &screens[i];
+    }
 }
 
 /* This is called to find out if we the screen needs a full update.

@@ -1025,6 +1025,14 @@ struct user_settings
     char custom_folder[MAX_PATHNAME+1];
     /* Where the main menu's Audiobooks entry points. */
     char audiobook_folder[MAX_PATHNAME+1];
+    /* The WPS used while a book plays (a name in WPS_DIR, no extension).
+     * Empty: the music one. */
+    char audiobook_wps[MAX_FILENAME+1];
+    int  ab_rewind_after;    /* minutes of pause before rewinding; 0 = never */
+    int  ab_rewind_amount;   /* seconds */
+    int  ab_finished_pct;    /* a book this far through counts as finished */
+    bool ab_autoscan;        /* rescan at startup when the library changed */
+    bool emoji_enabled;      /* colour emoji from /.rockbox/emoji */
 #ifdef HAVE_QUICKSCREEN
     bool shortcuts_replaces_qs;
 #endif

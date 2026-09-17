@@ -24,6 +24,8 @@ A Rockbox fork for the HiBy R1, built on top of [bahusoid's Rockbox Audiobook Mo
 *   **Playback:** holding Prev/Next keeps skipping tracks (one per 1-5 s, configurable) instead of seeking; album art that is still loading no longer flashes the placeholder.
 *   **Backlight:** normal, dimmed and off, each with its own timer, and dim levels in 0.5 % steps.
 *   **Database:** `[All tracks]` and `Decade` entries, and folders the scan leaves alone (the Audiobooks folder by default).
+*   **[Audiobooks library](docs/mods/audiobooks-library.md):** the main menu's Audiobooks entry is a library with covers, authors, series, narrators, progress and time left, a Continue Listening card, per-book speed, rewind after a long pause, a sleep timer that stops at the end of a chapter, and its own WPS.
+*   **Emoji:** colour emoji in any text (titles, file names, menus), drawn from `/.rockbox/emoji/emoji.rbe` (Noto Emoji, made by `tools/emojipack.py`; in the release as `rockbox-hibyr1-emoji.zip`). Theme Settings > Emoji turns them off.
 *   **Keyclick:** each click source (keys, stick arming/armed/action, dial, scroll, touch, lock) can be turned on or off.
 *   **Robustness:** config.cfg is fsynced and a last-good copy is kept; crashes are logged to `/.rockbox/crash.log`.
 

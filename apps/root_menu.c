@@ -38,6 +38,7 @@
 #include "power.h"
 #include "talk.h"
 #include "audio.h"
+#include "audiobooks/audiobooks.h"
 #include "shortcuts.h"
 
 #ifdef HAVE_HOTSWAP
@@ -127,15 +128,12 @@ static int browser(void* param)
     switch ((intptr_t)param)
     {
         case GO_TO_CUSTOMFOLDER:
-        case GO_TO_AUDIOBOOKS:
         {
-            /* Deliberately not remembered in last_folder: these entries
-             * mean "that folder", and a main menu item that lands
+            /* Deliberately not remembered in last_folder: this entry
+             * means "that folder", and a main menu item that lands
              * somewhere different depending on where the file browser was
              * last is not a shortcut to anywhere. */
-            const char *want = ((intptr_t)param == GO_TO_AUDIOBOOKS) ?
-                                   global_settings.audiobook_folder :
-                                   global_settings.custom_folder;
+            const char *want = global_settings.custom_folder;
             filter = global_settings.dirfilter;
             if (want[0])
             {
@@ -477,6 +475,13 @@ static int playlist_view(void * param)
     return GO_TO_PREVIOUS;
 }
 
+/* The library, not a folder: see apps/audiobooks. */
+static int audiobooks(void* param)
+{
+    (void)param;
+    return audiobooks_screen();
+}
+
 static int load_bmarks(void* param)
 {
     (void)param;
@@ -523,7 +528,7 @@ static const struct root_items items[] = {
     [GO_TO_SYSTEM_SCREEN] = { miscscrn, &info_menu, &system_menu },
     [GO_TO_SHORTCUTMENU] = { do_shortcut_menu, NULL, NULL },
     [GO_TO_CUSTOMFOLDER] = { browser, (void*)GO_TO_CUSTOMFOLDER, &file_menu },
-    [GO_TO_AUDIOBOOKS]   = { browser, (void*)GO_TO_AUDIOBOOKS,   &file_menu },
+    [GO_TO_AUDIOBOOKS]   = { audiobooks, NULL, NULL },
 
 };
 //static const int nb_items = sizeof(items)/sizeof(*items);
@@ -1305,6 +1310,7 @@ void root_menu(void)
     int shortcut_origin = GO_TO_ROOT;
 
     push_current_activity(ACTIVITY_MAINMENU);
+    audiobooks_startup_scan();
     next_screen = root_menu_setup_screens();
 
     while (true)

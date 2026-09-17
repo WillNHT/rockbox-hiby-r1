@@ -47,6 +47,8 @@
 #include "icons.h"
 #ifdef HAVE_LCD_COLOR
 #include "filetypes.h"
+#include "emoji.h"
+#include "audiobooks/audiobooks.h"
 #endif
 
 #ifdef HAVE_BACKDROP_IMAGE
@@ -379,6 +381,32 @@ static int showicons_callback(int action,
 }
 
 MENUITEM_SETTING(show_icons, &global_settings.show_icons, showicons_callback);
+
+#if defined(HAVE_LCD_COLOR)
+static int emoji_callback(int action,
+                          const struct menu_item_ex *this_item,
+                          struct gui_synclist *this_list)
+{
+    (void)this_item;
+    (void)this_list;
+    if (action == ACTION_EXIT_MENUITEM)
+    {
+        if (global_settings.emoji_enabled)
+            emoji_init();
+        else
+            emoji_close();
+    }
+    return action;
+}
+MENUITEM_SETTING(emoji_item, &global_settings.emoji_enabled, emoji_callback);
+#endif
+
+static int audiobook_wps(void)
+{
+    return audiobooks_choose_wps();
+}
+MENUITEM_FUNCTION(browse_audiobook_wps, 0, ID2P(LANG_AB_WPS),
+                  audiobook_wps, NULL, Icon_Wps);
 MENUITEM_FUNCTION_W_PARAM(browse_themes, 0, ID2P(LANG_CUSTOM_THEME),
                           browse_folder, (void*)&themes, NULL, Icon_Config);
 MENUITEM_SETTING(cursor_style, &global_settings.cursor_style, NULL);
@@ -391,6 +419,7 @@ MAKE_MENU(theme_menu, ID2P(LANG_THEME_MENU),
             &browse_themes,
             &browse_fonts,
             &browse_wps,
+            &browse_audiobook_wps,
 #ifdef HAVE_REMOTE_LCD
             &browse_rwps,
 #endif
@@ -405,6 +434,9 @@ MAKE_MENU(theme_menu, ID2P(LANG_THEME_MENU),
             &browse_rsbs,
 #endif
             &show_icons,
+#if defined(HAVE_LCD_COLOR)
+            &emoji_item,
+#endif
 #ifdef HAVE_BACKDROP_IMAGE
             &clear_main_bd,
 #endif
