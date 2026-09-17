@@ -59,16 +59,26 @@
 %?mp<|%?if(%an(16,70),=,14)<%Vd(ch13)>|||||>
 %?mp<|%?if(%an(16,70),=,15)<%Vd(ch14)>|||||>
 %?mp<|%?if(%an(16,70),=,16)<%Vd(ch15)>|||||>
-%?if(%an(10,90),=,1)<%Vd(sh0)>
-%?if(%an(10,90),=,2)<%Vd(sh1)>
-%?if(%an(10,90),=,3)<%Vd(sh2)>
-%?if(%an(10,90),=,4)<%Vd(sh3)>
-%?if(%an(10,90),=,5)<%Vd(sh4)>
-%?if(%an(10,90),=,6)<%Vd(sh5)>
-%?if(%an(10,90),=,7)<%Vd(sh6)>
-%?if(%an(10,90),=,8)<%Vd(sh7)>
-%?if(%an(10,90),=,9)<%Vd(sh8)>
-%?if(%an(10,90),=,10)<%Vd(sh9)>
+%?if(%an(30,150),=,1)<%Vd(sh00)>
+%?if(%an(30,150),=,2)<%Vd(sh01)>
+%?if(%an(30,150),=,3)<%Vd(sh02)>
+%?if(%an(30,150),=,4)<%Vd(sh03)>
+%?if(%an(30,150),=,5)<%Vd(sh04)>
+%?if(%an(30,150),=,6)<%Vd(sh05)>
+%?if(%an(30,150),=,7)<%Vd(sh06)>
+%?if(%an(30,150),=,8)<%Vd(sh07)>
+%?if(%an(30,150),=,9)<%Vd(sh08)>
+%?if(%an(30,150),=,10)<%Vd(sh09)>
+%?if(%an(30,150),=,11)<%Vd(sh10)>
+%?if(%an(30,150),=,12)<%Vd(sh11)>
+%?if(%an(30,150),=,13)<%Vd(sh12)>
+%?if(%an(30,150),=,14)<%Vd(sh13)>
+%?if(%an(30,150),=,15)<%Vd(sh14)>
+%?if(%an(30,150),=,16)<%Vd(sh15)>
+%?if(%an(30,150),=,17)<%Vd(sh16)>
+%?if(%an(30,150),=,18)<%Vd(sh17)>
+%?if(%an(30,150),=,19)<%Vd(sh18)>
+%?if(%an(30,150),=,20)<%Vd(sh19)>
 %?if(%an(8,110),=,1)<%Vd(pu0)>
 %?if(%an(8,110),=,2)<%Vd(pu1)>
 %?if(%an(8,110),=,3)<%Vd(pu2)>
@@ -223,7 +233,7 @@ SHF%xd(O,%ps)
 %Cb(0,0,480,800,26,55)
 %Cl(32,152,416,416,c,c)
 %Cd
-%Cm(32,572,416,40,170,0)
+%Cm(32,568,416,40,170,0)
 #
 # Main
 # ====
@@ -233,7 +243,7 @@ SHF%xd(O,%ps)
 # the parse and drops the user to the failsafe WPS.
 %Vl(aa,30,150,1,1,-)
 #
-%Vl(mirror,30,572,1,1,-)
+%Vl(mirror,30,568,1,1,-)
 #
 # No cover is not an empty screen. %C is false for a track with no
 # artwork, and with it the backdrop, the cover and the reflection all go -
@@ -318,40 +328,70 @@ SHF%xd(O,%ps)
 #
 # %%Vt(0) and the seventh parameter of %%dr are what make it a sheen
 # rather than a bar. The clear restores the backdrop buffer - the cover -
-# and the rectangle is then blended over it at a quarter opacity. Without
+# and the rectangle is then blended over it at about an eighth opacity. Without
 # the first the band is a black box eating the cover; without the second
 # it is a painted grey stripe.
 #
-%Vl(sh0,30,150,420,26,-)
+%Vl(sh00,30,150,420,26,-)
 %Vt(0)
-%dr(0,0,-,-,F4F2EE,0C0D0E,26)
-%Vl(sh1,30,192,420,26,-)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh01,30,170,420,26,-)
 %Vt(0)
-%dr(0,0,-,-,F4F2EE,0C0D0E,26)
-%Vl(sh2,30,234,420,26,-)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh02,30,190,420,26,-)
 %Vt(0)
-%dr(0,0,-,-,F4F2EE,0C0D0E,26)
-%Vl(sh3,30,276,420,26,-)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh03,30,210,420,26,-)
 %Vt(0)
-%dr(0,0,-,-,F4F2EE,0C0D0E,26)
-%Vl(sh4,30,318,420,26,-)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh04,30,230,420,26,-)
 %Vt(0)
-%dr(0,0,-,-,F4F2EE,0C0D0E,26)
-%Vl(sh5,30,360,420,26,-)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh05,30,250,420,26,-)
 %Vt(0)
-%dr(0,0,-,-,F4F2EE,0C0D0E,26)
-%Vl(sh6,30,402,420,26,-)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh06,30,270,420,26,-)
 %Vt(0)
-%dr(0,0,-,-,F4F2EE,0C0D0E,26)
-%Vl(sh7,30,444,420,26,-)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh07,30,290,420,26,-)
 %Vt(0)
-%dr(0,0,-,-,F4F2EE,0C0D0E,26)
-%Vl(sh8,30,486,420,26,-)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh08,30,310,420,26,-)
 %Vt(0)
-%dr(0,0,-,-,F4F2EE,0C0D0E,26)
-%Vl(sh9,30,528,420,26,-)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh09,30,330,420,26,-)
 %Vt(0)
-%dr(0,0,-,-,F4F2EE,0C0D0E,26)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh10,30,350,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh11,30,370,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh12,30,390,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh13,30,410,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh14,30,430,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh15,30,450,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh16,30,470,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh17,30,490,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh18,30,510,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
+%Vl(sh19,30,530,420,26,-)
+%Vt(0)
+%dr(0,0,-,-,F4F2EE,0C0D0E,12)
 #
 # The pulse
 # =========
