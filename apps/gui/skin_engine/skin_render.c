@@ -37,6 +37,7 @@
 #include "skin_display.h"
 #include "skin_engine.h"
 #include "skin_layer.h"
+#include "skin_lyrics.h"
 #include "skin_parser.h"
 #include "tag_table.h"
 #include "skin_scan.h"
@@ -220,6 +221,19 @@ static bool do_non_text_tags(struct gui_wps *gwps, struct skin_draw_info *info,
                 char path[MAX_PATH];
                 if (fx && playlist_cover_current(path, sizeof(path)))
                     cover_draw(gwps->display, path, fx->x, fx->y, fx->w);
+            }
+            break;
+#endif
+#if defined(HAVE_LYRICS) && !defined(__PCTOOL__)
+        case SKIN_TOKEN_LYRICS_BLOCK:
+            if (do_refresh)
+            {
+                struct skin_lyrics *ly =
+                        SKINOFFSETTOPTR(skin_buffer, token->value.data);
+                if (ly)
+                    skin_lyrics_draw(gwps, skin_vp, ly,
+                        (info->refresh_type & SKIN_REFRESH_ALL)
+                            == SKIN_REFRESH_ALL);
             }
             break;
 #endif

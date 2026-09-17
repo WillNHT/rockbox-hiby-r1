@@ -38,6 +38,7 @@
 #include "pcm_sampr.h"
 #ifdef HAVE_PLAY_FREQ
 #include "talk.h"
+#include "lyrics.h"
 #endif
 
 #if defined(HAVE_CROSSFADE)
@@ -184,6 +185,24 @@ MENUITEM_SETTING(album_art, &global_settings.album_art, NULL);
 
 MENUITEM_SETTING(playback_log, &global_settings.playback_log, NULL);
 
+#ifdef HAVE_LYRICS
+static int lyrics_callback(int action, const struct menu_item_ex *this_item,
+                           struct gui_synclist *this_list)
+{
+    (void)this_item;
+    (void)this_list;
+    if (action == ACTION_EXIT_MENUITEM)
+        lyrics_invalidate();
+    return action;
+}
+MENUITEM_SETTING(lyrics_show, &global_settings.lyrics_enabled,
+                 lyrics_callback);
+MENUITEM_SETTING(lyrics_source, &global_settings.lyrics_source,
+                 lyrics_callback);
+MAKE_MENU(lyrics_menu, ID2P(LANG_LYRICS), 0, Icon_NOICON,
+          &lyrics_show, &lyrics_source);
+#endif
+
 MAKE_MENU(playback_settings,ID2P(LANG_PLAYBACK),0,
           Icon_Playback_menu,
           &shuffle_item, &repeat_mode, &play_selected,
@@ -218,6 +237,9 @@ MAKE_MENU(playback_settings,ID2P(LANG_PLAYBACK),0,
           ,&album_art
 #endif
         ,&playback_log
+#ifdef HAVE_LYRICS
+        ,&lyrics_menu
+#endif
          );
 
 /*    PLAYBACK MENU                */

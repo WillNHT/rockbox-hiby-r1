@@ -348,6 +348,17 @@ enum skin_token_type {
      * Appended, like everything else here - see the note above. */
     SKIN_TOKEN_PLAYLIST_COVER,
     SKIN_TOKEN_PLAYLIST_COVER_FOUND,
+
+    /* Lyrics - see apps/lyrics.c and skin_engine/skin_lyrics.c.
+     * %yl(n)  the lyric line n lines after the one being sung (0 = it)
+     * %?yf<synced|plain|none>  what kind of lyrics the track has
+     * %yb(x, y, w, h [, inactive colour [, align [, gap]]])  a block
+     * %yp  percent of the current line that has gone by
+     * Appended, like everything else here - see the note above. */
+    SKIN_TOKEN_LYRICS_LINE,
+    SKIN_TOKEN_LYRICS_FOUND,
+    SKIN_TOKEN_LYRICS_BLOCK,
+    SKIN_TOKEN_LYRICS_PROGRESS,
 };
 
 /*

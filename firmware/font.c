@@ -403,6 +403,7 @@ static struct font* font_load_header(int fd, struct font *pheader,
     pf->firstchar     = readlong(pheader);
     pf->defaultchar   = readlong(pheader);
     pf->size          = readlong(pheader);
+    pf->default_bitmap_offset = -1;
 
     /* get variable font data sizes*/
     /* # words of bitmap_t*/
@@ -748,6 +749,38 @@ struct font* font_get(int font)
     }
 }
 
+/* Where glyph index idx's bitmap starts in the file's bitmap data */
+static int32_t file_bitmap_offset(struct font *pf, int idx, int width)
+{
+    int32_t bitmap_offset = 0;
+    int fd;
+
+    if (pf->file_offset_offset)
+    {
+        int32_t offset = pf->file_offset_offset + idx * (pf->long_offset ? sizeof(int32_t) : sizeof(int16_t));
+        /* load via different fd to get this file section cached */
+        if(pf->fd_offset >=0 )
+            fd = pf->fd_offset;
+        else
+            fd = pf->fd;
+        lseek(fd, offset, SEEK_SET);
+        unsigned char tmp[2];
+        if (read (fd, tmp, 2) == 2)
+        {
+            bitmap_offset = tmp[0] | (tmp[1] << 8);
+            if (pf->long_offset) {
+                if (read (fd, tmp, 2) == 2)
+                    bitmap_offset |= (tmp[0] << 16) | (tmp[1] << 24);
+            }
+        }
+    }
+    else
+    {
+        bitmap_offset = idx * glyph_bytes(pf, width);
+    }
+    return bitmap_offset;
+}
+
 /*
  * Reads an entry into cache entry
  */
@@ -784,31 +817,18 @@ load_cache_entry(struct font_cache_entry* p, void* callback_data)
         p->width = pf->maxwidth;
     }
 
-    int32_t bitmap_offset = 0;
+    int32_t bitmap_offset = file_bitmap_offset(pf, char_code, p->width);
 
-    if (pf->file_offset_offset)
-    {
-        int32_t offset = pf->file_offset_offset + char_code * (pf->long_offset ? sizeof(int32_t) : sizeof(int16_t));
-        /* load via different fd to get this file section cached */
-        if(pf->fd_offset >=0 )
-            fd = pf->fd_offset;
-        else
-            fd = pf->fd;
-        lseek(fd, offset, SEEK_SET);
-        unsigned char tmp[2];
-        if (read (fd, tmp, 2) == 2)
-        {
-            bitmap_offset = tmp[0] | (tmp[1] << 8);
-            if (pf->long_offset) {
-                if (read (fd, tmp, 2) == 2)
-                    bitmap_offset |= (tmp[0] << 16) | (tmp[1] << 24);
-            }
-        }
-    }
-    else
-    {
-        bitmap_offset = char_code * glyph_bytes(pf, p->width);
-    }
+    /* A converted font fills the gaps in its range with its default
+     * glyph, so a code point that shares the default's bitmap is one this
+     * font does not have. Remembered here, where the offset is read
+     * anyway, so asking again costs nothing. */
+    if (pf->file_offset_offset && pf->default_bitmap_offset < 0)
+        pf->default_bitmap_offset =
+            file_bitmap_offset(pf, pf->defaultchar - pf->firstchar, 0);
+    p->missing = pf->file_offset_offset &&
+                 (int)char_code != pf->defaultchar - (int)pf->firstchar &&
+                 bitmap_offset == pf->default_bitmap_offset;
 
     int32_t file_offset = FONT_HEADER_SIZE + bitmap_offset;
     lseek(pf->fd, file_offset, SEEK_SET);
@@ -1078,6 +1098,65 @@ static NO_INLINE void glyph_cache_load(const char *font_path, struct font *pf)
     }
     return;
 }
+
+bool font_has_glyph(struct font *pf, ucschar_t ch)
+{
+    int idx, def;
+
+    if (ch < pf->firstchar || ch >= pf->firstchar + pf->size)
+        return false;
+    if ((int)ch == pf->defaultchar)
+        return true;
+    idx = ch - pf->firstchar;
+    def = pf->defaultchar - pf->firstchar;
+    if (def < 0 || def >= pf->size)
+        return true;
+
+    if (pf->fd >= 0 && pf != &sysfont)
+    {
+        struct font_cache_entry *e =
+            font_cache_get(&pf->cache, idx, false, load_cache_entry, pf);
+        return !e->missing;
+    }
+    if (pf->disabled)
+    {
+        struct font_cache_entry *e =
+            font_cache_get(&pf->cache, idx, true, NULL, NULL);
+        return e ? !e->missing : true;
+    }
+    if (!pf->offset)
+        return true;
+    if (pf->bits_size < MAX_FONTSIZE_FOR_16_BIT_OFFSETS)
+        return ((uint16_t*)pf->offset)[idx] != ((uint16_t*)pf->offset)[def];
+    return ((uint32_t*)pf->offset)[idx] != ((uint32_t*)pf->offset)[def];
+}
+
+static int fallback_font_id = -1;
+
+void font_set_fallback(int font_id)
+{
+    fallback_font_id = font_id;
+}
+
+int font_get_fallback(void)
+{
+    return fallback_font_id;
+}
+
+struct font *font_glyph_font(struct font *pf, ucschar_t ch)
+{
+    struct font *fb;
+
+    if (fallback_font_id < 0 || ch < 0x80 || font_has_glyph(pf, ch))
+        return pf;
+    fb = font_get(fallback_font_id);
+    if (fb == pf || fb == &sysfont)
+        return pf;
+    if (pf->depth == 0 && fb->depth != 0)
+        return pf;          /* a mono line cannot take an antialiased glyph */
+    return font_has_glyph(fb, ch) ? fb : pf;
+}
+
 #else /* BOOTLOADER */
 
 void font_init(void)
@@ -1127,6 +1206,23 @@ const unsigned char* font_get_bits(struct font* pf, ucschar_t char_code)
             (((pf->height + 7) / 8) * pf->maxwidth * char_code));
 
     return bits;
+}
+
+
+void font_set_fallback(int font_id)
+{
+    (void)font_id;
+}
+
+int font_get_fallback(void)
+{
+    return -1;
+}
+
+struct font *font_glyph_font(struct font *pf, ucschar_t ch)
+{
+    (void)ch;
+    return pf;
 }
 
 #endif /* BOOTLOADER */
@@ -1192,7 +1288,7 @@ int font_getstringnsize(const unsigned char *str, size_t maxbytes, int *w, int *
             continue;
 
         /* get proportional width and glyph bits*/
-        width += font_get_width(pf,ch);
+        width += font_get_width(font_glyph_font(pf, ch), ch);
     }
     if ( w )
         *w = width;

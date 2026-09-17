@@ -73,6 +73,7 @@
 #include "voice_thread.h"
 #include "lcd-transition.h"
 #include "gui/coverview.h"
+#include "lyrics.h"
 
 #if defined(DX50) || defined(DX90)
 #include "governor-ibasso.h"
@@ -2715,6 +2716,17 @@ const struct settings_list settings[] = {
    OFFON_SETTING(0, ab_autoscan, LANG_AB_AUTOSCAN, true,
                  "audiobook scan at startup", NULL),
    OFFON_SETTING(0, emoji_enabled, LANG_EMOJI, true, "emoji", NULL),
+#ifdef HAVE_LYRICS
+   OFFON_SETTING(0, lyrics_enabled, LANG_LYRICS_SHOW, true, "lyrics", NULL),
+   CHOICE_SETTING(0, lyrics_source, LANG_LYRICS_SOURCE, LYRICS_FILE_FIRST,
+                  "lyrics source", "file first,embedded first", NULL, 2,
+                  ID2P(LANG_LYRICS_FILE_FIRST),
+                  ID2P(LANG_LYRICS_EMBEDDED_FIRST)),
+#endif
+   /* Unifont covers the whole Basic Multilingual Plane (CJK, Hangul,
+    * Vietnamese), and it is in the fonts pack. */
+   TEXT_SETTING(F_THEMESETTING|F_NEEDAPPLY, fallback_font_file,
+                "fallback font", "16-GNU-Unifont", FONT_DIR "/", ".fnt"),
 #ifdef HAVE_COVER_VIEWS
    /* Albums, tracks, playlists and audiobooks. Shelves by default: a card
     * per row keeps up/down as the only way through, which is the stick. */

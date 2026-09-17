@@ -19498,3 +19498,87 @@
     *: "Carousel"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_LYRICS
+  desc: playback settings: the lyrics submenu
+  user: core
+  <source>
+    *: "Lyrics"
+  </source>
+  <dest>
+    *: "Lyrics"
+  </dest>
+  <voice>
+    *: "Lyrics"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LYRICS_SHOW
+  desc: lyrics: whether skins show lyrics
+  user: core
+  <source>
+    *: "Show Lyrics"
+  </source>
+  <dest>
+    *: "Show Lyrics"
+  </dest>
+  <voice>
+    *: "Show Lyrics"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LYRICS_SOURCE
+  desc: lyrics: whether a file next to the track or lyrics in its tags are tried first
+  user: core
+  <source>
+    *: "Lyrics Source"
+  </source>
+  <dest>
+    *: "Lyrics Source"
+  </dest>
+  <voice>
+    *: "Lyrics Source"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LYRICS_FILE_FIRST
+  desc: lyrics source: .lrc/.txt file first
+  user: core
+  <source>
+    *: "File First"
+  </source>
+  <dest>
+    *: "File First"
+  </dest>
+  <voice>
+    *: "File First"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LYRICS_EMBEDDED_FIRST
+  desc: lyrics source: tags in the track first
+  user: core
+  <source>
+    *: "Embedded First"
+  </source>
+  <dest>
+    *: "Embedded First"
+  </dest>
+  <voice>
+    *: "Embedded First"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FALLBACK_FONT
+  desc: theme settings: font for characters the theme's fonts lack
+  user: core
+  <source>
+    *: "Fallback Font"
+  </source>
+  <dest>
+    *: "Fallback Font"
+  </dest>
+  <voice>
+    *: "Fallback Font"
+  </voice>
+</phrase>

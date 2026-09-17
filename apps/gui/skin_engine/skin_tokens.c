@@ -82,6 +82,7 @@
 #include "ata.h" /* ata_disk_isssd() */
 #endif
 #include "playlist_cover.h"
+#include "lyrics.h"
 
 #define NOINLINE __attribute__ ((noinline))
 
@@ -1578,6 +1579,46 @@ const char *get_token_value(struct gui_wps *gwps,
             return "c";
 #else
             return NULL;
+#endif
+#if defined(HAVE_LYRICS) && !defined(__PCTOOL__)
+        case SKIN_TOKEN_LYRICS_LINE:
+        {
+            struct lyrics_pos pos;
+            const char *line;
+            if (!lyrics_position(&pos))
+                return NULL;
+            /* Before the first line (current is -1) only what is coming
+             * is shown: %yl(0) is empty and %yl(1) is the first line. */
+            line = lyrics_line(pos.current + token->value.l);
+            if (!line && pos.current < 0 && token->value.l == 0)
+                line = "";
+            if (!line)
+                return NULL;
+            return line;
+        }
+        case SKIN_TOKEN_LYRICS_FOUND:
+        {
+            struct lyrics_pos pos;
+            lyrics_position(&pos);
+            if (pos.kind == LYRICS_NONE)
+                return NULL;        /* the last branch, or false */
+            /* %?yf<synced|plain|none>, or %?yf<any|none> */
+            numeric_ret = (limit < 3 || pos.kind == LYRICS_SYNCED) ? 1 : 2;
+            itoa_buf(buf, buf_size, numeric_ret);
+            numeric_buf = buf;
+            goto gtv_ret_numeric_tag_info;
+        }
+        case SKIN_TOKEN_LYRICS_PROGRESS:
+        {
+            struct lyrics_pos pos;
+            if (!lyrics_position(&pos) || pos.current < 0 || pos.next_ms <= 0)
+                numeric_ret = 0;
+            else
+                numeric_ret = MIN(100, pos.line_ms * 100 / pos.next_ms);
+            itoa_buf(buf, buf_size, numeric_ret);
+            numeric_buf = buf;
+            goto gtv_ret_numeric_tag_info;
+        }
 #endif
         case SKIN_TOKEN_STICK_DIAL_ARMED:
 #if defined(HAVE_TOUCHSCREEN) && !defined(__PCTOOL__)

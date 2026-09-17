@@ -359,6 +359,7 @@ void sound_settings_apply(void);
 void settings_apply_skins(void);
 
 void settings_apply(bool read_disk);
+void settings_apply_fallback_font(void);
 void settings_apply_pm_range(void);
 void settings_display(void);
 
@@ -1036,6 +1037,13 @@ struct user_settings
 #ifdef HAVE_COVER_VIEWS
     int library_view;        /* enum coverview_style */
 #endif
+#ifdef HAVE_LYRICS
+    bool lyrics_enabled;
+    int  lyrics_source;      /* enum lyrics_source_order */
+#endif
+    /* A font that lends glyphs the others lack (FONT_DIR, no extension).
+     * "-" for none. */
+    unsigned char fallback_font_file[MAX_FILENAME+1];
 #ifdef HAVE_LCD_TRANSITIONS
     int menu_transition;     /* enum lcd_transition */
     int menu_transition_ms;

@@ -48,6 +48,10 @@
  * A cache of twelve 320 px covers, 2.5 MiB. */
 #define HAVE_COVER_VIEWS
 
+/* Lyrics for the skin engine (apps/lyrics.c): LRC and plain text next to
+ * the track or in its tags. 270 KiB of buffers. */
+#define HAVE_LYRICS
+
 /* Blend antialiased glyphs and alpha images in linear light rather than in
  * gamma-encoded RGB565, so a glyph keeps its weight whatever it landed on.
  * Six table lookups per blended pixel; 2.2 KiB of tables. */
