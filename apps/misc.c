@@ -1134,6 +1134,32 @@ void keyclick_set_callback(keyclick_callback cb, void* data)
     keyclick_data = data;
 }
 
+bool keyclick_enabled(enum keyclick_source source)
+{
+    switch (source)
+    {
+        case KEYCLICK_SRC_BUTTON:
+            return global_settings.keyclick_src_button;
+        case KEYCLICK_SRC_BUTTON_REPEAT:
+            return global_settings.keyclick_src_button_repeat;
+        case KEYCLICK_SRC_STICK_ARMING:
+            return global_settings.keyclick_src_stick_arming;
+        case KEYCLICK_SRC_STICK_ARMED:
+            return global_settings.keyclick_src_stick_armed;
+        case KEYCLICK_SRC_STICK_ACTION:
+            return global_settings.keyclick_src_stick_action;
+        case KEYCLICK_SRC_STICK_DIAL:
+            return global_settings.keyclick_src_stick_dial;
+        case KEYCLICK_SRC_STICK_SCROLL:
+            return global_settings.keyclick_src_stick_scroll;
+        case KEYCLICK_SRC_TOUCH:
+            return global_settings.keyclick_src_touch;
+        case KEYCLICK_SRC_LOCK:
+            return global_settings.keyclick_src_lock;
+    }
+    return true;
+}
+
 /* Produce keyclick based upon button and global settings */
 void keyclick_click(bool rawbutton, int action)
 {
@@ -1177,6 +1203,17 @@ void keyclick_click(bool rawbutton, int action)
         last_button = button;
     else
         last_button = BUTTON_NONE;
+
+    if (do_beep)
+    {
+        enum keyclick_source src = (button & BUTTON_REPEAT)
+            ? KEYCLICK_SRC_BUTTON_REPEAT : KEYCLICK_SRC_BUTTON;
+#ifdef HAVE_TOUCHSCREEN
+        if (button & BUTTON_TOUCHSCREEN)
+            src = KEYCLICK_SRC_TOUCH;
+#endif
+        do_beep = keyclick_enabled(src);
+    }
 
     if (do_beep && keyclick_current_callback)
         do_beep = keyclick_current_callback(action, keyclick_data);

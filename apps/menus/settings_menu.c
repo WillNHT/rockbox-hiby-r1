@@ -350,13 +350,33 @@ MENUITEM_SETTING(volume_adjust_norm_steps, &global_settings.volume_adjust_norm_s
 /* Keyclick menu */
 MENUITEM_SETTING(keyclick, &global_settings.keyclick, NULL);
 MENUITEM_SETTING(keyclick_repeats, &global_settings.keyclick_repeats, NULL);
+MENUITEM_SETTING(keyclick_src_button, &global_settings.keyclick_src_button, NULL);
+MENUITEM_SETTING(keyclick_src_button_repeat, &global_settings.keyclick_src_button_repeat, NULL);
+MENUITEM_SETTING(keyclick_src_stick_arming, &global_settings.keyclick_src_stick_arming, NULL);
+MENUITEM_SETTING(keyclick_src_stick_armed, &global_settings.keyclick_src_stick_armed, NULL);
+MENUITEM_SETTING(keyclick_src_stick_action, &global_settings.keyclick_src_stick_action, NULL);
+MENUITEM_SETTING(keyclick_src_stick_dial, &global_settings.keyclick_src_stick_dial, NULL);
+MENUITEM_SETTING(keyclick_src_stick_scroll, &global_settings.keyclick_src_stick_scroll, NULL);
+MENUITEM_SETTING(keyclick_src_touch, &global_settings.keyclick_src_touch, NULL);
+MENUITEM_SETTING(keyclick_src_lock, &global_settings.keyclick_src_lock, NULL);
+MAKE_MENU(keyclick_sources_menu, ID2P(LANG_KEYCLICK_SOURCES), 0, Icon_NOICON,
+          &keyclick_src_button,
+          &keyclick_src_button_repeat,
+          &keyclick_src_stick_arming,
+          &keyclick_src_stick_armed,
+          &keyclick_src_stick_action,
+          &keyclick_src_stick_dial,
+          &keyclick_src_stick_scroll,
+          &keyclick_src_touch,
+          &keyclick_src_lock);
 #ifdef HAVE_HARDWARE_CLICK
 MENUITEM_SETTING(keyclick_hardware, &global_settings.keyclick_hardware, NULL);
 MAKE_MENU(keyclick_menu, ID2P(LANG_KEYCLICK), 0, Icon_NOICON,
-           &keyclick, &keyclick_hardware, &keyclick_repeats);
+           &keyclick, &keyclick_hardware, &keyclick_repeats,
+           &keyclick_sources_menu);
 #else
 MAKE_MENU(keyclick_menu, ID2P(LANG_KEYCLICK), 0, Icon_NOICON,
-           &keyclick, &keyclick_repeats);
+           &keyclick, &keyclick_repeats, &keyclick_sources_menu);
 #endif
 
 #if CONFIG_CHARGING

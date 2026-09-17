@@ -243,6 +243,23 @@ void keyclick_set_callback(keyclick_callback cb, void* data);
 /* Produce keyclick based upon button and global settings */
 void keyclick_click(bool rawbutton, int action);
 
+/* Where a click comes from, each switchable on its own under
+ * Sound Settings > Keyclick > Click On. The master Keyclick volume still
+ * governs the clicks; the chirps (lock, dial arming) only their source. */
+enum keyclick_source
+{
+    KEYCLICK_SRC_BUTTON,
+    KEYCLICK_SRC_BUTTON_REPEAT,
+    KEYCLICK_SRC_STICK_ARMING,
+    KEYCLICK_SRC_STICK_ARMED,
+    KEYCLICK_SRC_STICK_ACTION,
+    KEYCLICK_SRC_STICK_DIAL,
+    KEYCLICK_SRC_STICK_SCROLL,
+    KEYCLICK_SRC_TOUCH,
+    KEYCLICK_SRC_LOCK,
+};
+bool keyclick_enabled(enum keyclick_source source);
+
 /* Return current ReplayGain mode a file should have (REPLAYGAIN_TRACK or
  * REPLAYGAIN_ALBUM) if ReplayGain processing is enabled, or -1 if no
  * information present.

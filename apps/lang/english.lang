@@ -18476,3 +18476,143 @@
     *: "Hold Skip Delay"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_KEYCLICK_SOURCES
+  desc: in Sound Settings -> Keyclick: which events click
+  user: core
+  <source>
+    *: "Click On"
+  </source>
+  <dest>
+    *: "Click On"
+  </dest>
+  <voice>
+    *: "Click On"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_BUTTON
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Hardware Button Press"
+  </source>
+  <dest>
+    *: "Hardware Button Press"
+  </dest>
+  <voice>
+    *: "Hardware Button Press"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_BUTTON_REPEAT
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Hardware Button Repeat"
+  </source>
+  <dest>
+    *: "Hardware Button Repeat"
+  </dest>
+  <voice>
+    *: "Hardware Button Repeat"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_STICK_ARMING
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Stick: Arming"
+  </source>
+  <dest>
+    *: "Stick: Arming"
+  </dest>
+  <voice>
+    *: "Stick: Arming"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_STICK_ARMED
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Stick: Armed"
+  </source>
+  <dest>
+    *: "Stick: Armed"
+  </dest>
+  <voice>
+    *: "Stick: Armed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_STICK_ACTION
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Stick: Action Fired"
+  </source>
+  <dest>
+    *: "Stick: Action Fired"
+  </dest>
+  <voice>
+    *: "Stick: Action Fired"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_STICK_DIAL
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Stick: Dial Detents"
+  </source>
+  <dest>
+    *: "Stick: Dial Detents"
+  </dest>
+  <voice>
+    *: "Stick: Dial Detents"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_STICK_SCROLL
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Stick: Scroll Ticks"
+  </source>
+  <dest>
+    *: "Stick: Scroll Ticks"
+  </dest>
+  <voice>
+    *: "Stick: Scroll Ticks"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_TOUCH
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Touch Tap"
+  </source>
+  <dest>
+    *: "Touch Tap"
+  </dest>
+  <voice>
+    *: "Touch Tap"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_LOCK
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Lock / Unlock"
+  </source>
+  <dest>
+    *: "Lock / Unlock"
+  </dest>
+  <voice>
+    *: "Lock / Unlock"
+  </voice>
+</phrase>

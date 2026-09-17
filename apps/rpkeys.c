@@ -124,7 +124,8 @@ bool rpkeys_locked(void)
  * countdown on screen is what makes the hold legible without them. */
 static void cue(void)
 {
-    system_sound_play(SOUND_KEYCLICK);
+    if (keyclick_enabled(KEYCLICK_SRC_BUTTON))
+        system_sound_play(SOUND_KEYCLICK);
 }
 
 /* Two chirps, one rising and one falling, for the state changes that are
@@ -588,7 +589,8 @@ static bool handle_power(int held, bool repeat, bool release)
                 want = CHIRP_RUN_NOTES;
             while (lock_chirp_step < want)
             {
-                rpkeys_chirp_step(lock_chirp_step, CHIRP_RUN_NOTES, locked);
+                if (keyclick_enabled(KEYCLICK_SRC_LOCK))
+                    rpkeys_chirp_step(lock_chirp_step, CHIRP_RUN_NOTES, locked);
                 lock_chirp_step++;
             }
         }

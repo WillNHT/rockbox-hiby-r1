@@ -475,6 +475,16 @@ struct user_settings
     int  beep;              /* system beep volume when changing tracks etc. */
     int  keyclick;          /* keyclick volume */
     int  keyclick_repeats;  /* keyclick on repeats */
+    /* which events click; see keyclick_enabled() */
+    bool keyclick_src_button;
+    bool keyclick_src_button_repeat;
+    bool keyclick_src_stick_arming;
+    bool keyclick_src_stick_armed;
+    bool keyclick_src_stick_action;
+    bool keyclick_src_stick_dial;
+    bool keyclick_src_stick_scroll;
+    bool keyclick_src_touch;
+    bool keyclick_src_lock;
     bool dithering_enabled;
 #ifdef HAVE_PITCHCONTROL
     bool timestretch_enabled;

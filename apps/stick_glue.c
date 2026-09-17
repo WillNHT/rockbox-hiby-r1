@@ -1425,8 +1425,29 @@ static void note_dial_arming(void)
 
     while (played < want)
     {
-        rpkeys_chirp_step(played, DIAL_ARM_NOTES, true);
+        if (keyclick_enabled(KEYCLICK_SRC_STICK_ARMING))
+            rpkeys_chirp_step(played, DIAL_ARM_NOTES, true);
         played++;
+    }
+}
+
+static enum keyclick_source cue_source(int cue)
+{
+    switch (cue)
+    {
+    case STICK_CUE_SECTOR:
+        return KEYCLICK_SRC_STICK_ARMING;
+    case STICK_CUE_ARM:
+        return KEYCLICK_SRC_STICK_ARMED;
+    case STICK_CUE_DETENT:
+        /* The same cue marks a dial detent and a scroll step; the phase
+         * says which. */
+        return live_state.phase == STICK_PHASE_DIAL
+            ? KEYCLICK_SRC_STICK_DIAL : KEYCLICK_SRC_STICK_SCROLL;
+    case STICK_CUE_COMMIT:
+    case STICK_CUE_REJECT:
+    default:
+        return KEYCLICK_SRC_STICK_ACTION;
     }
 }
 
@@ -1435,6 +1456,8 @@ static void play_cue(int cue)
     if (cue == STICK_CUE_NONE)
         return;
     if (!global_settings.keyclick)
+        return;
+    if (!keyclick_enabled(cue_source(cue)))
         return;
 
     /* One short click for every cue point is the default (spec 7). The
