@@ -707,6 +707,11 @@ struct user_settings
     unsigned char autoresume_paths[MAX_PATHLIST+1]; /* colon-separated list */
     bool runtimedb;           /* runtime database active? */
     unsigned char tagcache_scan_paths[MAX_PATHLIST+1];
+    /* Folders the database scan skips, ':'-separated (FAT names cannot
+       hold a colon). Kept short enough for a config.cfg line, which is
+       read into 128 bytes. */
+    char db_exclude_folders[96];
+    bool db_exclude_audiobooks; /* skip global_settings.audiobook_folder */
     unsigned char tagcache_db_path[MAX_PATHNAME+1];
 #endif /* HAVE_TAGCACHE */
     bool alt_settings_enable; /* resume next track? 0=no, 1=custom */

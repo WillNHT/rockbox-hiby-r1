@@ -1923,6 +1923,10 @@ const struct settings_list settings[] = {
                  DEFAULT_TAGCACHE_SCAN_PATHS, NULL, NULL),
     TEXT_SETTING(0, tagcache_db_path, "database path",
                  ROCKBOX_DIR, NULL, NULL),
+    TEXT_SETTING(0, db_exclude_folders, "database exclude folders",
+                 "", NULL, NULL),
+    OFFON_SETTING(0, db_exclude_audiobooks, LANG_DB_EXCLUDE_AUDIOBOOKS, true,
+                  "database exclude audiobooks", NULL),
 #endif
 
         OFFON_SETTING(0, alt_settings_enable, LANG_ALT_SETTINGS, true,

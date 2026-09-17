@@ -212,6 +212,13 @@ void tagcache_unload_ramcache(void);
 void tagcache_commit_finalize(void);
 void tagcache_init(void) INIT_ATTR;
 bool tagcache_is_initialized(void);
+#ifndef __PCTOOL__
+/* Folder exclusions (Settings > Database > Excluded Folders). */
+bool tagcache_path_excluded(const char *path);
+bool tagcache_folder_listed(const char *path);
+/* Adds or removes one folder; false if the list has no room. */
+bool tagcache_set_folder_excluded(const char *path, bool exclude);
+#endif
 bool tagcache_is_fully_initialized(void);
 bool tagcache_is_usable(void);
 void tagcache_start_scan(void);
