@@ -34,6 +34,12 @@ static inline void core_sleep(void)
     wait_for_interrupt();
 }
 
+#ifdef HAVE_SHUTDOWN_WATCHDOG
+/* Force power off (or reboot) from the kernel if a clean shutdown has not
+ * finished in time. Safe to call more than once. */
+void shutdown_watchdog_arm(bool reboot_instead);
+#endif
+
 #endif /* __PCTOOL__ */
 
 #if defined(WIN32) || defined(__PCTOOL__)

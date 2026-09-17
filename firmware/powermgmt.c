@@ -1038,6 +1038,9 @@ void powermgmt_init(void)
 /* Various hardware housekeeping tasks relating to shutting down the player */
 void shutdown_hw(enum shutdown_type sd_type)
 {
+#ifdef HAVE_SHUTDOWN_WATCHDOG
+    shutdown_watchdog_arm(sd_type == SHUTDOWN_REBOOT);
+#endif
     charging_algorithm_close();
     audio_stop();
 
