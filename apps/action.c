@@ -74,6 +74,8 @@ typedef struct
 #ifdef HAVE_TOUCHSCREEN
     /* The button was handed back inline by the stick, not read from a key. */
     bool                           stick_made;
+    /* The button came back round the queue from the stick (BUTTON_SYNTH). */
+    bool                           stick_queued;
 #endif
 } action_cur_t;
 
@@ -574,10 +576,17 @@ static inline bool get_action_touchscreen(action_last_t *last, action_cur_t *cur
 
         return true;
     }
-    else
+    else if (!cur->stick_queued)
     {
         /* A real key arrived. Forget any half-finished contact, or the next
-         * touch would be read as the continuation of one. */
+         * touch would be read as the continuation of one.
+         *
+         * Not for a key the stick queued. Those arrive while the thumb that
+         * made them is still down - the extra steps of a fast drag, a
+         * sustained scroll - and forgetting the contact then made its
+         * release an "isolated release", which is dropped above. The stick
+         * never heard the thumb lift, the gesture stayed live, and its
+         * overlay stayed on the panel until the next touch. */
         last->touchevent.type = TOUCHEVENT_NONE;
         last->ts_button = BUTTON_NONE;
     }
@@ -1133,6 +1142,7 @@ static void init_act_cur(action_cur_t *cur,
     cur->is_prebutton        = false;
 #ifdef HAVE_TOUCHSCREEN
     cur->stick_made          = false;
+    cur->stick_queued        = false;
 #endif
     cur->items               = NULL;
     cur->timeout             = timeout;
@@ -1268,6 +1278,9 @@ static int get_action_worker(action_last_t *last, action_cur_t *cur)
     if (cur->button & BUTTON_SYNTH)
     {
         cur->button &= ~BUTTON_SYNTH;
+#ifdef HAVE_TOUCHSCREEN
+        cur->stick_queued = true;
+#endif
     }
     else
 #endif

@@ -36,6 +36,10 @@
  * direct-to-framebuffer path if it cannot have it. */
 #define HAVE_COMPOSITOR
 
+/* Retained layers composed at present time (firmware/drivers/lcd-layers.c).
+ * The stick overlay lives in one instead of in the framebuffer. */
+#define HAVE_LCD_LAYERS
+
 /* Blend antialiased glyphs and alpha images in linear light rather than in
  * gamma-encoded RGB565, so a glyph keeps its weight whatever it landed on.
  * Six table lookups per blended pixel; 2.2 KiB of tables. */

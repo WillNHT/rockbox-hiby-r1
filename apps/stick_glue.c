@@ -425,7 +425,111 @@ static void dirty_point(int x, int y, int pad)
  * cannot provide them every call here reports failure and the old
  * ask-for-a-repaint path runs unchanged. */
 
+#if defined(HAVE_LCD_LAYERS)
+/* The overlay has a layer of its own (firmware/drivers/lcd-layers.c), which
+ * is what all of the above was working around. It never touches the
+ * framebuffer, so there is nothing to save, nothing to put back, nothing a
+ * repaint underneath can make stale, and nothing to ask the screen to
+ * repaint for. A capture is only the painter saying where it will draw;
+ * the erase is clearing the layer and pushing where it was. */
+#include "lcd-layers.h"
 #ifdef HAVE_COMPOSITOR
+#include "canvas.h"
+#include "canvas_glue.h"
+#endif
+
+extern struct frame_buffer_t lcd_framebuffer_default;
+
+enum { BD_MAIN, BD_BAND, BD_EDGE_T, BD_EDGE_B, BD_EDGE_L, BD_EDGE_R };
+
+static bool layer_drawing;
+/* Set while the Canvas HUD paints: it blends, and a keyed layer has nothing
+ * under it to blend with. Its rectangles start as a copy of the screen
+ * beneath, so the translucency looks as it always did. The copy is as old
+ * as the frame, which is the staleness the old backing store had too, and
+ * the HUD repaints on every move. */
+static bool layer_snapshot;
+
+static inline bool bd_active(void) { return true; }
+
+static bool bd_capture(int slot, int x, int y, int w, int h)
+{
+    (void)slot;
+    if (x < 0) { w += x; x = 0; }
+    if (y < 0) { h += y; y = 0; }
+    if (x + w > LCD_WIDTH)  w = LCD_WIDTH - x;
+    if (y + h > LCD_HEIGHT) h = LCD_HEIGHT - y;
+    if (w <= 0 || h <= 0)
+        return false;
+
+    lcd_layer_mark(LCD_LAYER_OVERLAY, x, y, w, h);
+
+    if (layer_snapshot)
+    {
+        const size_t stride =
+            LCD_NATIVE_STRIDE(lcd_framebuffer_default.stride);
+        fb_data *dst = lcd_layer_fb(LCD_LAYER_OVERLAY)->fb_ptr;
+        const fb_data *src = lcd_framebuffer_default.fb_ptr;
+        int row;
+        for (row = 0; row < h; row++)
+            memcpy(dst + (size_t)(y + row) * stride + x,
+                   src + (size_t)(y + row) * stride + x,
+                   w * sizeof(fb_data));
+    }
+    return true;
+}
+
+static void dirty_flush(void);
+
+static void bd_cleared(int x, int y, int w, int h)
+{
+    dirty_add(x, y, x + w - 1, y + h - 1);
+}
+
+static void bd_restore_all(void)
+{
+    lcd_layer_clear(LCD_LAYER_OVERLAY, bd_cleared);
+}
+
+static inline void bd_forget_all(void) { }
+static inline void bd_forget_within(int rx, int ry, int rw, int rh)
+{ (void)rx; (void)ry; (void)rw; (void)rh; }
+static inline void bd_gesture_reset(void) { }
+
+/* A full-screen viewport whose pixels are the layer's. The transparent key
+ * is its background, so text drawn solid leaves its box see-through, and
+ * the LCD backdrop is set aside while drawing: a solid fill copies from
+ * the backdrop at an offset that is only valid inside the framebuffer. */
+static struct viewport layer_vp;
+static fb_data *layer_saved_backdrop;
+
+static struct viewport *layer_begin(void)
+{
+    layer_vp.x = 0;
+    layer_vp.y = 0;
+    layer_vp.width = LCD_WIDTH;
+    layer_vp.height = LCD_HEIGHT;
+    layer_vp.flags = 0;
+    layer_vp.font = FONT_UI;
+    layer_vp.drawmode = DRMODE_SOLID;
+    layer_vp.buffer = lcd_layer_fb(LCD_LAYER_OVERLAY);
+    layer_vp.fg_pattern = global_settings.fg_color;
+    layer_vp.bg_pattern = LCD_LAYER_KEY;
+
+    layer_saved_backdrop = lcd_get_backdrop();
+    lcd_set_backdrop(NULL);
+    layer_drawing = true;
+    return lcd_set_viewport_ex(&layer_vp, 0);
+}
+
+static void layer_end(struct viewport *oldvp)
+{
+    lcd_set_viewport_ex(oldvp, 0);
+    lcd_set_backdrop(layer_saved_backdrop);
+    layer_drawing = false;
+}
+
+#elif defined(HAVE_COMPOSITOR)
 #include "canvas.h"
 #include "canvas_glue.h"
 
@@ -616,7 +720,9 @@ static void bd_gesture_reset(void)
 {
     bd_short = false;
 }
-#else
+#endif /* HAVE_LCD_LAYERS / HAVE_COMPOSITOR */
+
+#if !defined(HAVE_LCD_LAYERS) && !defined(HAVE_COMPOSITOR)
 #define BD_MAIN   0
 #define BD_BAND   1
 #define BD_EDGE_T 2
@@ -761,6 +867,18 @@ static void paint_edges(const struct overlay_shape *s)
 
 static void canvas_screen(struct canvas_surface *fb)
 {
+#ifdef HAVE_LCD_LAYERS
+    /* Into the layer. What the HUD blends against there is the layer's
+     * near-black key rather than the screen, so its translucency reads as
+     * a dark panel - the same thing on a dark theme. */
+    if (layer_drawing)
+    {
+        canvas_surface_init(fb, lcd_layer_fb(LCD_LAYER_OVERLAY)->fb_ptr, NULL,
+                            LCD_WIDTH, LCD_HEIGHT,
+                            (int)LCD_NATIVE_STRIDE(lcd_framebuffer_default.stride));
+        return;
+    }
+#endif
     canvas_surface_init(fb, lcd_framebuffer_default.fb_ptr, NULL,
                         LCD_WIDTH, LCD_HEIGHT,
                         (int)LCD_NATIVE_STRIDE(lcd_framebuffer_default.stride));
@@ -998,6 +1116,10 @@ static void overlay_paint(const struct overlay_shape *s)
      * underneath to repaint any more. */
     bd_restore_all();
 
+#ifdef HAVE_LCD_LAYERS
+    oldvp = layer_begin();
+#else
+
     /* Paint into the default, full-screen viewport. The overlay's
      * coordinates are absolute, and whoever called us may well have a
      * viewport of their own set - the list does.
@@ -1016,6 +1138,7 @@ static void overlay_paint(const struct overlay_shape *s)
      * backing store that ink is taken back off by the overlay itself, and
      * forcing a whole-screen clear buys nothing but a flash. */
     oldvp = lcd_set_viewport_ex(NULL, bd_active() ? 0 : VP_FLAG_VP_DIRTY);
+#endif
 
     /* Solid, in the theme's foreground colour, not DRMODE_COMPLEMENT.
      * Inverting the pixels underneath is self-erasing, which is why it was
@@ -1070,11 +1193,14 @@ static void overlay_paint(const struct overlay_shape *s)
 
 #ifdef HAVE_COMPOSITOR
     case STICK_OVERLAY_CANVAS:
-        paint_canvas(s, false);
-        break;
-
     case STICK_OVERLAY_CANVAS_MIN:
-        paint_canvas(s, true);
+#ifdef HAVE_LCD_LAYERS
+        layer_snapshot = true;
+#endif
+        paint_canvas(s, s->style == STICK_OVERLAY_CANVAS_MIN);
+#ifdef HAVE_LCD_LAYERS
+        layer_snapshot = false;
+#endif
         break;
 #endif
 
@@ -1125,11 +1251,18 @@ static void overlay_paint(const struct overlay_shape *s)
     }
 
 flush:
+#ifdef HAVE_LCD_LAYERS
+    /* Back on the framebuffer before the push: the update composes the
+     * layer over it. */
+    layer_end(oldvp);
+    dirty_flush();
+#else
     dirty_flush();
 
     /* Restores the caller's viewport and, in doing so, leaves the default
      * one flagged dirty - see the note at the top. */
     lcd_set_viewport_ex(oldvp, bd_active() ? 0 : VP_FLAG_VP_DIRTY);
+#endif
 }
 
 /* Ask whatever is underneath to put itself back. GUI_EVENT_NEED_UI_UPDATE
@@ -1281,6 +1414,16 @@ bool stick_dial_armed(void)
 
 void stick_redraw_overlay(int rx, int ry, int rw, int rh)
 {
+#ifdef HAVE_LCD_LAYERS
+    /* The list's own update already put the layer over its new rows. A
+     * shape that has not moved needs nothing more - unless it is the
+     * Canvas HUD, whose layer holds a copy of the rows it covers. */
+    if (overlay.want && overlay.drawn &&
+        overlay.have_s.style != STICK_OVERLAY_CANVAS &&
+        overlay.have_s.style != STICK_OVERLAY_CANVAS_MIN &&
+        !memcmp(&overlay.have_s, &overlay.want_s, sizeof(overlay.have_s)))
+        return;
+#endif
     /* Called from the list once it has finished putting its rows down.
      * Whatever we had drawn is underneath those rows now, so the shape is
      * gone: forget it without trying to XOR it off (that would scribble on
@@ -1623,6 +1766,10 @@ void stick_tick(int context)
 
     play_cue(out.cue);
     overlay_update(&live_state);
+#ifdef HAVE_LCD_LAYERS
+    if (!overlay.want)
+        overlay_clear();        /* the coast ended; see the touch path */
+#endif
 
     if (out.action != STICK_ACT_FIRE)
         return;
@@ -1700,6 +1847,16 @@ int stick_handle_touch(const struct touchevent *ev, int context,
     play_cue(out.cue);
     note_dial_arming();
     overlay_update(&live_state);
+
+#ifdef HAVE_LCD_LAYERS
+    /* The gesture is over: take the overlay off now. Leaving it to the next
+     * action poll kept the last frame on the panel for as long as the
+     * screen sat blocked waiting for input - the edge light that stayed lit
+     * after a release. In its own layer the clear cannot scribble on
+     * anything, so there is no reason to wait. */
+    if (!overlay.want)
+        overlay_clear();
+#endif
 
     if (out.hold_end != STICK_BIND_NONE)
     {
