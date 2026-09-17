@@ -71,6 +71,7 @@
 #include "tree.h"
 
 #include "voice_thread.h"
+#include "lcd-transition.h"
 
 #if defined(DX50) || defined(DX90)
 #include "governor-ibasso.h"
@@ -2713,6 +2714,28 @@ const struct settings_list settings[] = {
    OFFON_SETTING(0, ab_autoscan, LANG_AB_AUTOSCAN, true,
                  "audiobook scan at startup", NULL),
    OFFON_SETTING(0, emoji_enabled, LANG_EMOJI, true, "emoji", NULL),
+#ifdef HAVE_LCD_TRANSITIONS
+   /* Named in .cfg files, so a theme can pick its transitions and the
+    * user can still change them afterwards. */
+   CHOICE_SETTING(0, menu_transition, LANG_MENU_TRANSITION,
+                  LCD_TRANSITION_SLIDE, "menu transition",
+                  "off,fade,slide,push,cascade", NULL, LCD_TRANSITION_COUNT,
+                  ID2P(LANG_OFF), ID2P(LANG_TRANSITION_FADE),
+                  ID2P(LANG_TRANSITION_SLIDE), ID2P(LANG_TRANSITION_PUSH),
+                  ID2P(LANG_TRANSITION_CASCADE)),
+   INT_SETTING(F_TIME_SETTING, menu_transition_ms, LANG_MENU_TRANSITION_TIME,
+               200, "menu transition time", UNIT_MS, 50, 1000, 50,
+               NULL, NULL, NULL),
+   CHOICE_SETTING(0, wps_transition, LANG_WPS_TRANSITION,
+                  LCD_TRANSITION_FADE, "wps transition",
+                  "off,fade,slide,push,cascade", NULL, LCD_TRANSITION_COUNT,
+                  ID2P(LANG_OFF), ID2P(LANG_TRANSITION_FADE),
+                  ID2P(LANG_TRANSITION_SLIDE), ID2P(LANG_TRANSITION_PUSH),
+                  ID2P(LANG_TRANSITION_CASCADE)),
+   INT_SETTING(F_TIME_SETTING, wps_transition_ms, LANG_WPS_TRANSITION_TIME,
+               250, "wps transition time", UNIT_MS, 50, 1000, 50,
+               NULL, NULL, NULL),
+#endif
    CUSTOM_SETTING(0, root_menu_renamed,
                   LANG_ROCKBOX_TITLE, /* lang string here is never actually used */
                   NULL, "root menu names",

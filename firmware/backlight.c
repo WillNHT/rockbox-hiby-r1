@@ -998,6 +998,16 @@ bool is_backlight_on(bool ignore_always_off)
         || ((timeout < 0) && !ignore_always_off);
 }
 
+/* True only at full brightness. Unlike is_backlight_on(), dimmed counts as
+ * not lit: a press that lands on a dimmed screen is a wake, not a command.
+ * "Always off" reports lit, since no press could change it. */
+bool is_backlight_lit(void)
+{
+    if (backlight_timer > 0)
+        return true;
+    return backlight_get_current_timeout() <= 0;
+}
+
 /* return value in ticks; 0 means always on, <0 means always off */
 int backlight_get_current_timeout(void)
 {
@@ -1211,6 +1221,11 @@ void backlight_set_timeout(int value) {(void)value;}
 bool is_backlight_on(bool ignore_always_off)
 {
     (void)ignore_always_off;
+    return true;
+}
+
+bool is_backlight_lit(void)
+{
     return true;
 }
 #ifdef HAVE_REMOTE_LCD

@@ -19288,3 +19288,129 @@
     *: "Emoji"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_TRANSITIONS
+  desc: theme settings: screen transitions submenu
+  user: core
+  <source>
+    *: "Transitions"
+  </source>
+  <dest>
+    *: "Transitions"
+  </dest>
+  <voice>
+    *: "Transitions"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_MENU_TRANSITION
+  desc: transitions: effect when moving between menus and screens
+  user: core
+  <source>
+    *: "Menu Transition"
+  </source>
+  <dest>
+    *: "Menu Transition"
+  </dest>
+  <voice>
+    *: "Menu Transition"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_MENU_TRANSITION_TIME
+  desc: transitions: length of the menu transition
+  user: core
+  <source>
+    *: "Menu Transition Time"
+  </source>
+  <dest>
+    *: "Menu Transition Time"
+  </dest>
+  <voice>
+    *: "Menu Transition Time"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_WPS_TRANSITION
+  desc: transitions: effect on the While Playing Screen when the track changes
+  user: core
+  <source>
+    *: "Track Change Transition"
+  </source>
+  <dest>
+    *: "Track Change Transition"
+  </dest>
+  <voice>
+    *: "Track Change Transition"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_WPS_TRANSITION_TIME
+  desc: transitions: length of the track change transition
+  user: core
+  <source>
+    *: "Track Change Transition Time"
+  </source>
+  <dest>
+    *: "Track Change Transition Time"
+  </dest>
+  <voice>
+    *: "Track Change Transition Time"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TRANSITION_FADE
+  desc: transition effect: cross-fade
+  user: core
+  <source>
+    *: "Fade"
+  </source>
+  <dest>
+    *: "Fade"
+  </dest>
+  <voice>
+    *: "Fade"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TRANSITION_SLIDE
+  desc: transition effect: new screen slides over the old one
+  user: core
+  <source>
+    *: "Slide"
+  </source>
+  <dest>
+    *: "Slide"
+  </dest>
+  <voice>
+    *: "Slide"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TRANSITION_PUSH
+  desc: transition effect: new screen pushes the old one out
+  user: core
+  <source>
+    *: "Push"
+  </source>
+  <dest>
+    *: "Push"
+  </dest>
+  <voice>
+    *: "Push"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TRANSITION_CASCADE
+  desc: transition effect: parts of the screen arrive one after another
+  user: core
+  <source>
+    *: "Cascade"
+  </source>
+  <dest>
+    *: "Cascade"
+  </dest>
+  <voice>
+    *: "Cascade"
+  </voice>
+</phrase>

@@ -1033,6 +1033,12 @@ struct user_settings
     int  ab_finished_pct;    /* a book this far through counts as finished */
     bool ab_autoscan;        /* rescan at startup when the library changed */
     bool emoji_enabled;      /* colour emoji from /.rockbox/emoji */
+#ifdef HAVE_LCD_TRANSITIONS
+    int menu_transition;     /* enum lcd_transition */
+    int menu_transition_ms;
+    int wps_transition;      /* enum lcd_transition, on track change */
+    int wps_transition_ms;
+#endif
 #ifdef HAVE_QUICKSCREEN
     bool shortcuts_replaces_qs;
 #endif

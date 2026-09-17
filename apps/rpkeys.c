@@ -78,8 +78,10 @@
 #define LOCK_HOLD_TICKS      (HZ)
 #define SHUTDOWN_HOLD_TICKS  (4 * HZ)
 
-/* A press shorter than this is a tap, whatever else is going on. */
-#define TAP_MAX_TICKS        (HZ / 2)
+/* A held next/prev changes track once it has been down this long - the
+ * button driver's first repeat, so the first skip lands as soon as a hold
+ * can be told from a press. */
+#define SKIP_HOLD_TICKS      (HZ * 3 / 10)
 
 /* POWER is the one key where a tap and a hold mean unrelated things, so the
  * two are made mutually exclusive rather than merely different: a press
@@ -600,6 +602,9 @@ static bool handle_power(int held, bool repeat, bool release)
             lock_cue_done = true;
             power_consumed = true;
             locked = !locked;
+#if defined(BUTTON_TOUCH_WAKES) && !defined(SIMULATOR)
+            button_set_touch_wake(!locked);
+#endif
         }
 
         /* Not until the press has outlived a tap's opening moments: the
@@ -659,7 +664,8 @@ static bool handle_volume(int button, bool repeat, bool release)
  * With Hold Prev/Next = Continuous Skip the hold keeps changing track: one
  * track per hold_skip_delay seconds for as long as the key stays down, the
  * one in progress playing on in between. With Seek it is the single
- * change after TAP_MAX_TICKS it always was.
+ * change. Either way the first change comes after SKIP_HOLD_TICKS: waiting
+ * the whole hold_skip_delay before the first one made a hold feel dead.
  *
  * The seek happens on the press, not on the release. Waiting for the finger
  * to come up so the two could be told apart put a visible delay in front of
@@ -670,6 +676,7 @@ static struct
 {
     long down_tick;
     bool consumed;
+    bool skipped;       /* this hold has changed track at least once */
 } skipper[2];
 
 static bool handle_skip(int idx, int dir, bool repeat, bool release)
@@ -680,6 +687,7 @@ static bool handle_skip(int idx, int dir, bool repeat, bool release)
     {
         skipper[idx].down_tick = 0;
         skipper[idx].consumed = false;
+        skipper[idx].skipped = false;
         return true;
     }
 
@@ -691,17 +699,20 @@ static bool handle_skip(int idx, int dir, bool repeat, bool release)
     {
         skipper[idx].down_tick = now;
         skipper[idx].consumed = false;
+        skipper[idx].skipped = false;
         seek_by(dir * SEEK_STEP_MS);
         return true;
     }
 
     bool continuous = global_settings.hold_skip == HOLD_SKIP_CONTINUOUS;
-    long threshold = continuous ? global_settings.hold_skip_delay * HZ
-                                : TAP_MAX_TICKS;
+    long threshold = (continuous && skipper[idx].skipped)
+                     ? global_settings.hold_skip_delay * HZ
+                     : SKIP_HOLD_TICKS;
 
     if (skipper[idx].down_tick && !skipper[idx].consumed &&
         now - skipper[idx].down_tick >= threshold)
     {
+        skipper[idx].skipped = true;
         if (continuous)
             skipper[idx].down_tick = now;   /* the next one counts from here */
         else

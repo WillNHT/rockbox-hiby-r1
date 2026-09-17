@@ -849,7 +849,7 @@ SHF%xd(O,%ps)
 # -----
 %Vl(q2,30,690,-30,28,2)
 %Vt(0)
-%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>
+%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>%?id< - %id|>
 #
 %Vl(q3,30,718,-30,46,4)
 %Vt(0)

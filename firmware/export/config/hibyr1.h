@@ -40,6 +40,10 @@
  * The stick overlay lives in one instead of in the framebuffer. */
 #define HAVE_LCD_LAYERS
 
+/* Animated screen changes (firmware/drivers/lcd-transition.c), presented
+ * through the layers' update hook. Two frame copies, 1.5 MiB. */
+#define HAVE_LCD_TRANSITIONS
+
 /* Blend antialiased glyphs and alpha images in linear light rather than in
  * gamma-encoded RGB565, so a glyph keeps its weight whatever it landed on.
  * Six table lookups per blended pixel; 2.2 KiB of tables. */
@@ -119,6 +123,16 @@
  * asks for with a key. Locking input must not also blank the screen. See
  * backlight_get_current_timeout(). */
 #define SOFTLOCK_KEEPS_BACKLIGHT
+
+/* Physical keys pressed on a dimmed or dark screen only wake it; the press
+ * is dropped (firmware/drivers/button.c). Bluetooth remote keys are left
+ * out: a remote is used with the player in a pocket. The value is
+ * BUTTON_POWER|RIGHT|LEFT|UP|DOWN from the target's button-target.h. */
+#define BUTTON_WAKE_SWALLOWS 0x3d
+#ifndef BOOTLOADER
+/* A tap on a dimmed or dark screen wakes it (button-devinput.c). */
+#define BUTTON_TOUCH_WAKES
+#endif
 
 #define MIN_BRIGHTNESS_SETTING      1
 #define MAX_BRIGHTNESS_SETTING      100

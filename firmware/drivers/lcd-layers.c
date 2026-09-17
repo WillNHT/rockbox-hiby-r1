@@ -47,6 +47,7 @@
 #include "system.h"
 #include "lcd.h"
 #include "lcd-layers.h"
+#include "lcd-transition.h"
 
 #define MAX_RECTS 8
 
@@ -250,6 +251,10 @@ void lcd_layers_compose(bool on)
  * *_base by its driver. */
 void lcd_update(void)
 {
+#if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
+    if (lcd_transition_hold())
+        return;
+#endif
     if (composed || !any_content())
     {
         lcd_update_base();
@@ -262,6 +267,10 @@ void lcd_update(void)
 
 void lcd_update_rect(int x, int y, int width, int height)
 {
+#if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
+    if (lcd_transition_hold())
+        return;
+#endif
     if (composed || !any_content())
     {
         lcd_update_rect_base(x, y, width, height);

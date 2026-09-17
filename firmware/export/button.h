@@ -145,6 +145,11 @@ void reset_last_touch(void);
 
 #if (defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN)) && !defined(HAS_BUTTON_HOLD)
 void button_enable_touch(bool en);
+#ifdef BUTTON_TOUCH_WAKES
+/* While input is locked a tap on a dark screen stays dark. */
+void button_set_touch_wake(bool enable);
+bool button_touch_wake_enabled(void);
+#endif
 #endif
 
 #ifdef HAVE_SW_POWEROFF
