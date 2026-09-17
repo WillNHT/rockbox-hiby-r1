@@ -55,10 +55,11 @@
 #include "skin_layer.h"
 #include "wps_internals.h"
 
-/* Blending needs real colour channels and a framebuffer laid out in them.
+/* Blending needs real colour channels and a framebuffer laid out in them,
+ * and blend565() works on RGB565 pixels only.
  * On a 1bpp or 2bpp target there is nothing to blend towards, so
  * everything below degrades to the opaque path it replaced. */
-#if defined(HAVE_LCD_COLOR) && (LCD_DEPTH >= 16) && !defined(__PCTOOL__)
+#if defined(HAVE_LCD_COLOR) && (LCD_DEPTH == 16) && !defined(__PCTOOL__)
 #define SKIN_LAYER_CAN_BLEND
 #endif
 

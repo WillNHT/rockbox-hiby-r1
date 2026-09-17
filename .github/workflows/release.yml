@@ -1,0 +1,202 @@
+name: HiBy R1 release
+
+# Produces files that go straight onto the player, attached to a GitHub
+# Release instead of buried in a double-zipped Actions artifact.
+#
+#   push a tag v*        -> a versioned release
+#   push to master       -> the rolling "nightly" prerelease is replaced
+#   manual dispatch      -> nightly, unless a tag is given
+on:
+  push:
+    tags: ['v*']
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to create (blank = nightly prerelease)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: firmware
+            type: N
+          - name: bootloader
+            type: B
+    runs-on: ubuntu-latest
+    name: Build ${{ matrix.name }}
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0  # version string comes from git describe
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y automake bison build-essential ccache flex libc6-dev libgmp3-dev libmpfr-dev \
+        libsdl1.2-dev libtool-bin texinfo zip gawk wget libmpc-dev gettext gtk-doc-tools
+
+    - name: root suid tar
+      run: sudo chown root /bin/tar && sudo chmod u+s /bin/tar
+
+    - name: Restore toolchain
+      id: cache
+      uses: actions/cache/restore@v6
+      with:
+        path: /tmp/local
+        # Same key as build.yml, so the two workflows share the toolchain.
+        key: ${{ runner.os }}-toolchain-y-${{ hashFiles('tools/rockboxdev.sh') }}
+
+    - name: Build toolchain
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: |
+        cd tools
+        chmod +x rockboxdev.sh
+        sudo ./rockboxdev.sh --target=y --prefix=/tmp/local
+
+    - name: Save toolchain
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: /tmp/local
+        key: ${{ runner.os }}-toolchain-y-${{ hashFiles('tools/rockboxdev.sh') }}
+
+    - name: Build
+      run: |
+        export PATH=/tmp/local/bin:$PATH
+        mkdir build && cd build
+        ../tools/configure --target=hibyr1 --type=${{ matrix.type }}
+        make -j$(nproc)
+        mkdir ../out
+        if [ "${{ matrix.type }}" = B ]; then
+          cp bootloader.r1 ../out/
+        else
+          # fontzip first: with rockbox.zip already present, its NODEPS rule
+          # would consider the target up to date and write nothing.
+          make fontzip
+          make zip
+          cp rockbox.zip ../out/rockbox-hibyr1.zip
+          cp rockbox-fonts.zip ../out/rockbox-hibyr1-fonts.zip
+        fi
+
+    - uses: actions/upload-artifact@v7
+      with:
+        name: ${{ matrix.name }}
+        path: out/*
+        if-no-files-found: error
+
+  themes:
+    runs-on: ubuntu-latest
+    name: Package themes
+    steps:
+    - uses: actions/checkout@v7
+    # The fork's themes live outside the build's zip; lay them out as they
+    # sit on the card so the archive unzips over the player's root.
+    - name: Package
+      run: |
+        mkdir -p pkg/.rockbox/themes pkg/.rockbox/wps pkg/.rockbox/fonts out
+        cp themes/*.cfg pkg/.rockbox/themes/
+        cp -r themes/wps/. pkg/.rockbox/wps/
+        cp -r themes/fonts/. pkg/.rockbox/fonts/
+        (cd pkg && zip -r ../out/rockbox-hibyr1-themes.zip .rockbox)
+    - uses: actions/upload-artifact@v7
+      with:
+        name: themes
+        path: out/*
+
+  # A stock HiBy update with this fork's bootloader injected: flash it once
+  # through the player's own updater to get the Rockbox boot option.
+  patched-firmware:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Patch stock firmware
+    continue-on-error: true  # the stock image is third-party; never block a release on it
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/download-artifact@v7
+      with:
+        name: bootloader
+    - name: Patch
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y p7zip-full squashfs-tools genisoimage coreutils
+        curl -fL -o r1.upt "https://github.com/bidhata/Hiby-R1-Mod/releases/download/file-limit/r1.upt"
+        chmod +x tools/r1_patcher/r1_patcher.sh
+        sudo ./tools/r1_patcher/r1_patcher.sh r1.upt bootloader.r1
+        mkdir out && sudo cp r1_rb.upt out/r1_rb.upt && sudo chown -R "$USER" out
+    - uses: actions/upload-artifact@v7
+      with:
+        name: patched-firmware
+        path: out/*
+
+  publish:
+    needs: [build, themes, patched-firmware]
+    if: always() && needs.build.result == 'success' && needs.themes.result == 'success'
+    runs-on: ubuntu-latest
+    name: Publish release
+    steps:
+    - uses: actions/download-artifact@v7
+      with:
+        path: dist
+        merge-multiple: true
+
+    - name: Checksums
+      run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
+
+    - name: Pick release
+      id: rel
+      env:
+        INPUT_TAG: ${{ inputs.tag }}
+      run: |
+        if [ "$GITHUB_REF_TYPE" = tag ]; then
+          echo "tag=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
+        elif [ -n "$INPUT_TAG" ]; then
+          echo "tag=$INPUT_TAG" >> $GITHUB_OUTPUT
+        else
+          echo "tag=nightly" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Write notes
+      run: |
+        cat > notes.md <<EOF
+        Built from \`${GITHUB_SHA::10}\`.
+
+        | File | Put it where |
+        |---|---|
+        | \`rockbox-hibyr1.zip\` | Unzip to the root of the SD card (creates \`.rockbox/\`). |
+        | \`rockbox-hibyr1-fonts.zip\` | Optional. Unzip to the card root, over the above. |
+        | \`rockbox-hibyr1-themes.zip\` | Optional. This fork's themes; unzip to the card root, then pick one under Theme Settings. |
+        | \`bootloader.r1\` | Bootloader, for use with \`tools/r1_patcher\`. |
+        | \`r1_rb.upt\` | Stock HiBy firmware with the bootloader injected (if present). Copy to the card root and run the player's firmware update; only needed once. |
+
+        Check downloads against \`SHA256SUMS\`.
+        EOF
+
+    - name: Publish
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        TAG: ${{ steps.rel.outputs.tag }}
+      run: |
+        if [ "$TAG" = nightly ]; then
+          # Rolling prerelease: drop the old one and move the tag to this commit.
+          gh release delete nightly --yes --cleanup-tag || true
+          gh release create nightly dist/* --target "$GITHUB_SHA" --prerelease \
+            --title "Nightly ($(date -u +%Y-%m-%d) ${GITHUB_SHA::7})" --notes-file notes.md
+        elif gh release view "$TAG" >/dev/null 2>&1; then
+          gh release upload "$TAG" dist/* --clobber
+        else
+          gh release create "$TAG" dist/* --target "$GITHUB_SHA" \
+            --title "$TAG" --notes-file notes.md --generate-notes
+        fi
