@@ -123,6 +123,10 @@ static char *debug_get_flags(uint32_t flags);
 static void debug_available_settings(void);
 
 #define CONFIGFILE_TEMP CONFIGFILE ".tmp"
+/* The last config.cfg that was written completely. Not ".bak": users keep
+   their own hand-made config.cfg.bak next to it, and this one is replaced
+   on every save. */
+#define CONFIGFILE_LASTGOOD CONFIGFILE ".lastgood"
 #define RESUMEFILE_TEMP RESUMEFILE ".tmp"
 
 #ifdef LOGF_ENABLE
@@ -144,6 +148,17 @@ bool rename_temp_file(const char *tempfile,
     remove(file);
     rename(tempfile, file);
     return true;
+}
+
+/* How many settings the last settings_load_config() call recognised. */
+static int settings_loaded_count;
+static bool settings_restored;
+
+bool settings_restored_from_backup(void)
+{
+    bool restored = settings_restored;
+    settings_restored = false;
+    return restored;
 }
 
 const char* setting_get_cfgvals(const struct settings_list *setting)
@@ -177,7 +192,15 @@ void settings_load(void)
     logf("\r\n%s()\r\n", __func__);
     debug_available_settings();
 
-    settings_load_config(CONFIGFILE, false); /* load user_settings items */
+    /* load user_settings items. A config.cfg that is missing, empty or
+       holds nothing we recognise is what a crash in the middle of a save
+       leaves behind; the last complete one is kept for exactly that. */
+    if ((!settings_load_config(CONFIGFILE, false) || settings_loaded_count == 0)
+        && settings_load_config(CONFIGFILE_LASTGOOD, false)
+        && settings_loaded_count > 0)
+    {
+        settings_restored = true;
+    }
     settings_load_config(RESUMEFILE, false); /* load system_status items */
 
     /* fixed settings file has final say on user_settings AND system_status items */
@@ -377,6 +400,7 @@ bool settings_load_config(const char* file, bool apply)
     char line[128];
     bool theme_changed = false;
 
+    settings_loaded_count = 0;
     fd = open_utf8(file, O_RDONLY);
     if (fd < 0)
         return false;
@@ -387,6 +411,7 @@ bool settings_load_config(const char* file, bool apply)
         if (!settings_parseline(line, &name, &value))
             continue;
         string_to_cfg(name, value, &theme_changed);
+        settings_loaded_count++;
     } /* while(...) */
 
     close(fd);
@@ -609,6 +634,10 @@ static bool settings_write_config(const char* filename, int options)
             return false;
         }
     } /* for(...) */
+    /* The rename that follows is only as good as the data under it: on a
+       FAT card with delayed writes a crash straight after it can leave a
+       config.cfg with no content. */
+    fsync(fd);
     close(fd);
     return true;
 }
@@ -648,7 +677,16 @@ static void flush_config_block_callback(void)
         }
         else
         {
-            rename_temp_file(CONFIGFILE_TEMP, CONFIGFILE);
+            /* Keep the previous complete file until the new one is in
+               place: at every step either config.cfg or the last-good copy
+               is whole. */
+            if (file_exists(CONFIGFILE))
+            {
+                remove(CONFIGFILE_LASTGOOD);
+                rename(CONFIGFILE, CONFIGFILE_LASTGOOD);
+            }
+            if (!rename_temp_file(CONFIGFILE_TEMP, CONFIGFILE))
+                user_settings_crc = 0;
         }
     }
 #ifdef LOGF_ENABLE

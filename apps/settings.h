@@ -321,6 +321,8 @@ void update_runtime(void);
 void zero_runtime(void);
 void settings_load(void) INIT_ATTR;
 bool settings_load_config(const char* file, bool apply);
+/* true once if settings_load() had to fall back to the last-good config */
+bool settings_restored_from_backup(void);
 
 void status_save(bool force);
 int settings_save(void);

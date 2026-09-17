@@ -376,6 +376,7 @@ static int get_tag(int *tag)
         TAG_MATCH("title", tag_title) \
         TAG_MATCH("%sort", var_sorttype) \
         TAG_MATCH("artist", tag_artist) \
+        TAG_MATCH("decade", tag_virt_decade) \
         TAG_MATCH("length", tag_length) \
         TAG_MATCH("rating", tag_rating) \
         TAG_MATCH("%limit", var_limit) \

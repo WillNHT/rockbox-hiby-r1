@@ -34,6 +34,11 @@
 #include "lcd.h"
 #include "filesystem-hosted.h"
 #include "logf.h"
+#include "rbpaths.h"
+#include "crashlog-linux.h"
+
+const char *handle_special_dirs(const char *dir, unsigned flags,
+                                char *buf, const size_t bufsize);
 
 /* to make thread-internal.h happy */
 uintptr_t *stackbegin;
@@ -50,6 +55,16 @@ static void sig_handler(int sig, siginfo_t *siginfo, void *context)
      */
     static bool triggered = false;
 
+    /* get context info */
+    ucontext_t *uc = (ucontext_t *)context;
+    unsigned long pc = uc->uc_mcontext.pc;
+    unsigned long sp = uc->uc_mcontext.gregs[29];
+
+    /* The file first: the screen is gone after the reboot, the card is not.
+       Only once, for the same reason the backtrace is only taken once. */
+    if (!triggered && sig != SIGTERM && sig != SIGPIPE)
+        crashlog_write(sig, pc, siginfo->si_addr);
+
     lcd_set_backdrop(NULL);
     lcd_set_drawinfo(DRMODE_SOLID, LCD_BLACK, LCD_WHITE);
     unsigned line = 0;
@@ -57,11 +72,6 @@ static void sig_handler(int sig, siginfo_t *siginfo, void *context)
     lcd_setfont(FONT_SYSFIXED);
     lcd_set_viewport(NULL);
     lcd_clear_display();
-
-    /* get context info */
-    ucontext_t *uc = (ucontext_t *)context;
-    unsigned long pc = uc->uc_mcontext.pc;
-    unsigned long sp = uc->uc_mcontext.gregs[29];
 
     lcd_putsf(0, line++, "%s at %08lx", strsignal(sig), pc);
 
@@ -107,6 +117,12 @@ void system_init(void)
     int *s;
     /* fake stack, to make thread-internal.h happy */
     stackbegin = stackend = (uintptr_t*)&s;
+
+    /* Resolve the crash log's real path now; a signal handler cannot. */
+    char crashlog_buf[256];
+    crashlog_init(handle_special_dirs(ROCKBOX_DIR "/crash.log", 0,
+                                      crashlog_buf, sizeof(crashlog_buf)));
+
    /* catch some signals for easier debugging */
     struct sigaction sa;
     sigfillset(&sa.sa_mask);

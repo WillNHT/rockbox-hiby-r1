@@ -155,6 +155,7 @@ target/hosted/lc-unix.c
 target/hosted/sysfs.c
 target/hosted/backlight-unix.c
 target/hosted/system-hosted.c
+target/hosted/crashlog-linux.c
 target/hosted/lcd-linuxfb.c
 target/hosted/power-linux.c
 #endif

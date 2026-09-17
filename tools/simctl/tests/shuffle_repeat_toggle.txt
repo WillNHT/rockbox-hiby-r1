@@ -1,0 +1,487 @@
+# Regression for the shuffle/repeat quickscreen crash (issue #4).
+# Needs the simdisk layout used here: Music/1818/<album>/01 *.m4a.
+# Opens the track, holds up for the quickscreen, flicks left (shuffle)
+# and right (repeat) 42 times. Before the fix the sim segfaulted in
+# audio_update_and_announce_next_track() within the first few flicks.
+sleep 1500
+down 240 500
+sleep 60
+move 240 475
+sleep 60
+move 240 450
+sleep 60
+move 240 425
+sleep 60
+up
+sleep 600
+down 240 400
+sleep 120
+up
+sleep 600
+sleep 1200
+down 240 500
+sleep 60
+move 240 475
+sleep 60
+move 240 450
+sleep 60
+move 240 425
+sleep 60
+up
+sleep 600
+down 240 400
+sleep 120
+up
+sleep 600
+sleep 1200
+dump
+down 240 400
+sleep 120
+up
+sleep 600
+sleep 1200
+down 240 400
+sleep 120
+up
+sleep 600
+sleep 1200
+down 240 400
+sleep 120
+up
+sleep 600
+sleep 2500
+down 240 500
+sleep 40
+move 240 470
+sleep 40
+move 240 430
+sleep 40
+move 240 390
+sleep 1200
+up
+sleep 1000
+dump
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 200 400
+sleep 30
+move 160 400
+sleep 30
+move 120 400
+sleep 30
+up
+sleep 250
+down 240 400
+sleep 30
+move 280 400
+sleep 30
+move 320 400
+sleep 30
+move 360 400
+sleep 30
+up
+sleep 800
+dump
+sleep 500
+dump
+dump

@@ -225,7 +225,7 @@ static const char * const tags_str[] = { "artist", "album", "genre", "title",
 #else /* strings for logf debugging */
     "tag_virt_basename", "tag_virt_length_min", "tag_virt_length_sec",
     "tag_virt_playtime_min", "tag_virt_playtime_sec",
-    "tag_virt_entryage", "tag_virt_autoscore"
+    "tag_virt_entryage", "tag_virt_autoscore", "tag_virt_decade"
 };
 /* more debug strings */
 static const char * const tag_type_str[] = {
@@ -1321,6 +1321,13 @@ static long check_virtual_tags(int tag, int idx_id,
                    - tc_find_tag(tag_commitid, idx_id, idx) - 1;
             break;
 
+        /* The year rounded down to its decade: 1987 -> 1980. */
+        case tag_virt_decade:
+            data = tc_find_tag(tag_year, idx_id, idx);
+            if (data > 0)
+                data -= data % 10;
+            break;
+
         case tag_virt_basename:
             tag = tag_filename; /* return filename; caller handles basename */
             /* FALLTHRU */
@@ -1671,12 +1678,15 @@ static bool build_lookup_list(struct tagcache_search *tcs)
             if (!check_clauses(tcs, idx, tcs->clause, tcs->clause_count))
                 continue;
             /* Add to the seek list if not already in uniq buffer (doesn't yield)*/
-            if (!add_uniqbuf(tcs, idx->tag_seek[tcs->type]))
+            long seek = TAGCACHE_IS_VIRTUAL(tcs->type)
+                ? check_virtual_tags(tcs->type, i, idx)
+                : idx->tag_seek[tcs->type];
+            if (!add_uniqbuf(tcs, seek))
                 continue;
 
             /* Lets add it. */
             seeklist = &tcs->seeklist[tcs->seek_list_count];
-            seeklist->seek = idx->tag_seek[tcs->type];
+            seeklist->seek = seek;
             seeklist->flag = idx->flag;
             seeklist->idx_id = i;
             tcs->seek_list_count++;
@@ -1728,12 +1738,15 @@ static bool build_lookup_list(struct tagcache_search *tcs)
             continue;
 
         /* Add to the seek list if not already in uniq buffer. */
-        if (!add_uniqbuf(tcs, entry.tag_seek[tcs->type]))
+        long seek = TAGCACHE_IS_VIRTUAL(tcs->type)
+            ? check_virtual_tags(tcs->type, i, &entry)
+            : entry.tag_seek[tcs->type];
+        if (!add_uniqbuf(tcs, seek))
             continue;
 
         /* Lets add it. */
         seeklist = &tcs->seeklist[tcs->seek_list_count];
-        seeklist->seek = entry.tag_seek[tcs->type];
+        seeklist->seek = seek;
         seeklist->flag = entry.flag;
         seeklist->idx_id = i;
         tcs->seek_list_count++;
@@ -1776,7 +1789,9 @@ bool tagcache_search(struct tagcache_search *tcs, int tag)
     tcs->ramsearch = tc_stat.ramcache;
     if (tcs->ramsearch)
     {
-        tcs->entry_count = tcramcache.hdr->entry_count[tcs->type];
+        tcs->entry_count = TAGCACHE_IS_VIRTUAL(tcs->type)
+            ? current_tcmh.tch.entry_count
+            : tcramcache.hdr->entry_count[tcs->type];
     }
     else
 #endif
