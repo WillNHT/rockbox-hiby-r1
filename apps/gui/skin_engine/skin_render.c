@@ -332,7 +332,7 @@ static bool do_non_text_tags(struct gui_wps *gwps, struct skin_draw_info *info,
                 struct skin_albumart *aa = SKINOFFSETTOPTR(skin_buffer, data->albumart);
                 if (aa)
                 {
-                    int handle = playback_current_aa_hid(data->playback_aa_slot);
+                    int handle = skin_albumart_hid(data->playback_aa_slot, NULL);
 #if CONFIG_TUNER
                     if (in_radio_screen() || (get_radio_status() != FMRADIO_OFF))
                     {
@@ -500,7 +500,7 @@ static void do_tags_in_hidden_conditional(struct skin_element* branch,
             else if (token->type == SKIN_TOKEN_ALBUMART_DISPLAY && data->albumart)
             {
                 draw_album_art(gwps,
-                        playback_current_aa_hid(data->playback_aa_slot), true);
+                        skin_albumart_hid(data->playback_aa_slot, NULL), true);
             }
 #endif
         skip:

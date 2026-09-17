@@ -47,6 +47,7 @@
 #include "albumart.h"
 #include "playlist.h"
 #include "playback.h"
+#include "skin_display.h"
 #include "metadata.h"
 #include "crc32.h"
 #include "file.h"
@@ -1429,8 +1430,10 @@ const char *get_token_value(struct gui_wps *gwps,
         case SKIN_TOKEN_ALBUMART_FOUND:
             if (SKINOFFSETTOPTR(get_skin_buffer(data), data->albumart))
             {
-                int handle = -1;
-                handle = playback_current_aa_hid(data->playback_aa_slot);
+                bool present;
+                int handle = skin_albumart_hid(data->playback_aa_slot, &present);
+                if (present)
+                    handle = 0;
 #if CONFIG_TUNER
                 if (in_radio_screen() || (get_radio_status() != FMRADIO_OFF))
                 {

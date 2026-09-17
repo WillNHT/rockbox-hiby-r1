@@ -45,6 +45,7 @@
 #include "lcd.h"
 #include "screen_access.h"
 #include "skin_art_fx.h"
+#include "skin_display.h"
 #include "skin_engine.h"
 #include "wps_internals.h"
 #include "core_alloc.h"
@@ -70,8 +71,7 @@ static int art_handle(struct gui_wps *gwps)
     }
 
     {
-        int h = playback_current_aa_hid(data->playback_aa_slot);
-        return h;
+        return skin_albumart_hid(data->playback_aa_slot, NULL);
     }
 }
 

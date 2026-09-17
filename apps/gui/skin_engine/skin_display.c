@@ -706,6 +706,56 @@ void draw_peakmeters(struct gui_wps *gwps, int line_number,
 #ifdef HAVE_ALBUMART
 /* Draw the album art bitmap from the given handle ID onto the given WPS.
    Call with clear = true to clear the bitmap instead of drawing it. */
+#define AA_LOADING_GRACE HZ
+
+struct aa_loading
+{
+    int  last_hid;
+    bool pending;
+    long pending_since;
+};
+
+int skin_albumart_hid(int slot, bool *present)
+{
+    static struct aa_loading state[SKINNABLE_SCREENS_COUNT] = {
+        [0 ... SKINNABLE_SCREENS_COUNT-1] = { .last_hid = -1 }
+    };
+    int hid = playback_current_aa_hid(slot);
+    bool ok = hid >= 0;
+
+    if ((unsigned)slot < SKINNABLE_SCREENS_COUNT)
+    {
+        struct aa_loading *st = &state[slot];
+        if (ok)
+        {
+            st->last_hid = hid;
+            st->pending = false;
+        }
+        /* ERR_HANDLE_NOT_FOUND is "not tried yet"; a track that was tried
+           and has no art says ERR_UNSUPPORTED_TYPE. */
+        else if (hid == ERR_HANDLE_NOT_FOUND &&
+                 (audio_status() & AUDIO_STATUS_PLAY))
+        {
+            if (!st->pending)
+            {
+                st->pending = true;
+                st->pending_since = current_tick;
+            }
+            if (TIME_BEFORE(current_tick, st->pending_since + AA_LOADING_GRACE))
+            {
+                ok = true;
+                hid = st->last_hid;
+            }
+        }
+        else
+            st->pending = false;
+    }
+
+    if (present)
+        *present = ok;
+    return hid;
+}
+
 void draw_album_art(struct gui_wps *gwps, int handle_id, bool clear)
 {
     if (!gwps || !gwps->data || !gwps->display || handle_id < 0)

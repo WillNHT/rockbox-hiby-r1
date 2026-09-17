@@ -61,6 +61,14 @@ void draw_peakmeters(struct gui_wps *gwps, int line_number,
 /* Draw the album art bitmap from the given handle ID onto the given Skin.
    Call with clear = true to clear the bitmap instead of drawing it. */
 void draw_album_art(struct gui_wps *gwps, int handle_id, bool clear);
+/* The album art handle a skin should use for a playback slot.
+ * Art loads a moment after the track starts, and until then playback
+ * reports "no handle" - which a skin cannot tell from "this track has no
+ * art", so %?C showed the placeholder for that moment. While the art is
+ * still loading (for at most a second) this reports it as present
+ * (*present = true) and returns the previous cover's handle, which is
+ * drawn if the buffer still holds it and silently skipped otherwise. */
+int skin_albumart_hid(int slot, bool *present);
 #endif
 
 #endif
