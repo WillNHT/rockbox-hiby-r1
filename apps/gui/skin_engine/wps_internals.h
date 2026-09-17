@@ -119,6 +119,14 @@ struct skin_art_fx {
     int16_t a, b;
 };
 
+/* %Cr(cx, cy, radius, step_deg, deg_per_sec, label_pct [, accent]).
+ * See skin_art_vinyl(). */
+struct skin_vinyl {
+    int16_t cx, cy, radius;
+    int16_t step_deg, deg_per_sec, label_pct;
+    int accent;
+};
+
 /* %an(frames, period_ms). See parse_animation(). */
 struct skin_animation {
     int frames;

@@ -209,6 +209,15 @@ static bool do_non_text_tags(struct gui_wps *gwps, struct skin_draw_info *info,
                 }
             }
             break;
+        case SKIN_TOKEN_ALBUMART_VINYL:
+            if (do_refresh)
+            {
+                struct skin_vinyl *v =
+                        SKINOFFSETTOPTR(skin_buffer, token->value.data);
+                if (v)
+                    skin_art_vinyl(gwps, &skin_vp->vp, v);
+            }
+            break;
         case SKIN_TOKEN_PEAKMETER:
             data->peak_meter_enabled = true;
             if (do_refresh)

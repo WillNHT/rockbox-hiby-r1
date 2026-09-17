@@ -337,6 +337,11 @@ enum skin_token_type {
      * whatever is beneath it. See apps/gui/skin_engine/skin_layer.c.
      * Appended, like everything else here - see the note above. */
     SKIN_TOKEN_VIEWPORT_TRANSPARENCY,
+
+    /* %Cr - a turning record, with the cover as its label. See
+     * skin_art_vinyl() in apps/gui/skin_engine/skin_art_fx.c. Appended,
+     * like everything else here - see the note above. */
+    SKIN_TOKEN_ALBUMART_VINYL,
 };
 
 /*
