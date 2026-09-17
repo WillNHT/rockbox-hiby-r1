@@ -228,6 +228,20 @@ void canvas_shadow(struct canvas_surface *dst, const struct canvas_rect *r,
 void canvas_gradient(struct canvas_surface *s, const struct canvas_rect *r,
                      canvas_px from, canvas_px to, bool vertical, bool dither);
 
+/* Mean colour of a rectangle, sampled on a grid of at most 32x32 points.
+ * Good enough to tint with and cheap enough to call once per cover. */
+canvas_px canvas_average(const struct canvas_surface *s,
+                         const struct canvas_rect *r);
+
+/* The "ambient" wash a blurred cover sits under: each pixel is first
+ * pulled `desat`/255 of the way to its own grey, then blended with a
+ * colour that runs from `top` to `bottom` down the rectangle, at an
+ * opacity that runs from `a_top` to `a_bottom`. Dithered, because a dark
+ * slow gradient is exactly where RGB565 bands. */
+void canvas_wash(struct canvas_surface *s, const struct canvas_rect *r,
+                 canvas_px top, canvas_px bottom,
+                 unsigned a_top, unsigned a_bottom, unsigned desat);
+
 /* Nine-slice: stretch src into drect keeping its corners intact. */
 void canvas_9slice(struct canvas_surface *dst, const struct canvas_rect *drect,
                    const struct canvas_surface *src,

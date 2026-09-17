@@ -394,18 +394,29 @@ def snappy_v2(vinyl=False):
 AX, AY, AS = 30, 150, 420
 AH = 420              # square: a cover is square and the inset is 2 px
 ART_W, ART_H = 416, 416
-MIRROR_Y, MIRROR_H = AY + AH + 2, 40
+# Butted against the cover's lower edge: two pixels lower and the reflection
+# floated with a dark seam between it and the cover it is reflecting.
+MIRROR_Y, MIRROR_H = AY + AH - 2, 40
 BAND_Y = 616
-PULSE_Y, PULSE_H = 766, 3
-PULSE_W = [40, 90, 150, 220, 300, 220, 150, 90]
-SHEEN_MS = 90
 # The sheen sweeps the cover, and stops there. It used to run to y=708,
 # over the peak meter, the codec line, the artist and the title - and
 # those are static viewports, drawn on a full update and never again, so
 # every pass of the sheen took a 26 px bite out of the chrome and nothing
 # put it back. That is the whole of "duration, visualiser, bit rate and
 # playlist are not showing": they were showing, and then they were eaten.
-SHEEN_Y0, SHEEN_STEP, SHEEN_H = AY, 42, 26
+#
+# Granular: the band moves 6 px a frame at the engine's 20 fps, so what the
+# eye sees is a glide rather than the 20-40 px hops it used to make. The
+# band has soft edges - SHEEN_PROFILE is its opacity from the leading edge
+# to the trailing one, one strip each - so there is no hard line to jump.
+# After the sweep the counter runs on through SHEEN_REST empty frames: a
+# pause, so the sheen reads as a glint and not as a scanner.
+SHEEN_MS, SHEEN_STEP = 50, 6
+SHEEN_PROFILE = [(6, 2), (6, 4), (6, 7), (8, 10), (6, 7), (6, 4), (6, 2)]
+SHEEN_H = sum(h for h, _ in SHEEN_PROFILE)
+SHEEN_Y0 = AY + 2
+SHEEN_STOPS = (AH - 4 - SHEEN_H) // SHEEN_STEP + 1
+SHEEN_REST = 30
 
 
 def animated(gauge=False):
@@ -425,10 +436,11 @@ def animated(gauge=False):
 #    one is redrawn at 20 fps instead of waiting for the track to do
 #    something. It costs nothing while it is not being drawn, so the dial
 #    border below is free until the dial is armed.
-#  * %%Cb draws the cover scaled to cover the panel, blurred, with a veil
-#    of the theme's ground over it - into the LCD *backdrop*, the one
-#    surface a later viewport's clear restores rather than wipes. The sharp
-#    cover and its reflection are composed into it too.
+#  * %%Cb draws the cover scaled to cover the panel, blurred and washed
+#    with a gradient from its own colour to the theme's ground - into
+#    the LCD *backdrop*, the one surface a later viewport's clear
+#    restores rather than wipes. The sharp cover, its shadow and its
+#    reflection are composed into it too.
 #  * %%Vt(0) makes a viewport clear to that backdrop instead of to a colour,
 #    and %%dr takes an opacity - that is how chrome sits on the picture.
 #  * %%Cm mirrors the bottom of the cover under itself, fading out.
@@ -464,15 +476,16 @@ def animated(gauge=False):
     # Every enable for something that moves goes here, in the default
     # viewport. Placed next to its own viewports it lands inside whichever
     # %Vl was declared last - "locked", hidden while unlocked - and a tag
-    # inside a hidden viewport is never evaluated, so the chase and the
-    # sheen were never switched on at all.
-    steps = 10
-    en, vp = march("ch", AX, AY, AS, AH, 16, 70, thick=4)
-    o += ["%%?mp<|%s|||||>" % e for e in en]
-    for i in range(steps):
-        o.append("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%d)>" % (steps, SHEEN_MS, i + 1, i))
-    for i in range(len(PULSE_W)):
-        o.append("%%?if(%%an(%d,110),=,%d)<%%Vd(pu%d)>" % (len(PULSE_W), i + 1, i))
+    # inside a hidden viewport is never evaluated, so the sheen was
+    # never switched on at all.
+    #
+    # There used to be two more: a yellow segment chasing round the cover's
+    # edge and a breathing rule under the title. Both are gone (#23) - the
+    # cover is the picture, and a light running round it only competed.
+    frames = SHEEN_STOPS + SHEEN_REST
+    for i in range(SHEEN_STOPS):
+        o.append("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%02d)>"
+                 % (frames, SHEEN_MS, i + 1, i))
 
     if not gauge:
         # Its enables come first in what it returns, then its viewports -
@@ -487,42 +500,39 @@ def animated(gauge=False):
     # top of them.
     moving = []
     moving.append("""#
-# The chase
-# =========
-# A bright segment running clockwise around the cover, one stop per frame,
-# and only while something is playing: a still screen with a light running
-# round it looks like it is doing something when it is not.""")
-    moving.append("#")
-    moving += vp
-
-    # the sheen: a translucent band sweeping down the panel
-    moving.append("""#
 # The sheen
 # =========
-# A soft band sweeping down the panel. The backdrop cannot move - it is
-# rendered once into the backdrop buffer and re-rendering it every frame
-# would be a 480x800 scale and blur at 20 fps - so the movement goes over
-# the top of it instead, which costs one blended rectangle.
+# A soft band gliding down the cover, then a pause. The backdrop cannot
+# move - it is rendered once into the backdrop buffer and re-rendering it
+# every frame would be a 480x800 scale and blur at 20 fps - so the movement
+# goes over the top of it instead, which costs a few blended rectangles.
 #
 # %%Vt(0) and the seventh parameter of %%dr are what make it a sheen
 # rather than a bar. The clear restores the backdrop buffer - the cover -
-# and the rectangle is then blended over it at a quarter opacity. Without
-# the first the band is a black box eating the cover; without the second
-# it is a painted grey stripe.""")
+# and each strip is then blended over it at a few percent. Without the
+# first the band is a black box eating the cover; without the second it
+# is a painted grey stripe. The strips rise and fall in opacity, so the
+# band has no edge, and it moves %d px a frame, so it has no jump.""" % SHEEN_STEP)
     moving.append("#")
-    for i in range(steps):
+    for i in range(SHEEN_STOPS):
         sy = SHEEN_Y0 + i * SHEEN_STEP
-        moving.append("%%Vl(sh%d,%d,%d,%d,%d,-)" % (i, AX, sy, AS, SHEEN_H))
+        moving.append("%%Vl(sh%02d,%d,%d,%d,%d,-)"
+                      % (i, AX + 2, sy, ART_W, SHEEN_H))
         moving.append("%Vt(0)")
-        moving.append("%%dr(0,0,-,-,%s,%s,26)" % (INK, GROUND))
+        y = 0
+        for h, a in SHEEN_PROFILE:
+            moving.append("%%dr(0,%d,-,%d,%s,%s,%d)" % (y, h, INK, INK, a))
+            y += h
 
     o.append("""#
 # The backdrop
 # ============
-# The cover, scaled to cover the whole panel, blurred, with a veil of the
-# theme's ground blended over it so text stays readable. %%Cb does the
-# work; apps/canvas.c has had the blur since it was written and nothing
-# could ask for it.
+# The cover, scaled to cover the whole panel, heavily blurred, pulled
+# towards grey, and washed with a gradient that starts in the cover's own
+# average colour at the top and sinks into the theme's ground at the
+# bottom - the Spotify look. The sharp cover sits on a soft dark shadow so
+# its edge never melts into its own blurred copy. %%Cb does all of it (see
+# skin_art_fx.c); apps/canvas.c has the blur and the wash.
 #
 # Labelled and enabled from the default viewport, because the default
 # viewport cannot draw: skin_render() sets its refresh mode to zero
@@ -549,7 +559,7 @@ def animated(gauge=False):
 # no backdrop, and the viewport's own clear to the theme's ground is what
 # the screen should show; the veiled viewports fall back to that too.
 %%Vl(bg,0,0,-,-,-)
-%%Cb(0,0,480,800,26,55)
+%%Cb(0,0,480,800,40,62)
 %%Cl(%d,%d,%d,%d,c,c)
 %%Cd
 %%Cm(%d,%d,%d,%d,170,0)
@@ -566,9 +576,7 @@ def animated(gauge=False):
 #
 # No cover is not an empty screen. %%C is false for a track with no
 # artwork, and with it the backdrop, the cover and the reflection all go -
-# so without this the whole middle of the panel is nothing at all. The
-# chase still runs round it, because what it is saying is "this is
-# playing", and that is still true.
+# so without this the whole middle of the panel is nothing at all.
 %%Vl(noart,%d,%d,%d,%d,-)
 %%Vt(0)
 %%dr(0,0,-,2)
@@ -599,17 +607,6 @@ def animated(gauge=False):
 %V(30,718,-30,46,4)
 %Vt(0)
 %al%s%?it<%it|%fn>"""]
-
-    o.append("""#
-# The pulse
-# =========
-# An accent rule under the title, breathing. Eight widths, and the two
-# colours make it a gradient rather than a flat bar.""")
-    o.append("#")
-    for i, pw in enumerate(PULSE_W):
-        o.append("%%Vl(pu%d,30,%d,%d,%d,-)" % (i, PULSE_Y, pw, PULSE_H))
-        o.append("%Vt(0)")
-        o.append("%%dr(0,0,-,-,%s,%s)" % (ACCENT, GROUND))
 
     content.append("""#
 # Footer

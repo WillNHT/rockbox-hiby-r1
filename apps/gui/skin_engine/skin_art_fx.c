@@ -360,6 +360,13 @@ static void bd_draw_cover(struct canvas_surface *surf,
             y += (aa->height - h) / 2;
     }
 
+    /* A soft shadow first, so the cover's edge stands off its own blurred
+     * copy instead of melting into it where the two are the same colour. */
+    {
+        struct canvas_rect sr = { x, y, w, h };
+        canvas_shadow(surf, &sr, 0, 14, 0, 6, (canvas_px)bd_ground, 230);
+    }
+
     for (row = 0; row < h; row++)
     {
         canvas_px *d;
@@ -385,7 +392,7 @@ static bool bd_render(struct gui_wps *gwps, int handle)
     struct bitmap *bmp;
     canvas_px *scratch = NULL;
     size_t scratch_px = 0;
-    int w, h, px, py;
+    int w, h;
 
     if (!bd_buf)
         return false;
@@ -419,24 +426,32 @@ static bool bd_render(struct gui_wps *gwps, int handle)
 
     if (bd_veil > 0)
     {
+        /* The veil is a wash, not a flat sheet: the cover's own average
+         * colour, darkened, at the top, sinking into the theme's ground at
+         * the bottom, with the blurred picture pulled a third of the way to
+         * grey first. A loud cover becomes a mood rather than a second
+         * picture competing with the sharp one - the Spotify look. The
+         * veil percentage sets the opacity at the top; the bottom, where
+         * the text is, is always denser. */
+        struct canvas_surface art;
+        struct canvas_rect ar;
+        canvas_px avg, tint;
         unsigned a = (unsigned)bd_veil * 255 / 100;
+        unsigned a_bottom;
+
         if (a > 255)
             a = 255;
+        a_bottom = a + (255 - a) * 3 / 4;
 
-        for (py = 0; py < h; py++)
-        {
-            canvas_px *row;
-            if (bd_y + py < 0 || bd_y + py >= LCD_HEIGHT)
-                continue;
-            row = canvas_at(&surf, 0, bd_y + py);
-            for (px = 0; px < w; px++)
-            {
-                int ax = bd_x + px;
-                if (ax < 0 || ax >= LCD_WIDTH)
-                    continue;
-                row[ax] = canvas_blend_px(row[ax], (canvas_px)bd_ground, a);
-            }
-        }
+        canvas_surface_init(&art, (canvas_px *)bmp->data, NULL,
+                            bmp->width, bmp->height,
+                            STRIDE_MAIN(bmp->width, bmp->height));
+        ar.x = 0; ar.y = 0; ar.w = bmp->width; ar.h = bmp->height;
+        avg = canvas_average(&art, &ar);
+        tint = canvas_blend_px(avg, (canvas_px)bd_ground, 120);
+
+        canvas_wash(&surf, &r, tint, (canvas_px)bd_ground,
+                    a, a_bottom, 85);
     }
 
     if (bd_cover)
