@@ -225,7 +225,7 @@ static const char * const tags_str[] = { "artist", "album", "genre", "title",
 #else /* strings for logf debugging */
     "tag_virt_basename", "tag_virt_length_min", "tag_virt_length_sec",
     "tag_virt_playtime_min", "tag_virt_playtime_sec",
-    "tag_virt_entryage", "tag_virt_autoscore"
+    "tag_virt_entryage", "tag_virt_autoscore", "tag_virt_decade"
 };
 /* more debug strings */
 static const char * const tag_type_str[] = {
@@ -1321,6 +1321,13 @@ static long check_virtual_tags(int tag, int idx_id,
                    - tc_find_tag(tag_commitid, idx_id, idx) - 1;
             break;
 
+        /* The year rounded down to its decade: 1987 -> 1980. */
+        case tag_virt_decade:
+            data = tc_find_tag(tag_year, idx_id, idx);
+            if (data > 0)
+                data -= data % 10;
+            break;
+
         case tag_virt_basename:
             tag = tag_filename; /* return filename; caller handles basename */
             /* FALLTHRU */
@@ -1671,12 +1678,15 @@ static bool build_lookup_list(struct tagcache_search *tcs)
             if (!check_clauses(tcs, idx, tcs->clause, tcs->clause_count))
                 continue;
             /* Add to the seek list if not already in uniq buffer (doesn't yield)*/
-            if (!add_uniqbuf(tcs, idx->tag_seek[tcs->type]))
+            long seek = TAGCACHE_IS_VIRTUAL(tcs->type)
+                ? check_virtual_tags(tcs->type, i, idx)
+                : idx->tag_seek[tcs->type];
+            if (!add_uniqbuf(tcs, seek))
                 continue;
 
             /* Lets add it. */
             seeklist = &tcs->seeklist[tcs->seek_list_count];
-            seeklist->seek = idx->tag_seek[tcs->type];
+            seeklist->seek = seek;
             seeklist->flag = idx->flag;
             seeklist->idx_id = i;
             tcs->seek_list_count++;
@@ -1728,12 +1738,15 @@ static bool build_lookup_list(struct tagcache_search *tcs)
             continue;
 
         /* Add to the seek list if not already in uniq buffer. */
-        if (!add_uniqbuf(tcs, entry.tag_seek[tcs->type]))
+        long seek = TAGCACHE_IS_VIRTUAL(tcs->type)
+            ? check_virtual_tags(tcs->type, i, &entry)
+            : entry.tag_seek[tcs->type];
+        if (!add_uniqbuf(tcs, seek))
             continue;
 
         /* Lets add it. */
         seeklist = &tcs->seeklist[tcs->seek_list_count];
-        seeklist->seek = entry.tag_seek[tcs->type];
+        seeklist->seek = seek;
         seeklist->flag = entry.flag;
         seeklist->idx_id = i;
         tcs->seek_list_count++;
@@ -1776,7 +1789,9 @@ bool tagcache_search(struct tagcache_search *tcs, int tag)
     tcs->ramsearch = tc_stat.ramcache;
     if (tcs->ramsearch)
     {
-        tcs->entry_count = tcramcache.hdr->entry_count[tcs->type];
+        tcs->entry_count = TAGCACHE_IS_VIRTUAL(tcs->type)
+            ? current_tcmh.tch.entry_count
+            : tcramcache.hdr->entry_count[tcs->type];
     }
     else
 #endif
@@ -4713,6 +4728,15 @@ static bool check_file_refs(bool auto_update)
         }
 
         int idx_id = tfe.idx_id; /* dircache reference clobbers *tfe */
+
+        /* Already indexed, but in a folder excluded since: an update is
+           what takes it out again. */
+        if (auto_update && tagcache_path_excluded(buf))
+        {
+            delete_entry(idx_id);
+            do_timed_yield();
+            continue;
+        }
 #ifdef HAVE_DIRCACHE
         struct index_entry *idx = &tcramcache.hdr->indices[idx_id];
         unsigned int searchflag;
@@ -4767,6 +4791,114 @@ static bool check_deleted_files(void)
 {
     return check_file_refs(true);
 }
+
+#ifndef __PCTOOL__
+/* The same folder, or something inside it. Case-insensitive, because the
+ * card is FAT and "/Audiobooks" and "/audiobooks" are one folder. */
+static bool path_under(const char *path, const char *dir, size_t dlen)
+{
+    while (dlen > 0 && dir[dlen - 1] == '/')
+        dlen--;
+    if (dlen == 0)              /* "/" or "": never exclude everything */
+        return false;
+    return strncasecmp(path, dir, dlen) == 0 &&
+           (path[dlen] == '\0' || path[dlen] == '/');
+}
+
+/* Walks the ':'-separated list, calling fn on each entry until it says
+ * stop. Returns what the last call returned. */
+static bool each_excluded(bool (*fn)(const char *dir, size_t len,
+                                     const char *arg),
+                          const char *arg)
+{
+    const char *p = global_settings.db_exclude_folders;
+    while (*p)
+    {
+        const char *end = strchr(p, ':');
+        size_t len = end ? (size_t)(end - p) : strlen(p);
+        if (len && fn(p, len, arg))
+            return true;
+        if (!end)
+            break;
+        p = end + 1;
+    }
+    return false;
+}
+
+static bool match_under(const char *dir, size_t len, const char *path)
+{
+    return path_under(path, dir, len);
+}
+
+static bool match_same(const char *dir, size_t len, const char *path)
+{
+    size_t plen = strlen(path);
+    while (plen > 0 && path[plen - 1] == '/')
+        plen--;
+    while (len > 0 && dir[len - 1] == '/')
+        len--;
+    return len == plen && strncasecmp(dir, path, len) == 0;
+}
+
+bool tagcache_path_excluded(const char *path)
+{
+    if (global_settings.db_exclude_audiobooks &&
+        path_under(path, global_settings.audiobook_folder,
+                   strlen(global_settings.audiobook_folder)))
+        return true;
+    return each_excluded(match_under, path);
+}
+
+bool tagcache_folder_listed(const char *path)
+{
+    return each_excluded(match_same, path);
+}
+
+bool tagcache_set_folder_excluded(const char *path, bool exclude)
+{
+    char *list = global_settings.db_exclude_folders;
+    size_t cap = sizeof(global_settings.db_exclude_folders);
+    char out[sizeof(global_settings.db_exclude_folders)];
+    size_t used = 0;
+    const char *p = list;
+
+    /* Rebuild without the entry (and without any duplicate of it). */
+    out[0] = '\0';
+    while (*p)
+    {
+        const char *end = strchr(p, ':');
+        size_t len = end ? (size_t)(end - p) : strlen(p);
+        if (len && !match_same(p, len, path))
+        {
+            if (used + len + 2 > cap)
+                return false;
+            if (used)
+                out[used++] = ':';
+            memcpy(out + used, p, len);
+            used += len;
+            out[used] = '\0';
+        }
+        if (!end)
+            break;
+        p = end + 1;
+    }
+
+    if (exclude)
+    {
+        size_t len = strlen(path);
+        if (used + len + 2 > cap)
+            return false;
+        if (used)
+            out[used++] = ':';
+        memcpy(out + used, path, len + 1);
+    }
+
+    strlcpy(list, out, cap);
+    return true;
+}
+#else
+#define tagcache_path_excluded(path) false
+#endif /* __PCTOOL__ */
 
 /* Note that this function must not be inlined, otherwise the whole point
  * of having the code in a separate function is lost.
@@ -4911,6 +5043,11 @@ static bool check_dir(const char *dirname, int add_files)
         logf("tagcache: opendir(%s) failed", dirname);
         return false;
     }
+
+    /* An excluded folder is skipped like one holding database.ignore,
+       so a database.unignore further down still brings a subfolder back. */
+    if (tagcache_path_excluded(dirname))
+        add_files = false;
 
     /* check for a database.ignore and database.unignore */
     int ignore, unignore;

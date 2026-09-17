@@ -485,10 +485,39 @@ static void backlight_setup_fade_down(void)
 #endif /* CONFIG_BACKLIGHT_FADING */
 
 #ifdef HAVE_BACKLIGHT_DIM_IDLE
-/* The idle level, or below MIN_BRIGHTNESS_SETTING for "go dark", which is
- * what every other target does and what this one did. */
-static int backlight_dim_level;
-static bool backlight_dimmed;
+/* Three states: on, dimmed, off.
+ *
+ *   on  --(backlight timeout)-->  dimmed  --(off timeout)-->  off
+ *    ^_______________ any input, from either _______________|
+ *
+ * The idle level is in tenths of a percent; 0 means "go dark" at the
+ * backlight timeout, which is what every other target does. The off
+ * timeout counts from the moment the panel dims, so 2 min + 3 min is dark
+ * at 5 min. */
+static int backlight_dim_level;          /* 0..1000 */
+static bool backlight_dimmed;            /* state: dimmed                 */
+static bool backlight_hw_at_dim;         /* panel holds the idle level    */
+static int backlight_off_after;          /* ticks, 0 = never              */
+static int backlight_dim_timer;          /* countdown while dimmed        */
+
+static void hw_dim_level(int level)
+{
+#ifdef HAVE_BACKLIGHT_FINE_BRIGHTNESS
+    backlight_hw_brightness_fine(level);
+#else
+    int pct = level / 10;
+    backlight_hw_brightness(pct < MIN_BRIGHTNESS_SETTING
+                            ? MIN_BRIGHTNESS_SETTING : pct);
+#endif
+    backlight_hw_at_dim = true;
+}
+
+void backlight_set_off_timeout(int seconds)
+{
+    backlight_off_after = seconds > 0 ? seconds * HZ : 0;
+    if (backlight_dimmed)
+        backlight_dim_timer = backlight_off_after;
+}
 
 void backlight_set_dim_brightness(int level)
 {
@@ -501,9 +530,15 @@ void backlight_set_dim_brightness(int level)
      * user is reading the setting on is not an answer to anything. */
     if (backlight_dimmed)
     {
-        backlight_dimmed = (level >= MIN_BRIGHTNESS_SETTING);
-        backlight_hw_brightness(backlight_dimmed ? level
-                                                 : backlight_brightness);
+        backlight_dimmed = (level > 0);
+        if (backlight_dimmed)
+            hw_dim_level(level);
+        else
+        {
+            backlight_dim_timer = 0;
+            backlight_hw_at_dim = false;
+            backlight_hw_brightness(backlight_brightness);
+        }
     }
 }
 
@@ -512,6 +547,8 @@ int backlight_get_dim_brightness(void)
     return backlight_dim_level;
 }
 #endif
+
+static void do_backlight_blank(void);
 
 static inline void do_backlight_off(void)
 {
@@ -526,15 +563,23 @@ static inline void do_backlight_off(void)
      * brightness: the LCD controller must stay awake (no lcd_enable(false),
      * no LCD sleep countdown) or there is nothing to see at any
      * brightness. */
-    if (backlight_dim_level >= MIN_BRIGHTNESS_SETTING)
+    if (backlight_dim_level > 0)
     {
         backlight_dimmed = true;
+        backlight_dim_timer = backlight_off_after;
         backlight_hw_on();
-        backlight_hw_brightness(backlight_dim_level);
+        hw_dim_level(backlight_dim_level);
         return;
     }
     backlight_dimmed = false;
+    backlight_dim_timer = 0;
 #endif
+    do_backlight_blank();
+}
+
+/* The panel actually going dark. */
+static void do_backlight_blank(void)
+{
 #if BACKLIGHT_FADE_IN_THREAD
     backlight_setup_fade_down();
 #else
@@ -585,9 +630,13 @@ static void backlight_update_state(void)
         /* Coming back up from the idle level. Without fading,
          * backlight_hw_on() does not touch brightness, so the panel would
          * stay dim for the rest of the session. */
-        if (backlight_dimmed)
+        backlight_dimmed = false;
+        backlight_dim_timer = 0;
+        if (backlight_hw_at_dim)
         {
-            backlight_dimmed = false;
+            /* From dimmed, or from off after dimmed: the panel still holds
+               the idle level either way. */
+            backlight_hw_at_dim = false;
             backlight_hw_brightness(backlight_brightness);
         }
 #endif
@@ -772,6 +821,18 @@ static void backlight_timeout_handler(void)
             do_backlight_off();
         }
     }
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+    else if (backlight_dim_timer > 0)
+    {
+        backlight_dim_timer -= BACKLIGHT_THREAD_TIMEOUT;
+        if (backlight_dim_timer <= 0)
+        {
+            backlight_dim_timer = 0;
+            backlight_dimmed = false;
+            do_backlight_blank();
+        }
+    }
+#endif
 #ifdef HAVE_LCD_SLEEP
     else if(lcd_sleep_timer > 0)
     {

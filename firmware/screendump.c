@@ -26,6 +26,7 @@
 #include "file.h"
 #include "general.h"
 #include "lcd.h"
+#include "lcd-layers.h"
 #include "stdlib.h"
 #include "string.h"
 #include "system.h"
@@ -144,11 +145,12 @@ void screen_dump(void)
     }
     else
     {
+#ifdef HAVE_LCD_LAYERS
+        /* The panel is the framebuffer with the layers over it. */
+        lcd_layers_compose(true);
+#endif
         if(write(fd, bmpheader, sizeof(bmpheader)) != sizeof(bmpheader))
-        {
-            close(fd);
-            return;
-        }
+            goto out;
 
         /* BMP image goes bottom up */
         for (y = LCD_HEIGHT - 1; y >= 0; y--)
@@ -252,12 +254,13 @@ void screen_dump(void)
 
 #endif /* LCD_DEPTH */
             if(write(fd, linebuf, DUMP_BMP_LINESIZE) != DUMP_BMP_LINESIZE)
-            {
-                close(fd);
-                return;
-            }
+                goto out;
         }
     }
+out:
+#ifdef HAVE_LCD_LAYERS
+    lcd_layers_compose(false);
+#endif
     close(fd);
 }
 

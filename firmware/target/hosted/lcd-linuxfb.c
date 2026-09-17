@@ -36,6 +36,13 @@
 #include "sysfs.h"
 #include "panic.h"
 
+#ifdef HAVE_LCD_LAYERS
+/* lcd-layers.c owns lcd_update*() and calls these. */
+#include "lcd-layers.h"
+#define lcd_update      lcd_update_base
+#define lcd_update_rect lcd_update_rect_base
+#endif
+
 /* Page flipping is opted into per target, in the target config header,
  * because it costs a second framebuffer plane and needs a driver that can
  * actually pan. Everything below degrades to the historical single-plane

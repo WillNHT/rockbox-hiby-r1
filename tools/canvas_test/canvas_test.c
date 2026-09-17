@@ -645,6 +645,61 @@ static void test_9slice(void)
     ts_free(&src);
 }
 
+static void test_vinyl(void)
+{
+    struct test_surf dst, lab;
+    const canvas_px accent = RED;
+
+    ts_make(&dst, 64, 64, false);
+    ts_make(&lab, 16, 16, false);
+    ts_fill_all(&lab, WHITE, 255);
+    canvas_fill(&lab.s, &(struct canvas_rect){ 12, 0, 4, 16 }, BLACK);
+
+    ts_fill_all(&dst, GREEN, 255);
+    canvas_vinyl(&dst.s, 32, 32, 30, 0, NULL, 40, accent, BLACK);
+
+    TEST("vinyl leaves the corners alone");
+    CHECK(px(&dst, 0, 0) == GREEN && px(&dst, 63, 63) == GREEN,
+          "wrote outside the circle");
+
+    TEST("vinyl has a hole in the middle");
+    CHECK(px(&dst, 32, 32) == BLACK, "centre is %04x", px(&dst, 32, 32));
+
+    TEST("vinyl covers its own disc");
+    CHECK(px(&dst, 32, 32 + 25) != GREEN, "groove area not drawn");
+
+    TEST("a bare label is the accent");
+    CHECK(px(&dst, 32, 32 - 8) == accent, "label is %04x", px(&dst, 32, 24));
+
+    TEST("the bare label's mark turns with the record");
+    {
+        canvas_px right0 = px(&dst, 32 + 9, 32);
+        canvas_vinyl(&dst.s, 32, 32, 30, 90, NULL, 40, accent, BLACK);
+        CHECK(right0 != accent && px(&dst, 32 + 9, 32) == accent &&
+              px(&dst, 32, 32 + 9) != accent,
+              "mark did not move a quarter turn clockwise");
+    }
+
+    TEST("a cover label rotates with the record");
+    {
+        /* The dark band is on the right of the cover. Half a turn puts it
+         * on the left. */
+        canvas_vinyl(&dst.s, 32, 32, 30, 0, &lab.s, 40, accent, BLACK);
+        CHECK(px(&dst, 32 + 10, 32) == BLACK && px(&dst, 32 - 10, 32) == WHITE,
+              "unturned cover is not the right way round");
+        canvas_vinyl(&dst.s, 32, 32, 30, 180, &lab.s, 40, accent, BLACK);
+        CHECK(px(&dst, 32 - 10, 32) == BLACK && px(&dst, 32 + 10, 32) == WHITE,
+              "half a turn did not move the band across");
+    }
+
+    TEST("vinyl clips at the surface edge");
+    canvas_vinyl(&dst.s, 2, 2, 30, 45, &lab.s, 40, accent, BLACK);
+    CHECK(ts_guards_intact(&dst), "wrote outside the destination");
+
+    ts_free(&dst);
+    ts_free(&lab);
+}
+
 static void test_reflect(void)
 {
     struct test_surf dst, src;
@@ -990,6 +1045,7 @@ int main(int argc, char **argv)
     test_gradient();
     test_9slice();
     test_reflect();
+    test_vinyl();
     test_coverage();
     test_font4_expand();
     test_anim();

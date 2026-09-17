@@ -43,6 +43,7 @@ enum tag_type { tag_artist = 0, tag_album, tag_genre, tag_title,
     tag_virt_length_min, tag_virt_length_sec,
     tag_virt_playtime_min, tag_virt_playtime_sec,
     tag_virt_entryage, tag_virt_autoscore,
+    tag_virt_decade,
     TAG_COUNT_ALL};
 
 /* How many entries to fetch to the seek table at once while searching. */
@@ -66,9 +67,12 @@ enum tag_type { tag_artist = 0, tag_album, tag_genre, tag_title,
     (1LU << tag_lastelapsed) | (1LU << tag_lastoffset) | \
     (1LU << tag_virt_length_min) | (1LU << tag_virt_length_sec) | \
     (1LU << tag_virt_playtime_min) | (1LU << tag_virt_playtime_sec) | \
-    (1LU << tag_virt_entryage) | (1LU << tag_virt_autoscore))
+    (1LU << tag_virt_entryage) | (1LU << tag_virt_autoscore) | \
+    (1LU << tag_virt_decade))
 
 #define TAGCACHE_IS_NUMERIC(tag) (BIT_N(tag) & TAGCACHE_NUMERIC_TAGS)
+/* Virtual tags are computed from an index entry, not stored in it. */
+#define TAGCACHE_IS_VIRTUAL(tag) ((tag) >= TAG_COUNT)
 
 enum clause { clause_none, clause_is, clause_is_not, clause_gt, clause_gteq,
     clause_lt, clause_lteq, clause_contains, clause_not_contains, 
@@ -208,6 +212,13 @@ void tagcache_unload_ramcache(void);
 void tagcache_commit_finalize(void);
 void tagcache_init(void) INIT_ATTR;
 bool tagcache_is_initialized(void);
+#ifndef __PCTOOL__
+/* Folder exclusions (Settings > Database > Excluded Folders). */
+bool tagcache_path_excluded(const char *path);
+bool tagcache_folder_listed(const char *path);
+/* Adds or removes one folder; false if the list has no room. */
+bool tagcache_set_folder_excluded(const char *path, bool exclude);
+#endif
 bool tagcache_is_fully_initialized(void);
 bool tagcache_is_usable(void);
 void tagcache_start_scan(void);

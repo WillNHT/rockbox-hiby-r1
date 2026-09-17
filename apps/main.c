@@ -242,6 +242,14 @@ int main(void)
 #endif /* #ifdef AUTOROCK */
 
     global_status.last_volume_change = 0;
+    if (settings_restored_from_backup())
+    {
+        /* config.cfg was lost, most likely to a crash mid-save; the
+           last complete one was loaded instead. Say so, and write it
+           back as config.cfg. */
+        splash(HZ*2, "Settings restored from backup");
+        settings_save();
+    }
     /* no calls INIT_ATTR functions after this point anymore!
      * see definition of INIT_ATTR in config.h */
     CHART(">root_menu");

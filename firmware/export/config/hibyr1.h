@@ -36,6 +36,10 @@
  * direct-to-framebuffer path if it cannot have it. */
 #define HAVE_COMPOSITOR
 
+/* Retained layers composed at present time (firmware/drivers/lcd-layers.c).
+ * The stick overlay lives in one instead of in the framebuffer. */
+#define HAVE_LCD_LAYERS
+
 /* Blend antialiased glyphs and alpha images in linear light rather than in
  * gamma-encoded RGB565, so a glyph keeps its weight whatever it landed on.
  * Six table lookups per blended pixel; 2.2 KiB of tables. */
@@ -107,6 +111,9 @@
 /* The idle timeout dims the panel instead of blanking it, to a level the
  * user chooses. See do_backlight_off() in firmware/backlight.c. */
 #define HAVE_BACKLIGHT_DIM_IDLE
+/* backlight_hw_brightness_fine(): tenths of a percent, scaled to the
+ * driver's own max_brightness, for dim levels finer than 1 %. */
+#define HAVE_BACKLIGHT_FINE_BRIGHTNESS
 
 /* This device has no hold switch, and its lock is a software one the user
  * asks for with a key. Locking input must not also blank the screen. See

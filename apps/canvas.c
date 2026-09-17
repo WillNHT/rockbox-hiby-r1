@@ -1046,6 +1046,146 @@ void canvas_reflect(struct canvas_surface *dst, int dx, int dy,
 }
 
 /* ------------------------------------------------------------------ */
+/* Vinyl                                                               */
+/* ------------------------------------------------------------------ */
+
+/* sin(0..90 deg) in Q14 */
+static const int16_t sin_q14[91] =
+{
+        0,   286,   572,   857,  1143,  1428,  1713,  1997,  2280,  2563,
+     2845,  3126,  3406,  3686,  3964,  4240,  4516,  4790,  5063,  5334,
+     5604,  5872,  6138,  6402,  6664,  6924,  7182,  7438,  7692,  7943,
+     8192,  8438,  8682,  8923,  9162,  9397,  9630,  9860, 10087, 10311,
+    10531, 10749, 10963, 11174, 11381, 11585, 11786, 11982, 12176, 12365,
+    12551, 12733, 12911, 13085, 13255, 13421, 13583, 13741, 13894, 14044,
+    14189, 14330, 14466, 14598, 14726, 14849, 14968, 15082, 15191, 15296,
+    15396, 15491, 15582, 15668, 15749, 15826, 15897, 15964, 16026, 16083,
+    16135, 16182, 16225, 16262, 16294, 16322, 16344, 16362, 16374, 16382,
+    16384,
+};
+
+static int sin_deg_q14(int deg)
+{
+    deg %= 360;
+    if (deg < 0)
+        deg += 360;
+    if (deg <= 90)  return  sin_q14[deg];
+    if (deg <= 180) return  sin_q14[180 - deg];
+    if (deg <= 270) return -sin_q14[deg - 180];
+    return -sin_q14[360 - deg];
+}
+
+void canvas_vinyl(struct canvas_surface *dst, int cx, int cy, int radius,
+                  int angle_deg, const struct canvas_surface *label,
+                  int label_pct, canvas_px accent, canvas_px ground)
+{
+    const canvas_px groove   = CANVAS_RGB(22, 22, 25);
+    const canvas_px groove_l = CANVAS_RGB(34, 34, 38);
+    const canvas_px gap      = CANVAS_RGB(12, 12, 14);
+    const canvas_px rim      = CANVAS_RGB(58, 58, 62);
+    const canvas_px shine    = CANVAS_RGB(84, 84, 90);
+    canvas_px stripe;
+    int32_t r2, rim2, lab_r, lab2, hole2, ring2;
+    int32_t gap_in[3], gap_out[3];
+    int c, s, x, y, i;
+
+    if (radius <= 0)
+        return;
+    if (label_pct < 0)
+        label_pct = 0;
+    if (label_pct > 90)
+        label_pct = 90;
+
+    c = sin_deg_q14(90 - angle_deg);
+    s = sin_deg_q14(angle_deg);
+
+    r2    = (int32_t)radius * radius;
+    rim2  = (int32_t)(radius - 2) * (radius - 2);
+    lab_r = radius * label_pct / 100;
+    lab2  = (int32_t)lab_r * lab_r;
+    ring2 = (int32_t)(lab_r + 3) * (lab_r + 3);
+    hole2 = (int32_t)(radius / 40 + 2) * (radius / 40 + 2);
+
+    /* The silent gaps between tracks: three thin dark rings. */
+    for (i = 0; i < 3; i++)
+    {
+        int rr = lab_r + (radius - lab_r) * (i + 1) / 4;
+        gap_in[i]  = (int32_t)(rr - 1) * (rr - 1);
+        gap_out[i] = (int32_t)(rr + 1) * (rr + 1);
+    }
+
+    /* Half-way between the accent and black: the mark on a bare label. */
+    stripe = CANVAS_RGB(CANVAS_R(accent) / 2, CANVAS_G(accent) / 2,
+                        CANVAS_B(accent) / 2);
+
+    for (y = -radius; y <= radius; y++)
+    {
+        int ty = cy + y;
+        canvas_px *row;
+
+        if (ty < 0 || ty >= dst->h)
+            continue;
+        row = canvas_at(dst, 0, ty);
+
+        for (x = -radius; x <= radius; x++)
+        {
+            int tx = cx + x;
+            int32_t d2 = (int32_t)x * x + (int32_t)y * y;
+            canvas_px p;
+
+            if (tx < 0 || tx >= dst->w || d2 > r2)
+                continue;
+
+            if (d2 <= hole2)
+                p = ground;
+            else if (d2 <= lab2)
+            {
+                /* Where this pixel was before the record turned. */
+                int u = (c * x + s * y) >> 14;
+                int v = (c * y - s * x) >> 14;
+
+                if (label && label->w > 0 && label->h > 0)
+                {
+                    int sx = (u + lab_r) * label->w / (2 * lab_r + 1);
+                    int sy = (v + lab_r) * label->h / (2 * lab_r + 1);
+                    if (sx < 0) sx = 0;
+                    if (sy < 0) sy = 0;
+                    if (sx >= label->w) sx = label->w - 1;
+                    if (sy >= label->h) sy = label->h - 1;
+                    p = *canvas_at(label, sx, sy);
+                }
+                else if (u > 0 && v > -lab_r / 8 && v < lab_r / 8)
+                    p = stripe;
+                else
+                    p = accent;
+            }
+            else if (d2 <= ring2)
+                p = ground;
+            else if (d2 > rim2)
+                p = rim;
+            else
+            {
+                p = ((d2 >> 7) % 3) ? groove : groove_l;
+                for (i = 0; i < 3; i++)
+                    if (d2 >= gap_in[i] && d2 <= gap_out[i])
+                        p = gap;
+                /* sin(2 theta) > 0.96: two narrow wedges of light, top
+                 * left and bottom right, that do not turn with the
+                 * record, brightest at their middle. */
+                {
+                    /* int32 is enough for a radius up to ~500 px */
+                    int32_t k = 200 * x * y - 96 * d2;
+                    if (k > 0)
+                        p = canvas_blend_px(p, shine,
+                                            (unsigned)(k * 40 / d2 + 40));
+                }
+            }
+            row[tx] = p;
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
 /* Text coverage                                                       */
 /* ------------------------------------------------------------------ */
 

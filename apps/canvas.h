@@ -233,6 +233,18 @@ void canvas_9slice(struct canvas_surface *dst, const struct canvas_rect *drect,
                    const struct canvas_surface *src,
                    int left, int top, int right, int bottom);
 
+/* A vinyl record centred on (cx, cy), `radius` px, turned `angle_deg`
+ * clockwise. Grooves, a rim, two fixed highlights (a real record's
+ * reflections stay where the light is while it turns), and a label of
+ * `label_pct` percent of the radius: `label` scaled into it and rotated
+ * when there is one, the accent colour with a darker stripe when there is
+ * not - a plain disc looks the same at every angle, so something on it has
+ * to be asymmetric for the turning to show. Only pixels inside the circle
+ * are written, so whatever is around it stays. */
+void canvas_vinyl(struct canvas_surface *dst, int cx, int cy, int radius,
+                  int angle_deg, const struct canvas_surface *label,
+                  int label_pct, canvas_px accent, canvas_px ground);
+
 /* Flip srect vertically into dst at (dx, dy), fading alpha from `top` to
  * `bottom` down the height. The classic album-art reflection. */
 void canvas_reflect(struct canvas_surface *dst, int dx, int dy,

@@ -45,10 +45,12 @@
 #include "lcd.h"
 #include "screen_access.h"
 #include "skin_art_fx.h"
+#include "skin_display.h"
 #include "skin_engine.h"
 #include "wps_internals.h"
 #include "core_alloc.h"
 #include "misc.h"
+#include "audio.h"
 
 /* The art as the buffering layer holds it: RGB565, at whatever size %Cl
  * asked for.
@@ -70,8 +72,7 @@ static int art_handle(struct gui_wps *gwps)
     }
 
     {
-        int h = playback_current_aa_hid(data->playback_aa_slot);
-        return h;
+        return skin_albumart_hid(data->playback_aa_slot, NULL);
     }
 }
 
@@ -605,6 +606,48 @@ bool skin_art_mirror(struct gui_wps *gwps, struct viewport *vp,
 
     canvas_reflect(&fb, x, y, &art, &srect, srect.h,
                    (unsigned)top, (unsigned)bottom);
+    return true;
+}
+
+/* %Cr. The angle is kept here rather than derived from the clock the way
+ * %an is, because a record stops when the music does and picks up where
+ * it was: only time spent playing turns it. It is one angle for every
+ * record on screen, which is the number of records a skin has. */
+bool skin_art_vinyl(struct gui_wps *gwps, struct viewport *vp,
+                    const struct skin_vinyl *v)
+{
+    static long last_tick;
+    static long turned_mdeg;          /* millidegrees, 0..360000 */
+    struct canvas_surface fb, art;
+    struct bitmap *bmp;
+    int status = audio_status();
+    int angle;
+
+    if (!target_surface(gwps->display, vp, &fb))
+        return false;
+
+    if ((status & AUDIO_STATUS_PLAY) && !(status & AUDIO_STATUS_PAUSE) &&
+        last_tick && TIME_AFTER(current_tick, last_tick))
+    {
+        long dt = current_tick - last_tick;
+        if (dt > HZ)                  /* a screen that was away: no jump */
+            dt = HZ;
+        turned_mdeg = (turned_mdeg + dt * v->deg_per_sec * 1000 / HZ)
+                      % 360000;
+    }
+    last_tick = current_tick;
+    angle = (int)(turned_mdeg / 1000);
+    angle -= angle % v->step_deg;
+
+    bmp = art_bitmap(gwps);
+    if (bmp)
+        canvas_surface_init(&art, (canvas_px *)bmp->data, NULL,
+                            bmp->width, bmp->height,
+                            STRIDE_MAIN(bmp->width, bmp->height));
+
+    canvas_vinyl(&fb, vp->x + v->cx, vp->y + v->cy, v->radius, angle,
+                 bmp ? &art : NULL, v->label_pct,
+                 (canvas_px)v->accent, (canvas_px)vp->bg_pattern);
     return true;
 }
 

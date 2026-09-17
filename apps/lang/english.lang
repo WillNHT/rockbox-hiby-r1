@@ -18420,3 +18420,325 @@
     *: "Main Menu Title"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_HOLD_SKIP
+  desc: in Playback -> Fast-Forward/Rewind: what holding Prev/Next does
+  user: core
+  <source>
+    *: "Hold Prev/Next"
+  </source>
+  <dest>
+    *: "Hold Prev/Next"
+  </dest>
+  <voice>
+    *: "Hold Prev/Next"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HOLD_SKIP_CONTINUOUS
+  desc: Hold Prev/Next option: keep skipping tracks
+  user: core
+  <source>
+    *: "Continuous Skip"
+  </source>
+  <dest>
+    *: "Continuous Skip"
+  </dest>
+  <voice>
+    *: "Continuous Skip"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HOLD_SKIP_SEEK
+  desc: Hold Prev/Next option: fast-forward/rewind in the track
+  user: core
+  <source>
+    *: "Seek"
+  </source>
+  <dest>
+    *: "Seek"
+  </dest>
+  <voice>
+    *: "Seek"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HOLD_SKIP_DELAY
+  desc: in Playback -> Fast-Forward/Rewind: seconds held per skip
+  user: core
+  <source>
+    *: "Hold Skip Delay"
+  </source>
+  <dest>
+    *: "Hold Skip Delay"
+  </dest>
+  <voice>
+    *: "Hold Skip Delay"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SOURCES
+  desc: in Sound Settings -> Keyclick: which events click
+  user: core
+  <source>
+    *: "Click On"
+  </source>
+  <dest>
+    *: "Click On"
+  </dest>
+  <voice>
+    *: "Click On"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_BUTTON
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Hardware Button Press"
+  </source>
+  <dest>
+    *: "Hardware Button Press"
+  </dest>
+  <voice>
+    *: "Hardware Button Press"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_BUTTON_REPEAT
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Hardware Button Repeat"
+  </source>
+  <dest>
+    *: "Hardware Button Repeat"
+  </dest>
+  <voice>
+    *: "Hardware Button Repeat"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_STICK_ARMING
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Stick: Arming"
+  </source>
+  <dest>
+    *: "Stick: Arming"
+  </dest>
+  <voice>
+    *: "Stick: Arming"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_STICK_ARMED
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Stick: Armed"
+  </source>
+  <dest>
+    *: "Stick: Armed"
+  </dest>
+  <voice>
+    *: "Stick: Armed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_STICK_ACTION
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Stick: Action Fired"
+  </source>
+  <dest>
+    *: "Stick: Action Fired"
+  </dest>
+  <voice>
+    *: "Stick: Action Fired"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_STICK_DIAL
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Stick: Dial Detents"
+  </source>
+  <dest>
+    *: "Stick: Dial Detents"
+  </dest>
+  <voice>
+    *: "Stick: Dial Detents"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_STICK_SCROLL
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Stick: Scroll Ticks"
+  </source>
+  <dest>
+    *: "Stick: Scroll Ticks"
+  </dest>
+  <voice>
+    *: "Stick: Scroll Ticks"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_TOUCH
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Touch Tap"
+  </source>
+  <dest>
+    *: "Touch Tap"
+  </dest>
+  <voice>
+    *: "Touch Tap"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SRC_LOCK
+  desc: in Sound Settings -> Keyclick -> Click On
+  user: core
+  <source>
+    *: "Lock / Unlock"
+  </source>
+  <dest>
+    *: "Lock / Unlock"
+  </dest>
+  <voice>
+    *: "Lock / Unlock"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DB_EXCLUDE_AUDIOBOOKS
+  desc: in Settings -> General -> Database
+  user: core
+  <source>
+    *: "Exclude Audiobooks Folder"
+  </source>
+  <dest>
+    *: "Exclude Audiobooks Folder"
+  </dest>
+  <voice>
+    *: "Exclude Audiobooks Folder"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DB_EXCLUDED_FOLDERS
+  desc: in Settings -> General -> Database: folders the scan skips
+  user: core
+  <source>
+    *: "Excluded Folders"
+  </source>
+  <dest>
+    *: "Excluded Folders"
+  </dest>
+  <voice>
+    *: "Excluded Folders"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DB_EXCLUDE_FOLDER
+  desc: file browser context menu on a folder
+  user: core
+  <source>
+    *: "Exclude from Database"
+  </source>
+  <dest>
+    *: "Exclude from Database"
+  </dest>
+  <voice>
+    *: "Exclude from Database"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DB_INCLUDE_FOLDER
+  desc: file browser context menu on an excluded folder
+  user: core
+  <source>
+    *: "Include in Database"
+  </source>
+  <dest>
+    *: "Include in Database"
+  </dest>
+  <voice>
+    *: "Include in Database"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DB_EXCLUDE_REMOVE
+  desc: Excluded Folders: confirm removing an entry
+  user: core
+  <source>
+    *: "Include this folder again?"
+  </source>
+  <dest>
+    *: "Include this folder again?"
+  </dest>
+  <voice>
+    *: "Include this folder again?"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DB_EXCLUDE_NONE
+  desc: Excluded Folders list is empty
+  user: core
+  <source>
+    *: "No excluded folders"
+  </source>
+  <dest>
+    *: "No excluded folders"
+  </dest>
+  <voice>
+    *: "No excluded folders"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DB_EXCLUDE_FULL
+  desc: Excluded Folders list has no room
+  user: core
+  <source>
+    *: "Exclusion list is full"
+  </source>
+  <dest>
+    *: "Exclusion list is full"
+  </dest>
+  <voice>
+    *: "Exclusion list is full"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DB_UPDATE_NOW
+  desc: after changing database exclusions
+  user: core
+  <source>
+    *: "Update database now?"
+  </source>
+  <dest>
+    *: "Update database now?"
+  </dest>
+  <voice>
+    *: "Update database now?"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BACKLIGHT_OFF_TIMEOUT
+  desc: in Settings -> General -> Display -> LCD: time from dimming to off
+  user: core
+  <source>
+    *: "Screen Off After Dim"
+  </source>
+  <dest>
+    *: "Screen Off After Dim"
+  </dest>
+  <voice>
+    *: "Screen Off After Dim"
+  </voice>
+</phrase>

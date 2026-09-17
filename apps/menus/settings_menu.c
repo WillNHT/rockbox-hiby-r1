@@ -171,12 +171,117 @@ MENUITEM_FUNCTION(tc_import, 0, ID2P(LANG_TAGCACHE_IMPORT),
 MENUITEM_FUNCTION(tc_paths, 0, ID2P(LANG_SELECT_DATABASE_DIRS),
                   dirs_to_scan, NULL, Icon_NOICON);
 
+/* Excluded folders: the list, and removing an entry from it. Adding one
+ * is done from the folder itself (its context menu), which is the only
+ * place a folder is ever picked without typing its path. */
+static int excluded_count(void)
+{
+    const char *p = global_settings.db_exclude_folders;
+    int n = 0;
+    while (*p)
+    {
+        const char *end = strchr(p, ':');
+        if ((end ? end - p : (long)strlen(p)) > 0)
+            n++;
+        if (!end)
+            break;
+        p = end + 1;
+    }
+    return n;
+}
+
+static const char *excluded_get(int index, char *buf, size_t len)
+{
+    const char *p = global_settings.db_exclude_folders;
+    while (*p)
+    {
+        const char *end = strchr(p, ':');
+        size_t n = end ? (size_t)(end - p) : strlen(p);
+        if (n > 0 && index-- == 0)
+        {
+            if (n >= len)
+                n = len - 1;
+            memcpy(buf, p, n);
+            buf[n] = '\0';
+            return buf;
+        }
+        if (!end)
+            break;
+        p = end + 1;
+    }
+    buf[0] = '\0';
+    return buf;
+}
+
+static const char *excluded_name(int selected_item, void *data,
+                                 char *buffer, size_t buffer_len)
+{
+    (void)data;
+    return excluded_get(selected_item, buffer, buffer_len);
+}
+
+void tagcache_offer_update(void)
+{
+    if (yesno_pop(ID2P(LANG_DB_UPDATE_NOW)))
+        tagcache_update_with_splash();
+}
+
+static int excluded_action(int action, struct gui_synclist *lists)
+{
+    if (action == ACTION_STD_OK)
+    {
+        char path[MAX_PATH];
+        int sel = gui_synclist_get_sel_pos(lists);
+        excluded_get(sel, path, sizeof(path));
+        if (path[0] && yesno_pop(ID2P(LANG_DB_EXCLUDE_REMOVE)))
+        {
+            tagcache_set_folder_excluded(path, false);
+            settings_save();
+            tagcache_offer_update();
+        }
+        return ACTION_STD_CANCEL;
+    }
+    return action;
+}
+
+static int excluded_folders(void)
+{
+    struct simplelist_info info;
+    int count = excluded_count();
+
+    if (count == 0)
+    {
+        splash(HZ*2, ID2P(LANG_DB_EXCLUDE_NONE));
+        return 0;
+    }
+    simplelist_info_init(&info, str(LANG_DB_EXCLUDED_FOLDERS), count, NULL);
+    info.get_name = excluded_name;
+    info.action_callback = excluded_action;
+    simplelist_show_list(&info);
+    return 0;
+}
+MENUITEM_FUNCTION(tc_excluded, 0, ID2P(LANG_DB_EXCLUDED_FOLDERS),
+                  excluded_folders, NULL, Icon_NOICON);
+
+static int db_exclude_audiobooks_cb(int action,
+                                    const struct menu_item_ex *this_item,
+                                    struct gui_synclist *this_list)
+{
+    (void)this_item; (void)this_list;
+    if (action == ACTION_EXIT_MENUITEM)
+        tagcache_offer_update();
+    return action;
+}
+MENUITEM_SETTING(db_exclude_audiobooks, &global_settings.db_exclude_audiobooks,
+                 db_exclude_audiobooks_cb);
+
 MAKE_MENU(tagcache_menu, ID2P(LANG_TAGCACHE), 0, Icon_NOICON,
 #ifdef HAVE_TC_RAMCACHE
                 &tagcache_ram,
 #endif
                 &tagcache_autoupdate, &tc_init, &tc_update, &runtimedb,
-                &tc_export, &tc_import, &tc_paths
+                &tc_export, &tc_import, &tc_paths,
+                &db_exclude_audiobooks, &tc_excluded
                 );
 #endif /* HAVE_TAGCACHE */
 /*    TAGCACHE MENU                */
@@ -350,13 +455,33 @@ MENUITEM_SETTING(volume_adjust_norm_steps, &global_settings.volume_adjust_norm_s
 /* Keyclick menu */
 MENUITEM_SETTING(keyclick, &global_settings.keyclick, NULL);
 MENUITEM_SETTING(keyclick_repeats, &global_settings.keyclick_repeats, NULL);
+MENUITEM_SETTING(keyclick_src_button, &global_settings.keyclick_src_button, NULL);
+MENUITEM_SETTING(keyclick_src_button_repeat, &global_settings.keyclick_src_button_repeat, NULL);
+MENUITEM_SETTING(keyclick_src_stick_arming, &global_settings.keyclick_src_stick_arming, NULL);
+MENUITEM_SETTING(keyclick_src_stick_armed, &global_settings.keyclick_src_stick_armed, NULL);
+MENUITEM_SETTING(keyclick_src_stick_action, &global_settings.keyclick_src_stick_action, NULL);
+MENUITEM_SETTING(keyclick_src_stick_dial, &global_settings.keyclick_src_stick_dial, NULL);
+MENUITEM_SETTING(keyclick_src_stick_scroll, &global_settings.keyclick_src_stick_scroll, NULL);
+MENUITEM_SETTING(keyclick_src_touch, &global_settings.keyclick_src_touch, NULL);
+MENUITEM_SETTING(keyclick_src_lock, &global_settings.keyclick_src_lock, NULL);
+MAKE_MENU(keyclick_sources_menu, ID2P(LANG_KEYCLICK_SOURCES), 0, Icon_NOICON,
+          &keyclick_src_button,
+          &keyclick_src_button_repeat,
+          &keyclick_src_stick_arming,
+          &keyclick_src_stick_armed,
+          &keyclick_src_stick_action,
+          &keyclick_src_stick_dial,
+          &keyclick_src_stick_scroll,
+          &keyclick_src_touch,
+          &keyclick_src_lock);
 #ifdef HAVE_HARDWARE_CLICK
 MENUITEM_SETTING(keyclick_hardware, &global_settings.keyclick_hardware, NULL);
 MAKE_MENU(keyclick_menu, ID2P(LANG_KEYCLICK), 0, Icon_NOICON,
-           &keyclick, &keyclick_hardware, &keyclick_repeats);
+           &keyclick, &keyclick_hardware, &keyclick_repeats,
+           &keyclick_sources_menu);
 #else
 MAKE_MENU(keyclick_menu, ID2P(LANG_KEYCLICK), 0, Icon_NOICON,
-           &keyclick, &keyclick_repeats);
+           &keyclick, &keyclick_repeats, &keyclick_sources_menu);
 #endif
 
 #if CONFIG_CHARGING

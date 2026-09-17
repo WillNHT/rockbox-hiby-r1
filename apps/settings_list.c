@@ -543,6 +543,30 @@ static int32_t getlang_time_unit_0_is_off(int value, int unit)
 }
 
 #if defined(HAVE_BACKLIGHT) || defined(HAVE_LCD_SLEEP_SETTING)
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+static const char* formatter_dim_level(char *buffer, size_t buffer_size,
+                                       int val, const char *unit)
+{
+    (void)unit;
+    if (val == 0)
+        return str(LANG_OFF);
+    snprintf(buffer, buffer_size, "%d.%d %%", val / 10, val % 10);
+    return buffer;
+}
+
+static int32_t getlang_dim_level(int value, int unit)
+{
+    (void)unit;
+    if (value == 0)
+        return LANG_OFF;
+    return TALK_ID(value / 10, UNIT_PERCENT);
+}
+
+static const int backlight_off_times[] = {0, 10, 20, 30, 45, 60, 90, 120,
+                                          180, 240, 300, 600, 900, 1200,
+                                          1500, 1800};
+#endif
+
 static const char* formatter_time_unit_0_is_always(char *buffer, size_t buffer_size,
                                     int val, const char *unit)
 {
@@ -1540,10 +1564,25 @@ const struct settings_list settings[] = {
      * "blank it", so the old behaviour is still reachable. The default is
      * a dim but readable panel: on a player the point of the screen is
      * what is playing, and having to wake it to read that is backwards. */
-    INT_SETTING(F_NO_WRAP, dim_brightness, LANG_DIM_BRIGHTNESS,
-                10, "dim brightness", UNIT_INT,
-                0, MAX_BRIGHTNESS_SETTING, 1,
-                NULL, NULL, backlight_set_dim_brightness),
+    /* In tenths of a percent: the bottom of the range is where the steps
+     * matter, and whole percent was too coarse there. 0.5 % steps give
+     * 200 of them. */
+    INT_SETTING(F_NO_WRAP, dim_level, LANG_DIM_BRIGHTNESS,
+                100, "dim level", UNIT_PERCENT,
+                0, 1000, 5,
+                formatter_dim_level, getlang_dim_level,
+                backlight_set_dim_brightness),
+    INT_SETTING(F_DEPRECATED, dim_brightness, LANG_DIM_BRIGHTNESS,
+                -1, "dim brightness", UNIT_INT,
+                -1, MAX_BRIGHTNESS_SETTING, 1,
+                NULL, NULL, NULL),
+    TABLE_SETTING_LIST(F_TIME_SETTING, backlight_off_timeout,
+                       LANG_BACKLIGHT_OFF_TIMEOUT, 0,
+                       "backlight off timeout", NULL, UNIT_SEC,
+                       formatter_time_unit_0_is_off,
+                       getlang_time_unit_0_is_off,
+                       backlight_set_off_timeout,
+                       16, backlight_off_times),
 #endif
     /* backlight fading */
 #if defined(HAVE_BACKLIGHT_FADING_INT_SETTING)
@@ -1923,6 +1962,10 @@ const struct settings_list settings[] = {
                  DEFAULT_TAGCACHE_SCAN_PATHS, NULL, NULL),
     TEXT_SETTING(0, tagcache_db_path, "database path",
                  ROCKBOX_DIR, NULL, NULL),
+    TEXT_SETTING(0, db_exclude_folders, "database exclude folders",
+                 "", NULL, NULL),
+    OFFON_SETTING(0, db_exclude_audiobooks, LANG_DB_EXCLUDE_AUDIOBOOKS, true,
+                  "database exclude audiobooks", NULL),
 #endif
 
         OFFON_SETTING(0, alt_settings_enable, LANG_ALT_SETTINGS, true,
@@ -2405,6 +2448,24 @@ const struct settings_list settings[] = {
     OFFON_SETTING(0, keyclick_repeats, LANG_KEYCLICK_REPEATS, false,
                   "keyclick repeats", NULL),
 #endif
+    OFFON_SETTING(0, keyclick_src_button, LANG_KEYCLICK_SRC_BUTTON, true,
+                  "keyclick button", NULL),
+    OFFON_SETTING(0, keyclick_src_button_repeat, LANG_KEYCLICK_SRC_BUTTON_REPEAT, true,
+                  "keyclick button repeat", NULL),
+    OFFON_SETTING(0, keyclick_src_stick_arming, LANG_KEYCLICK_SRC_STICK_ARMING, true,
+                  "keyclick stick arming", NULL),
+    OFFON_SETTING(0, keyclick_src_stick_armed, LANG_KEYCLICK_SRC_STICK_ARMED, true,
+                  "keyclick stick armed", NULL),
+    OFFON_SETTING(0, keyclick_src_stick_action, LANG_KEYCLICK_SRC_STICK_ACTION, true,
+                  "keyclick stick action", NULL),
+    OFFON_SETTING(0, keyclick_src_stick_dial, LANG_KEYCLICK_SRC_STICK_DIAL, true,
+                  "keyclick stick dial", NULL),
+    OFFON_SETTING(0, keyclick_src_stick_scroll, LANG_KEYCLICK_SRC_STICK_SCROLL, true,
+                  "keyclick stick scroll", NULL),
+    OFFON_SETTING(0, keyclick_src_touch, LANG_KEYCLICK_SRC_TOUCH, true,
+                  "keyclick touch", NULL),
+    OFFON_SETTING(0, keyclick_src_lock, LANG_KEYCLICK_SRC_LOCK, true,
+                  "keyclick lock", NULL),
     TEXT_SETTING(0, playlist_catalog_dir, "playlist catalog directory",
                      PLAYLIST_CATALOG_DEFAULT_DIR, NULL, NULL),
     INT_SETTING(F_TIME_SETTING, sleeptimer_duration, LANG_SLEEP_TIMER_DURATION,
@@ -2541,6 +2602,11 @@ const struct settings_list settings[] = {
 #endif
     OFFON_SETTING(0, prevent_skip, LANG_PREVENT_SKIPPING, false, "prevent track skip", NULL),
     OFFON_SETTING(0, rewind_across_tracks, LANG_REWIND_ACROSS_TRACKS, true, "rewind across tracks", NULL),
+    CHOICE_SETTING(0, hold_skip, LANG_HOLD_SKIP, HOLD_SKIP_CONTINUOUS,
+                   "hold prev next", "skip,seek", NULL, 2,
+                   ID2P(LANG_HOLD_SKIP_CONTINUOUS), ID2P(LANG_HOLD_SKIP_SEEK)),
+    INT_SETTING(F_TIME_SETTING, hold_skip_delay, LANG_HOLD_SKIP_DELAY, 3,
+                "hold skip delay", UNIT_SEC, 1, 5, 1, NULL, NULL, NULL),
 #ifdef HAVE_PITCHCONTROL
     OFFON_SETTING(0, pitch_mode_semitone, LANG_SEMITONE, false,
                   "Semitone pitch change", NULL),

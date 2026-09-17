@@ -107,35 +107,87 @@ void screen_put_iconxy(struct screen * display,
     if (icon == Icon_Book)
     {
         int m = height / 8;
-        int bx = xpos + m, by = ypos + m;
-        int bw = width - 2 * m, bh = height - 2 * m;
-        int mid = bx + bw / 2;
+        int bx = xpos + m / 2, by = ypos + m;
+        int bw = width - m, bh = height - 2 * m;
         int i;
 
         if (is_rtl)
             bx = display->getwidth() - bx - bw;
 
-        if (bw < 4 || bh < 4)
+        if (bw < 8 || bh < 6)
             return;
 
-        /* A closed book, front on: the cover, a solid spine down the
-         * left, and a couple of rules for the words on it. Drawn rather
-         * than themed - see the note in icon.h. */
-        int spine = bw / 5;
-        if (spine < 2)
-            spine = 2;
-        (void)mid;
+        /* An open book, seen from above: a cover showing round the edges,
+         * two pages with lines of text, the fold between them, and a
+         * ribbon. A closed book front-on is a rectangle with a stripe,
+         * which at list size reads as a box - an open one does not read
+         * as anything else. Drawn rather than themed - see the note in
+         * icon.h - and coloured like the strip icons beside it where the
+         * panel has colour. */
+        int cov  = MAX(1, bh / 10);         /* cover showing under pages */
+        int ph   = bh - 2 * cov;            /* page height               */
+        int mid  = bx + bw / 2;             /* the fold                  */
+        int dip  = MAX(1, bh / 12);         /* pages sag into the fold   */
+#ifdef HAVE_LCD_COLOR
+        unsigned fg = display->get_foreground();
+        const unsigned cover  = LCD_RGBPACK(0x3E, 0x78, 0xC4);
+        const unsigned page   = LCD_RGBPACK(0xF4, 0xF2, 0xEE);
+        const unsigned fold   = LCD_RGBPACK(0x9C, 0x9A, 0x96);
+        const unsigned words  = LCD_RGBPACK(0x8A, 0x88, 0x84);
+        const unsigned ribbon = LCD_RGBPACK(0xE0, 0x3C, 0x31);
+#define BOOK_INK(c) display->set_foreground(c)
+#else
+#define BOOK_INK(c) do { } while (0)
+#endif
 
-        display->drawrect(bx, by, bw, bh);
-        display->fillrect(bx, by, spine, bh);
+        /* cover, a little wider and lower than the pages */
+        BOOK_INK(cover);
+        display->fillrect(bx, by + dip + cov, bw, bh - dip - cov);
 
-        for (i = 1; i <= 2; i++)
+        /* pages: full height at the outer edge, lower at the fold */
+        BOOK_INK(page);
+        display->fillrect(bx + cov, by, mid - bx - cov, ph);
+        display->fillrect(mid + 1, by, bx + bw - cov - mid - 1, ph);
+#ifdef HAVE_LCD_COLOR
+        BOOK_INK(cover);
+#else
+        display->set_drawmode(DRMODE_COMPLEMENT);
+#endif
+        for (i = 0; i < dip; i++)
         {
-            int ly = by + (bh * i) / 3;
-            if (ly <= by + 1 || ly >= by + bh - 2)
-                continue;
-            display->hline(bx + spine + 2, bx + bw - 3, ly);
+            int span = (bw / 2 - cov) * (dip - i) / (dip + 2);
+            display->hline(mid - span, mid + span, by + i);
         }
+#ifndef HAVE_LCD_COLOR
+        display->set_drawmode(DRMODE_SOLID);
+#endif
+
+        /* the fold */
+        BOOK_INK(fold);
+        display->vline(mid, by + dip, by + ph - 1);
+
+        /* the words */
+        BOOK_INK(words);
+        for (i = 1; i <= 3; i++)
+        {
+            int ly = by + dip + ((ph - dip) * i) / 4;
+            if (ly >= by + ph - 1)
+                continue;
+            display->hline(bx + cov + 2, mid - 3, ly);
+            display->hline(mid + 3, bx + bw - cov - 3, ly);
+        }
+
+        /* the ribbon, hanging out of the bottom of the right page */
+        BOOK_INK(ribbon);
+        {
+            int rw = MAX(2, bw / 10);
+            int rx = mid + (bx + bw - mid) / 2;
+            display->fillrect(rx, by + dip, rw, bh - dip);
+        }
+#undef BOOK_INK
+#ifdef HAVE_LCD_COLOR
+        display->set_foreground(fg);
+#endif
         return;
     }
 

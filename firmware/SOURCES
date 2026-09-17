@@ -66,6 +66,10 @@ common/bootdata.c
 common/devicedata.c
 #endif
 
+#ifdef HAVE_LCD_LAYERS
+drivers/lcd-layers.c
+#endif
+
 #ifdef HAVE_SDL
 target/hosted/sdl/button-sdl.c
 target/hosted/sdl/kernel-sdl.c
@@ -155,6 +159,7 @@ target/hosted/lc-unix.c
 target/hosted/sysfs.c
 target/hosted/backlight-unix.c
 target/hosted/system-hosted.c
+target/hosted/crashlog-linux.c
 target/hosted/lcd-linuxfb.c
 target/hosted/power-linux.c
 #endif

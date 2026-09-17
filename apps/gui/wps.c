@@ -367,6 +367,58 @@ static bool ffwd_rew(int button, bool seek_from_end)
     return usb;
 }
 
+/* Holding Prev/Next with Hold Prev/Next = Continuous Skip: the track keeps
+ * playing, and every hold_skip_delay seconds of holding moves one track
+ * (or one skip length, for a file with its own skip length - audiobooks).
+ * Returns true on USB connection, like ffwd_rew(). */
+static int get_skip_length(struct mp3entry *id3);
+static void play_hop(int direction);
+static bool hold_skip(int button)
+{
+    int direction = (button == ACTION_WPS_SEEKFWD) ? 1 : -1;
+    long delay = global_settings.hold_skip_delay * HZ;
+    long start = current_tick;
+
+    while (true)
+    {
+        if (TIME_AFTER(current_tick, start + delay - 1))
+        {
+            struct mp3entry *id3 = get_wps_state()->id3;
+            if (id3 && get_skip_length(id3) != 0)
+                play_hop(direction);
+            else if (direction > 0)
+                audio_next();
+            else
+                audio_prev();
+            start = current_tick;
+        }
+
+        button = get_action(CONTEXT_WPS|ALLOW_SOFTLOCK, HZ/10);
+#ifdef HAVE_TOUCHSCREEN
+        if (button == ACTION_TOUCHSCREEN)
+            button = skintouch_to_wps();
+#endif
+        switch (button)
+        {
+            case ACTION_WPS_SEEKFWD:
+            case ACTION_WPS_SEEKBACK:
+                /* a held key repeats; the stick holds without repeating,
+                   which arrives here as timeouts */
+            case ACTION_NONE:
+                FOR_NB_SCREENS(i)
+                    skin_update(WPS, i, SKIN_REFRESH_NON_STATIC);
+                continue;
+            default:
+                if (default_event_handler(button) == SYS_USB_CONNECTED)
+                    return true;
+                if (IS_SYSEVENT(button))
+                    continue;
+                /* STOPSEEK - the release - or anything else ends it */
+                return false;
+        }
+    }
+}
+
 static void gwps_caption_backlight(struct wps_state *state)
 {
 #if defined(HAVE_BACKLIGHT) || defined(HAVE_REMOTE_LCD)
@@ -958,6 +1010,11 @@ long gui_wps_show(void)
                         change_dir(1);
                     }
                 }
+                else if (global_settings.hold_skip == HOLD_SKIP_CONTINUOUS)
+                {
+                    if (hold_skip(ACTION_WPS_SEEKFWD))
+                        return GO_TO_ROOT;
+                }
                 else
                     ffwd_rew(ACTION_WPS_SEEKFWD, false);
                 last_right = last_left = 0;
@@ -975,7 +1032,13 @@ long gui_wps_show(void)
                     {
                         change_dir(-1);
                     }
-                } else if (global_settings.rewind_across_tracks
+                }
+                else if (global_settings.hold_skip == HOLD_SKIP_CONTINUOUS)
+                {
+                    if (hold_skip(ACTION_WPS_SEEKBACK))
+                        return GO_TO_ROOT;
+                }
+                else if (global_settings.rewind_across_tracks
                            && get_wps_state()->id3->elapsed < DEFAULT_SKIP_THRESH
                            && playlist_check(-1))
                 {

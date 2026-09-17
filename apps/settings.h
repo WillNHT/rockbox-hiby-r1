@@ -60,6 +60,12 @@ enum {
     BOOKMARK_RECENT_ONLY_ASK = 4,
 };
 
+/* What holding Prev/Next does in the WPS */
+enum {
+    HOLD_SKIP_CONTINUOUS = 0,
+    HOLD_SKIP_SEEK,
+};
+
 /* Most recent bookmark */
 enum {
     BOOKMARK_ONE_PER_PLAYLIST = 2,
@@ -321,6 +327,8 @@ void update_runtime(void);
 void zero_runtime(void);
 void settings_load(void) INIT_ATTR;
 bool settings_load_config(const char* file, bool apply);
+/* true once if settings_load() had to fall back to the last-good config */
+bool settings_restored_from_backup(void);
 
 void status_save(bool force);
 int settings_save(void);
@@ -467,6 +475,16 @@ struct user_settings
     int  beep;              /* system beep volume when changing tracks etc. */
     int  keyclick;          /* keyclick volume */
     int  keyclick_repeats;  /* keyclick on repeats */
+    /* which events click; see keyclick_enabled() */
+    bool keyclick_src_button;
+    bool keyclick_src_button_repeat;
+    bool keyclick_src_stick_arming;
+    bool keyclick_src_stick_armed;
+    bool keyclick_src_stick_action;
+    bool keyclick_src_stick_dial;
+    bool keyclick_src_stick_scroll;
+    bool keyclick_src_touch;
+    bool keyclick_src_lock;
     bool dithering_enabled;
 #ifdef HAVE_PITCHCONTROL
     bool timestretch_enabled;
@@ -689,6 +707,11 @@ struct user_settings
     unsigned char autoresume_paths[MAX_PATHLIST+1]; /* colon-separated list */
     bool runtimedb;           /* runtime database active? */
     unsigned char tagcache_scan_paths[MAX_PATHLIST+1];
+    /* Folders the database scan skips, ':'-separated (FAT names cannot
+       hold a colon). Kept short enough for a config.cfg line, which is
+       read into 128 bytes. */
+    char db_exclude_folders[96];
+    bool db_exclude_audiobooks; /* skip global_settings.audiobook_folder */
     unsigned char tagcache_db_path[MAX_PATHNAME+1];
 #endif /* HAVE_TAGCACHE */
     bool alt_settings_enable; /* resume next track? 0=no, 1=custom */
@@ -724,6 +747,8 @@ struct user_settings
     int album_art; /* switch off album art display or choose preferred source */
 #endif
     bool rewind_across_tracks;
+    int hold_skip;       /* HOLD_SKIP_CONTINUOUS or HOLD_SKIP_SEEK */
+    int hold_skip_delay; /* seconds a held Prev/Next waits per skip */
 
     /* playlist viewer settings */
     bool playlist_viewer_icons; /* display icons on viewer */
@@ -822,9 +847,16 @@ struct user_settings
 #ifdef HAVE_BACKLIGHT_BRIGHTNESS
     int brightness;
 #ifdef HAVE_BACKLIGHT_DIM_IDLE
-    /* Where the panel sits once the backlight timeout expires. Zero is
-     * "go dark", the way every other target behaves. */
+    /* Where the panel sits once the backlight timeout expires, in tenths
+     * of a percent of the panel's range. Zero is "go dark", the way every
+     * other target behaves. */
+    int dim_level;
+    /* The old whole-percent setting, read from an old config.cfg and
+     * converted once by settings_apply(); -1 when there is nothing to
+     * convert. Never written. */
     int dim_brightness;
+    /* Seconds from dimming to off; 0 = stay dimmed. */
+    int backlight_off_timeout;
 #endif
 #endif
 

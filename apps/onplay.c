@@ -1037,6 +1037,34 @@ MENUITEM_FUNCTION(set_databasedir_item, 0, ID2P(LANG_DATABASE_DIR),
                   set_databasedir, clipboard_callback, Icon_Audio);
 #endif
 
+#ifdef HAVE_TAGCACHE
+/* Exclude the folder from the database, or bring it back. One item whose
+ * label says which. */
+void tagcache_offer_update(void);
+static char *db_exclude_name(int selected_item, void *data,
+                             char *buffer, size_t buffer_len)
+{
+    (void)selected_item; (void)data; (void)buffer; (void)buffer_len;
+    return str(tagcache_folder_listed(selected_file.path)
+               ? LANG_DB_INCLUDE_FOLDER : LANG_DB_EXCLUDE_FOLDER);
+}
+static int db_exclude_toggle(void)
+{
+    bool exclude = !tagcache_folder_listed(selected_file.path);
+    if (!tagcache_set_folder_excluded(selected_file.path, exclude))
+    {
+        splash(HZ*2, ID2P(LANG_DB_EXCLUDE_FULL));
+        return 0;
+    }
+    settings_save();
+    tagcache_offer_update();
+    return 0;
+}
+MENUITEM_FUNCTION_DYNTEXT(db_exclude_item, 0, db_exclude_toggle,
+                          db_exclude_name, NULL, NULL,
+                          clipboard_callback, Icon_Audio);
+#endif
+
 MAKE_ONPLAYMENU(set_as_dir_menu, ID2P(LANG_SET_AS),
                 clipboard_callback, Icon_NOICON,
                 &set_catalogdir_item,
@@ -1118,6 +1146,7 @@ static int clipboard_callback(int action,
                         this_item == &set_catalogdir_item ||
 #ifdef HAVE_TAGCACHE
                         this_item == &set_databasedir_item ||
+                        this_item == &db_exclude_item ||
 #endif
 #ifdef HAVE_RECORDING
                         this_item == &set_recdir_item ||
@@ -1212,7 +1241,11 @@ MAKE_ONPLAYMENU( tree_onplay_menu, ID2P(LANG_ONPLAY_MENU_TITLE),
 #if LCD_DEPTH > 1
            &set_backdrop_item,
 #endif
-           &add_to_faves_item, &set_as_dir_menu, &file_menu, &sort_playlists,
+           &add_to_faves_item, &set_as_dir_menu,
+#ifdef HAVE_TAGCACHE
+           &db_exclude_item,
+#endif
+           &file_menu, &sort_playlists,
 #ifdef HAVE_ALBUMART
         &view_album_art_item,
 #endif

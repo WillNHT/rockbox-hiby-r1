@@ -343,6 +343,38 @@ static int parse_animation(struct skin_element *element,
     return 0;
 }
 
+/* %Cr(cx, cy, radius, step_deg, deg_per_sec, label_pct [, accent]) */
+static int parse_vinyl(struct skin_element *element,
+                       struct wps_token *token,
+                       struct wps_data *wps_data)
+{
+    struct skin_vinyl *v = skin_buffer_alloc(sizeof(*v));
+
+    if (!v)
+        return WPS_ERROR_INVALID_PARAM;
+
+    v->cx          = get_param(element, 0)->data.number;
+    v->cy          = get_param(element, 1)->data.number;
+    v->radius      = get_param(element, 2)->data.number;
+    v->step_deg    = get_param(element, 3)->data.number;
+    v->deg_per_sec = get_param(element, 4)->data.number;
+    v->label_pct   = get_param(element, 5)->data.number;
+    v->accent      = curr_vp->vp.fg_pattern;
+
+    if (v->radius < 1 || v->step_deg < 1 || v->step_deg > 90 ||
+        v->deg_per_sec < 0)
+        return WPS_ERROR_INVALID_PARAM;
+
+    if (element->params_count > 6 &&
+        !parse_color(curr_screen, get_param_text(element, 6), &v->accent))
+        return WPS_ERROR_INVALID_PARAM;
+
+    token->value.data = PTRTOSKINOFFSET(skin_buffer, v);
+    /* It turns, so the skin needs the animation frame rate. */
+    wps_data->animation_enabled = true;
+    return 0;
+}
+
 static int parse_art_fx(struct skin_element *element,
                         struct wps_token *token,
                         struct wps_data *wps_data)
@@ -2599,6 +2631,9 @@ static int skin_element_callback(struct skin_element* element, void* data)
                 case SKIN_TOKEN_ALBUMART_BACKDROP:
                 case SKIN_TOKEN_ALBUMART_MIRROR:
                     function = parse_art_fx;
+                    break;
+                case SKIN_TOKEN_ALBUMART_VINYL:
+                    function = parse_vinyl;
                     break;
                 case SKIN_TOKEN_IMAGE_PRELOAD_DISPLAY:
                 case SKIN_TOKEN_IMAGE_DISPLAY_9SEGMENT:

@@ -27,6 +27,12 @@ bool skin_art_mirror(struct gui_wps *gwps, struct viewport *vp,
                      int x, int y, int w, int h, int top, int bottom,
                      bool full);
 
+/* %Cr - a record turning at deg_per_sec while playing, in step_deg steps,
+ * with the cover as its label. See skin_art_fx.c. */
+struct skin_vinyl;
+bool skin_art_vinyl(struct gui_wps *gwps, struct viewport *vp,
+                    const struct skin_vinyl *v);
+
 /* This skin is being reloaded: forget the backdrop it owned. */
 void skin_art_fx_reset(const struct wps_data *data);
 
@@ -62,6 +68,10 @@ static inline bool skin_art_mirror(struct gui_wps *g, struct viewport *v,
                                    int top, int bottom, bool full)
 { (void)g;(void)v;(void)x;(void)y;(void)w;(void)h;(void)top;(void)bottom;
   (void)full; return false; }
+struct skin_vinyl;
+static inline bool skin_art_vinyl(struct gui_wps *g, struct viewport *v,
+                                  const struct skin_vinyl *s)
+{ (void)g; (void)v; (void)s; return false; }
 static inline void skin_art_fx_reset(const struct wps_data *d) { (void)d; }
 static inline void skin_art_fx_leave(void) { }
 static inline bool skin_art_fx_reserve(void) { return false; }

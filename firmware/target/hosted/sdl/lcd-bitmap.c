@@ -114,6 +114,13 @@ static unsigned long get_lcd_pixel(int x, int y)
 #endif
 }
 
+#ifdef HAVE_LCD_LAYERS
+/* lcd-layers.c owns lcd_update*() and calls these. */
+#include "lcd-layers.h"
+#define lcd_update      lcd_update_base
+#define lcd_update_rect lcd_update_rect_base
+#endif
+
 void lcd_update(void)
 {
     /* update a full screen rect */

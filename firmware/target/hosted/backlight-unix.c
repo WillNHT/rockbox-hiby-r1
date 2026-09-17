@@ -100,6 +100,41 @@ void backlight_hw_off(void)
     }
 }
 
+#ifdef HAVE_BACKLIGHT_FINE_BRIGHTNESS
+/* The driver's own range. The setting has always been written straight
+ * through as 1..100, which is only right if the driver's range is 100;
+ * scaling through max_brightness keeps that exactly when it is, and is
+ * where resolution below 1 % comes from when it is larger. */
+static int hw_max_brightness(void)
+{
+    static int hw_max = -1;
+    if (hw_max < 0)
+    {
+        char path[64];
+        const char *slash = strrchr(sysfs_bl_brightness, '/');
+        size_t dir = slash ? (size_t)(slash - sysfs_bl_brightness) : 0;
+        snprintf(path, sizeof(path), "%.*s/max_brightness",
+                 (int)dir, sysfs_bl_brightness);
+        if (!sysfs_get_int(path, &hw_max) || hw_max <= 0)
+            hw_max = MAX_BRIGHTNESS_SETTING;
+    }
+    return hw_max;
+}
+
+void backlight_hw_brightness_fine(int permille)
+{
+    int max = hw_max_brightness();
+    int raw;
+
+    if (permille > 1000)
+        permille = 1000;
+    raw = (permille * max + 500) / 1000;
+    if (raw < 1)
+        raw = 1;
+    sysfs_set_int(sysfs_bl_brightness, raw);
+}
+#endif
+
 void backlight_hw_brightness(int brightness)
 {
     /* cap range, just in case */
@@ -108,7 +143,11 @@ void backlight_hw_brightness(int brightness)
     if (brightness < MIN_BRIGHTNESS_SETTING)
         brightness = MIN_BRIGHTNESS_SETTING;
 
+#ifdef HAVE_BACKLIGHT_FINE_BRIGHTNESS
+    backlight_hw_brightness_fine(brightness * 1000 / MAX_BRIGHTNESS_SETTING);
+#else
     sysfs_set_int(sysfs_bl_brightness, brightness);
+#endif
 }
 
 #ifdef HAVE_LCD_SLEEP
