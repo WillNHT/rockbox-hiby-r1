@@ -22,11 +22,9 @@
 #include <signal.h>
 #include <string.h>
 #include <ucontext.h>
-#ifdef HAVE_SHUTDOWN_WATCHDOG
 #include <pthread.h>
 #include <time.h>
 #include <sys/reboot.h>
-#endif
 #include <backtrace.h>
 
 #include "system.h"
