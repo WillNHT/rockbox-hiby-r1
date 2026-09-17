@@ -72,6 +72,7 @@
 
 #include "voice_thread.h"
 #include "lcd-transition.h"
+#include "gui/coverview.h"
 
 #if defined(DX50) || defined(DX90)
 #include "governor-ibasso.h"
@@ -2714,6 +2715,18 @@ const struct settings_list settings[] = {
    OFFON_SETTING(0, ab_autoscan, LANG_AB_AUTOSCAN, true,
                  "audiobook scan at startup", NULL),
    OFFON_SETTING(0, emoji_enabled, LANG_EMOJI, true, "emoji", NULL),
+#ifdef HAVE_COVER_VIEWS
+   /* Albums, tracks, playlists and audiobooks. Shelves by default: a card
+    * per row keeps up/down as the only way through, which is the stick. */
+   CHOICE_SETTING(0, library_view, LANG_LIBRARY_VIEW, COVERVIEW_SHELVES,
+                  "library view", "classic,thumbnails,shelves,grid,carousel",
+                  NULL, COVERVIEW_COUNT,
+                  ID2P(LANG_LIBRARY_VIEW_CLASSIC),
+                  ID2P(LANG_LIBRARY_VIEW_THUMBS),
+                  ID2P(LANG_LIBRARY_VIEW_SHELVES),
+                  ID2P(LANG_LIBRARY_VIEW_GRID),
+                  ID2P(LANG_LIBRARY_VIEW_CAROUSEL)),
+#endif
 #ifdef HAVE_LCD_TRANSITIONS
    /* Named in .cfg files, so a theme can pick its transitions and the
     * user can still change them afterwards. */

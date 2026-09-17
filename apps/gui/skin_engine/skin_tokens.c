@@ -81,6 +81,7 @@
 #if (CONFIG_STORAGE & STORAGE_ATA)
 #include "ata.h" /* ata_disk_isssd() */
 #endif
+#include "playlist_cover.h"
 
 #define NOINLINE __attribute__ ((noinline))
 
@@ -1427,6 +1428,14 @@ const char *get_token_value(struct gui_wps *gwps,
             numeric_buf = buf;
             goto gtv_ret_numeric_tag_info;
 #ifdef HAVE_ALBUMART
+        case SKIN_TOKEN_PLAYLIST_COVER_FOUND:
+        {
+            char pl[MAX_PATH], cover[MAX_PATH];
+            if (playlist_cover_current(pl, sizeof(pl)) &&
+                playlist_cover_find(pl, cover, sizeof(cover)))
+                return "P";
+            return NULL;
+        }
         case SKIN_TOKEN_ALBUMART_FOUND:
             if (SKINOFFSETTOPTR(get_skin_buffer(data), data->albumart))
             {

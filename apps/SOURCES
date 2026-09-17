@@ -46,6 +46,11 @@ audiobooks/abprogress.c
 audiobooks/ab_play.c
 audiobooks/ab_ui.c
 emoji.c
+playlist_cover.c
+#ifdef HAVE_COVER_VIEWS
+gui/covers.c
+gui/coverview.c
+#endif
 #ifdef HIBY_LINUX
 menus/hiby_bluetooth_menu.c
 #endif

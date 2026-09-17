@@ -280,6 +280,18 @@ void list_draw(struct screen *display, struct gui_synclist *list)
         list_text_vp->height -= title_height;
     }
 
+    if (list->callback_draw_list)
+    {
+        display->set_viewport(list_text_vp);
+        if (list->callback_draw_list(display, list, list_text_vp))
+        {
+            skin_render_deferred(display, parent);
+            display->set_viewport(last_vp);
+            return;
+        }
+        display->set_viewport(parent);
+    }
+
     const int nb_lines = list_get_nb_lines(list, screen);
 
     linedes.height = list->line_height[screen];

@@ -77,6 +77,8 @@
 
 #include "root_menu.h"
 #include "gui/transition.h"
+#include "gui/coverview.h"
+#include "pathfuncs.h"
 
 static struct gui_synclist tree_lists;
 
@@ -399,6 +401,101 @@ static int tree_get_file_position(char * filename)
  * Called when a new dir is loaded (for example when returning from other apps ...)
  * also completely redraws the tree
  */
+#ifdef HAVE_COVER_VIEWS
+/* Covers for the browser: albums and tracks in the database; playlists and
+ * tracks in the file browser. Folders get a placeholder. */
+static bool tree_item_path(int item, char *buf, size_t size, bool id3db)
+{
+#ifdef HAVE_TAGCACHE
+    if (id3db)
+        return tagtree_get_cover_file(&tc, item, buf, size);
+#else
+    (void)id3db;
+#endif
+    struct entry *e = tree_get_entry_at(&tc, item);
+    if (!e || (e->attr & ATTR_DIRECTORY))
+        return false;
+    int type = e->attr & FILE_ATTR_MASK;
+    const char *ext = strrchr(e->name, '.');
+    /* a picture is its own cover - a playlist's cover sits next to it */
+    bool image = ext && (!strcasecmp(ext, ".jpg") ||
+                         !strcasecmp(ext, ".jpeg") ||
+                         !strcasecmp(ext, ".png"));
+    if (type != FILE_ATTR_AUDIO && type != FILE_ATTR_M3U && !image)
+        return false;
+    return path_append(buf, tc.currdir, e->name, size) < size;
+}
+
+static bool tree_cover_id3db;
+
+static bool tree_draw_cover(struct screen *d, int item, void *data,
+                            int x, int y, int size)
+{
+    char path[MAX_PATH];
+    (void)data;
+    return tree_item_path(item, path, sizeof(path), tree_cover_id3db) &&
+           coverview_draw_path_cover(d, path, x, y, size);
+}
+
+static const char *tree_cover_subtitle(int item, void *data,
+                                       char *buf, size_t size)
+{
+    (void)data;
+#ifdef HAVE_TAGCACHE
+    if (tree_cover_id3db)
+        return NULL;
+#endif
+    struct entry *e = tree_get_entry_at(&tc, item);
+    if (!e)
+        return NULL;
+    if (e->attr & ATTR_DIRECTORY)
+        return str(LANG_DIRECTORY);
+    if ((e->attr & FILE_ATTR_MASK) == FILE_ATTR_M3U)
+        return str(LANG_PLAYLIST);
+    (void)buf; (void)size;
+    return NULL;
+}
+
+static const struct coverview_source tree_covers =
+{
+    .draw_cover = tree_draw_cover,
+    .subtitle = tree_cover_subtitle,
+};
+
+static void tree_attach_coverview(struct gui_synclist *list, bool id3db)
+{
+    bool covers = false;
+
+    tree_cover_id3db = id3db;
+#ifdef HAVE_TAGCACHE
+    if (id3db)
+        covers = tagtree_lists_covers(&tc);
+    else
+#endif
+    if (*tc.dirfilter < NUM_FILTER_MODES || *tc.dirfilter == SHOW_M3U)
+    {
+        /* A folder with music or playlists in it; a folder of folders
+         * stays a list. */
+        for (int i = 0; i < tc.filesindir && !covers; i++)
+        {
+            struct entry *e = tree_get_entry_at(&tc, i);
+            int type = e->attr & FILE_ATTR_MASK;
+            covers = !(e->attr & ATTR_DIRECTORY) &&
+                     (type == FILE_ATTR_AUDIO || type == FILE_ATTR_M3U);
+        }
+    }
+
+    if (covers)
+        coverview_attach(list, &tree_covers, global_settings.library_view);
+    else
+        coverview_detach(list);
+}
+#else
+static inline void tree_attach_coverview(struct gui_synclist *list,
+                                         bool id3db)
+{ (void)list; (void)id3db; }
+#endif
+
 static int update_dir(void)
 {
     struct gui_synclist * const list = &tree_lists;
@@ -520,6 +617,7 @@ static int update_dir(void)
     gui_synclist_set_title(list, P2STR((unsigned char*)title), icon);
 
     gui_synclist_set_nb_items(list, tc.filesindir);
+    tree_attach_coverview(list, id3db);
     gui_synclist_set_icon_callback(list,
                             global_settings.show_icons?tree_get_fileicon:NULL);
     gui_synclist_set_voice_callback(list, &tree_voice_cb);

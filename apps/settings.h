@@ -1033,6 +1033,9 @@ struct user_settings
     int  ab_finished_pct;    /* a book this far through counts as finished */
     bool ab_autoscan;        /* rescan at startup when the library changed */
     bool emoji_enabled;      /* colour emoji from /.rockbox/emoji */
+#ifdef HAVE_COVER_VIEWS
+    int library_view;        /* enum coverview_style */
+#endif
 #ifdef HAVE_LCD_TRANSITIONS
     int menu_transition;     /* enum lcd_transition */
     int menu_transition_ms;
