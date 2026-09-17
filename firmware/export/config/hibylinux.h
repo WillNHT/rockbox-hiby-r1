@@ -21,6 +21,11 @@
 /* Define this if the LCD can shut down */
 #define HAVE_LCD_SHUTDOWN
 
+/* Force power off from the kernel if a clean shutdown stalls */
+#ifndef SIMULATOR
+#define HAVE_SHUTDOWN_WATCHDOG
+#endif
+
 #ifdef HAVE_LCD_COLOR
 /* define this if you want album art for this target */
 #define HAVE_ALBUMART

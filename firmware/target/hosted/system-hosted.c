@@ -22,6 +22,9 @@
 #include <signal.h>
 #include <string.h>
 #include <ucontext.h>
+#include <pthread.h>
+#include <time.h>
+#include <sys/reboot.h>
 #include <backtrace.h>
 
 #include "system.h"
@@ -100,12 +103,65 @@ static void sig_handler(int sig, siginfo_t *siginfo, void *context)
     }
 }
 
+#ifdef HAVE_SHUTDOWN_WATCHDOG
+/* A clean shutdown can stall anywhere between the "Shutting Down..."
+ * splash and the kernel cutting power: a driver that blocks on close,
+ * /sbin/poweroff waiting on an init that never answers, or a poweroff
+ * that returns having done nothing. Any of those left the splash lit
+ * until the power button was held. The watchdog is a plain OS thread,
+ * so it fires whatever the Rockbox threads are stuck in, and it asks
+ * the kernel directly. */
+#define SHUTDOWN_WATCHDOG_SECS 20
+
+static void *shutdown_watchdog_fn(void *arg)
+{
+    int cmd = (int)(intptr_t)arg;
+    struct timespec ts = { SHUTDOWN_WATCHDOG_SECS, 0 };
+    while (nanosleep(&ts, &ts) != 0)
+        ;
+    sync();
+    reboot(cmd);
+    return NULL;
+}
+
+void shutdown_watchdog_arm(bool reboot_instead)
+{
+    static bool armed = false;
+    if (armed)
+        return;
+
+    pthread_t t;
+    pthread_attr_t attr;
+    intptr_t cmd = reboot_instead ? RB_AUTOBOOT : RB_POWER_OFF;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    armed = pthread_create(&t, &attr, shutdown_watchdog_fn,
+                           (void *)cmd) == 0;
+    pthread_attr_destroy(&attr);
+}
+
+/* init only gets signalled by poweroff/reboot; if it has not acted
+ * within a few seconds, go to the kernel ourselves */
+static void kernel_reboot_fallback(int cmd)
+{
+    sleep(5);
+    sync();
+    reboot(cmd);
+}
+#endif
+
 void power_off(void)
 {
+#ifdef HAVE_SHUTDOWN_WATCHDOG
+    shutdown_watchdog_arm(false);
+#endif
     backlight_hw_on();
     button_close_device();
     sync();
     system("/sbin/poweroff");
+#ifdef HAVE_SHUTDOWN_WATCHDOG
+    kernel_reboot_fallback(RB_POWER_OFF);
+#endif
     while (1) {
         // Make sure we're not throttling the cpu
         usleep(1000);
@@ -140,8 +196,14 @@ void system_init(void)
 
 void system_reboot(void)
 {
+#ifdef HAVE_SHUTDOWN_WATCHDOG
+    shutdown_watchdog_arm(true);
+#endif
     backlight_hw_off();
     system("/sbin/reboot");
+#ifdef HAVE_SHUTDOWN_WATCHDOG
+    kernel_reboot_fallback(RB_AUTOBOOT);
+#endif
     while (1) {
         // Make sure we're not throttling the cpu
         usleep(1000);
