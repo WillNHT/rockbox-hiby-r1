@@ -71,6 +71,10 @@ typedef struct
     const struct button_mapping   *items;
     const struct button_mapping* (*get_context_map)(int);
     bool                           is_prebutton;
+#ifdef HAVE_TOUCHSCREEN
+    /* The button was handed back inline by the stick, not read from a key. */
+    bool                           stick_made;
+#endif
 } action_cur_t;
 
 /* act_last holds action state between get_action() calls */
@@ -550,6 +554,7 @@ static inline bool get_action_touchscreen(action_last_t *last, action_cur_t *cur
 
                 if (r == STICK_RESULT_BUTTON)
                 {
+                    cur->stick_made = true;
                     /* Hand the keymap the same button a physical key would
                      * have produced, prerequisite and all, and let the
                      * ordinary lookup below decide what it means here. */
@@ -1089,6 +1094,19 @@ static inline int update_action_last(action_last_t *last, action_cur_t *cur)
 
     last->action = action;
     last->button = cur->button;
+#ifdef HAVE_TOUCHSCREEN
+    /* A key the stick made is a whole key press: it has no release to come.
+     * Recorded as released, or the context-change rule in
+     * action_poll_button() - eat everything until the previous button is
+     * let go - waits for a release that never arrives, and swallows the
+     * next gesture instead. A MENU flick on the WPS lands on the main menu
+     * exactly like that, and the first tap there did nothing.
+     *
+     * Only the inline ones: a key the stick queued may be the prerequisite
+     * of the next queued one, and that match needs it as it was sent. */
+    if (cur->stick_made)
+        last->button |= BUTTON_REL;
+#endif
     last->data   = button_get_data();
     last->tick   = current_tick;
 
@@ -1113,6 +1131,9 @@ static void init_act_cur(action_cur_t *cur,
     cur->button              = BUTTON_NONE;
     cur->context             = context;
     cur->is_prebutton        = false;
+#ifdef HAVE_TOUCHSCREEN
+    cur->stick_made          = false;
+#endif
     cur->items               = NULL;
     cur->timeout             = timeout;
     cur->get_context_map = get_context_map;
