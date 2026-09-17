@@ -67,6 +67,8 @@
 #include "skin_engine/skin_art_fx.h"
 #include "open_plugin.h"
 #include "audiobooks/audiobooks.h"
+#include "transition.h"
+#include "string-extra.h"
 
 #ifdef USB_ENABLE_AUDIO
 #include "usbstack/usb_audio.h"
@@ -77,6 +79,7 @@
 #define MIN_FF_REWIND_STEP 500
 
 static struct wps_state wps_state;
+static void transition_note_track(struct wps_state *state, bool animate);
 
 /* initial setup of wps_data  */
 static void wps_state_init(void);
@@ -891,10 +894,12 @@ long gui_wps_show(void)
             update = true;
             gwps_enter_wps(theme_enabled);
             theme_enabled = true;
+            transition_note_track(state, false);
         }
         else
         {
             gwps_caption_backlight(state);
+            transition_note_track(state, true);
 
             FOR_NB_SCREENS(i)
             {
@@ -1252,6 +1257,32 @@ struct wps_state *get_wps_state(void)
 {
     return &wps_state;
 }
+
+#ifdef HAVE_LCD_TRANSITIONS
+/* The track the WPS last drew, so a change can be animated. Both are only
+ * touched from the UI thread; the callback below only swaps id3 pointers. */
+static char transition_path[MAX_PATH];
+static int transition_index = -1;
+
+static void transition_note_track(struct wps_state *state, bool animate)
+{
+    const char *path = state->id3 ? state->id3->path : "";
+    int index = playlist_get_display_index();
+
+    if (animate && transition_path[0] && path[0] &&
+        strcmp(path, transition_path))
+    {
+        /* Previous track, or wrapped round to the end: back. A repeat of
+         * the only track, or a new playlist, reads as forward. */
+        gui_transition_wps(index < transition_index ? -1 : 1);
+    }
+    strmemccpy(transition_path, path, sizeof(transition_path));
+    transition_index = index;
+}
+#else
+static void transition_note_track(struct wps_state *state, bool animate)
+{ (void)state; (void)animate; }
+#endif
 
 /* this is called from the playback thread so NO DRAWING! */
 static void track_info_callback(unsigned short id, void *param)

@@ -74,6 +74,7 @@
 #include "language.h"
 #include "plugin.h"
 #include "disk.h"
+#include "gui/transition.h"
 
 struct root_items {
     int (*function)(void* param);
@@ -1086,7 +1087,11 @@ static inline int load_screen(int screen)
     if (activity != ACTIVITY_UNKNOWN)
         push_current_activity(activity);
 
+    gui_transition_menu(1);
     ret_val = items[screen].function(items[screen].param);
+    /* Back out, unless what comes next is another screen going in, whose
+     * own arm turns this one round. */
+    gui_transition_menu(-1);
 
     if (activity != ACTIVITY_UNKNOWN)
     {

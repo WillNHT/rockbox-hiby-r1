@@ -22,6 +22,7 @@
 #include "system.h"
 #include "kernel.h"
 #include "button.h"
+#include "lcd-transition.h"
 #ifdef HAVE_SDL
 #include "SDL.h"
 #if SDL_MAJOR_VERSION > 1
@@ -204,6 +205,11 @@ void button_clear_pressed(void)
 long button_get_w_tmo(int ticks)
 {
     struct queue_event ev;
+#if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
+    /* Waiting for a key: whatever was being drawn is done. */
+    if (ticks != TIMEOUT_NOBLOCK)
+        lcd_transition_idle();
+#endif
     button_queue_wait(&ev, ticks);
 
     if (ev.id == SYS_TIMEOUT)

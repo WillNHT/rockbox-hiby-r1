@@ -76,6 +76,7 @@
 #include "appevents.h"
 
 #include "root_menu.h"
+#include "gui/transition.h"
 
 static struct gui_synclist tree_lists;
 
@@ -798,6 +799,7 @@ static int dirbrowse(void)
                         return exit_to_new_screen(GO_TO_PREVIOUS);
                     }
                 }
+                gui_transition_menu(1);
 #ifdef HAVE_TAGCACHE
                 switch (id3db ? tagtree_enter(&tc, true) : ft_enter(&tc))
 #else
@@ -835,6 +837,7 @@ static int dirbrowse(void)
                         return exit_to_new_screen(GO_TO_ROOT);
                 }
 
+                gui_transition_menu(-1);
 #ifdef HAVE_TAGCACHE
                 if (id3db)
                     tagtree_exit(&tc, true);

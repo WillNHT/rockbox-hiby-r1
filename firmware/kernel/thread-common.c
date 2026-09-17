@@ -20,6 +20,7 @@
  ****************************************************************************/
 #include "kernel-internal.h"
 #include "system.h"
+#include "lcd-transition.h"
 
 /* Unless otherwise defined, do nothing */
 #ifndef YIELD_KERNEL_HOOK
@@ -195,6 +196,12 @@ unsigned sleep(unsigned ticks)
      * threading call is inappropriate. */
     if (SLEEP_KERNEL_HOOK(ticks))
         return 0; /* Handled */
+
+#if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
+    /* A screen drawn and then left up for a while is finished. */
+    if (ticks > 0)
+        lcd_transition_idle();
+#endif
 
     disable_irq();
     sleep_thread(ticks);

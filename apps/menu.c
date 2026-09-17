@@ -59,6 +59,7 @@
 
 /* gui api */
 #include "list.h"
+#include "transition.h"
 
 #define MAX_MENUS 8
 /* used to allow for dynamic menus */
@@ -735,6 +736,7 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
 
             if (stack_top > 0)
             {
+                gui_transition_menu(-1);
                 stack_top--;
                 menu = mstack[stack_top].menu;
                 int msel = mstack[stack_top].selected;
@@ -778,6 +780,7 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
                 case MT_MENU:
                     if (stack_top < MAX_MENUS)
                     {
+                        gui_transition_menu(1);
                         mstack[stack_top].menu = menu;
                         mstack[stack_top].selected = selected;
                         stack_top++;
@@ -789,6 +792,10 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
                 case MT_FUNCTION_CALL:
                 {
                     int return_value;
+                    /* Most of these open a screen of their own. One that
+                     * does not leaves the frame as it was, and an unchanged
+                     * frame is not animated. */
+                    gui_transition_menu(1);
                     if (type == MT_FUNCTION_CALL_W_PARAM)
                     {
                         return_value = temp->function_param->function_w_param(
@@ -798,6 +805,7 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
                     {
                         return_value = temp->function->function();
                     }
+                    gui_transition_menu(-1);
                     if (!(menu->flags&MENU_EXITAFTERTHISMENU) ||
                             (temp->flags&MENU_EXITAFTERTHISMENU))
                     {
@@ -817,7 +825,9 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
                 case MT_SETTING:
                 case MT_SETTING_W_TEXT:
                 {
+                    gui_transition_menu(1);
                     do_setting_from_menu(temp, vps);
+                    gui_transition_menu(-1);
                     init_menu_lists(menu, &lists, selected, false, vps);
                     redraw_lists = true;
 
@@ -831,6 +841,7 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
                     }
                     else if (stack_top < MAX_MENUS)
                     {
+                        gui_transition_menu(1);
                         mstack[stack_top].menu = menu;
                         mstack[stack_top].selected = selected;
                         stack_top++;

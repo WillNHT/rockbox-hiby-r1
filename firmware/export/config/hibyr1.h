@@ -40,6 +40,10 @@
  * The stick overlay lives in one instead of in the framebuffer. */
 #define HAVE_LCD_LAYERS
 
+/* Animated screen changes (firmware/drivers/lcd-transition.c), presented
+ * through the layers' update hook. Two frame copies, 1.5 MiB. */
+#define HAVE_LCD_TRANSITIONS
+
 /* Blend antialiased glyphs and alpha images in linear light rather than in
  * gamma-encoded RGB565, so a glyph keeps its weight whatever it landed on.
  * Six table lookups per blended pixel; 2.2 KiB of tables. */

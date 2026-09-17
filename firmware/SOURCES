@@ -70,6 +70,10 @@ common/devicedata.c
 drivers/lcd-layers.c
 #endif
 
+#if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
+drivers/lcd-transition.c
+#endif
+
 #ifdef HAVE_SDL
 target/hosted/sdl/button-sdl.c
 target/hosted/sdl/kernel-sdl.c
