@@ -543,6 +543,60 @@ static void test_shadow(void)
     ts_free(&t);
 }
 
+static void test_wash(void)
+{
+    struct test_surf t;
+    struct canvas_rect all = { 0, 0, 32, 64 };
+    canvas_px red = CANVAS_RGB(255, 0, 0);
+    canvas_px blue = CANVAS_RGB(0, 0, 255);
+
+    ts_make(&t, 32, 64, false);
+
+    TEST("the average of a split surface sits between its halves");
+    ts_fill_all(&t, BLACK, 255);
+    canvas_fill(&t.s, &(struct canvas_rect){ 0, 0, 32, 32 }, WHITE);
+    {
+        int r = CANVAS_R(canvas_average(&t.s, &all));
+        CHECK(r > 100 && r < 156, "average of black and white was %d", r);
+    }
+    CHECK(canvas_average(&t.s, &(struct canvas_rect){ 0, 40, 32, 8 })
+          == BLACK, "average of a black band was not black");
+
+    TEST("a full-strength wash is its gradient");
+    ts_fill_all(&t, WHITE, 255);
+    canvas_wash(&t.s, &all, red, blue, 255, 255, 0);
+    CHECK(CANVAS_R(px(&t, 0, 0)) > 230 && CANVAS_B(px(&t, 0, 0)) < 24,
+          "top is not red");
+    CHECK(CANVAS_B(px(&t, 0, 63)) > 230 && CANVAS_R(px(&t, 0, 63)) < 24,
+          "bottom is not blue");
+
+    TEST("opacity ramps from top to bottom");
+    ts_fill_all(&t, WHITE, 255);
+    canvas_wash(&t.s, &all, BLACK, BLACK, 0, 255, 0);
+    CHECK(CANVAS_R(px(&t, 0, 0)) > 230, "top was washed");
+    CHECK(CANVAS_R(px(&t, 0, 63)) < 24, "bottom was not washed");
+    CHECK(CANVAS_R(px(&t, 0, 32)) > 90 && CANVAS_R(px(&t, 0, 32)) < 170,
+          "middle was %d", CANVAS_R(px(&t, 0, 32)));
+
+    TEST("full desaturation turns a colour grey");
+    ts_fill_all(&t, red, 255);
+    canvas_wash(&t.s, &all, BLACK, BLACK, 0, 0, 255);
+    {
+        canvas_px c = px(&t, 5, 5);
+        int dr = CANVAS_R(c) - CANVAS_G(c);
+        int db = CANVAS_G(c) - CANVAS_B(c);
+        CHECK(dr > -12 && dr < 12 && db > -12 && db < 12,
+              "not grey: %d,%d,%d", CANVAS_R(c), CANVAS_G(c), CANVAS_B(c));
+    }
+
+    TEST("a wash hanging off the surface stays inside it");
+    canvas_wash(&t.s, &(struct canvas_rect){ -10, -10, 60, 90 },
+                red, blue, 128, 200, 60);
+    CHECK(ts_guards_intact(&t), "wrote outside the surface");
+
+    ts_free(&t);
+}
+
 static void test_gradient(void)
 {
     struct test_surf t;
@@ -1043,6 +1097,7 @@ int main(int argc, char **argv)
     test_round_shapes();
     test_shadow();
     test_gradient();
+    test_wash();
     test_9slice();
     test_reflect();
     test_vinyl();

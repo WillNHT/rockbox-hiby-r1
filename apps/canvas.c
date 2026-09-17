@@ -912,6 +912,93 @@ void canvas_gradient(struct canvas_surface *s, const struct canvas_rect *r,
     }
 }
 
+canvas_px canvas_average(const struct canvas_surface *s,
+                         const struct canvas_rect *r)
+{
+    struct canvas_rect c = *r;
+    unsigned long sr = 0, sg = 0, sb = 0, n = 0;
+    int x, y, sx, sy;
+
+    if (!clip_to_surface(s, &c))
+        return 0;
+
+    sx = c.w > 32 ? c.w / 32 : 1;
+    sy = c.h > 32 ? c.h / 32 : 1;
+
+    for (y = c.y + sy / 2; y < c.y + c.h; y += sy)
+    {
+        const canvas_px *row = canvas_at(s, 0, y);
+        for (x = c.x + sx / 2; x < c.x + c.w; x += sx)
+        {
+            sr += CANVAS_R(row[x]);
+            sg += CANVAS_G(row[x]);
+            sb += CANVAS_B(row[x]);
+            n++;
+        }
+    }
+    if (!n)
+        return 0;
+    return CANVAS_RGB(sr / n, sg / n, sb / n);
+}
+
+void canvas_wash(struct canvas_surface *s, const struct canvas_rect *r,
+                 canvas_px top, canvas_px bottom,
+                 unsigned a_top, unsigned a_bottom, unsigned desat)
+{
+    struct canvas_rect c = *r;
+    int x, y, span;
+
+    if (a_top > 255) a_top = 255;
+    if (a_bottom > 255) a_bottom = 255;
+    if (desat > 255) desat = 255;
+
+    if (!clip_to_surface(s, &c))
+        return;
+
+    /* Positions are measured in the unclipped rectangle, so a wash that
+     * hangs off the surface still has its stops where it was asked to. */
+    span = r->h - 1;
+    if (span < 1)
+        span = 1;
+
+    for (y = 0; y < c.h; y++)
+    {
+        canvas_px *row = canvas_at(s, 0, c.y + y);
+        int t = c.y + y - r->y;
+        int cr = CANVAS_R(top) + (CANVAS_R(bottom) - CANVAS_R(top)) * t / span;
+        int cg = CANVAS_G(top) + (CANVAS_G(bottom) - CANVAS_G(top)) * t / span;
+        int cb = CANVAS_B(top) + (CANVAS_B(bottom) - CANVAS_B(top)) * t / span;
+        int a  = (int)a_top + ((int)a_bottom - (int)a_top) * t / span;
+
+        for (x = c.x; x < c.x + c.w; x++)
+        {
+            int pr = CANVAS_R(row[x]);
+            int pg = CANVAS_G(row[x]);
+            int pb = CANVAS_B(row[x]);
+            int d = bayer4[((y & 3) << 2) | (x & 3)];
+
+            if (desat)
+            {
+                /* Rec. 601 luma, weights out of 256 */
+                int l = (pr * 77 + pg * 150 + pb * 29) >> 8;
+                pr += (l - pr) * (int)desat / 255;
+                pg += (l - pg) * (int)desat / 255;
+                pb += (l - pb) * (int)desat / 255;
+            }
+
+            pr += (cr - pr) * a / 255;
+            pg += (cg - pg) * a / 255;
+            pb += (cb - pb) * a / 255;
+
+            pr = clampi(pr + ((d * 8) >> 4) - 4, 0, 255);
+            pg = clampi(pg + ((d * 4) >> 4) - 2, 0, 255);
+            pb = clampi(pb + ((d * 8) >> 4) - 4, 0, 255);
+
+            row[x] = CANVAS_RGB(pr, pg, pb);
+        }
+    }
+}
+
 /* ------------------------------------------------------------------ */
 /* Nine-slice                                                          */
 /* ------------------------------------------------------------------ */
