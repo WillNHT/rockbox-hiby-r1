@@ -1509,6 +1509,30 @@ INLINE void fix_huff_tables(struct jpeg *p_jpeg)
  * quantization table when one of these IDCT routines is used, rather than
  * have the IDCT shift each value it processes.
  */
+/* The decoder keeps one luma slot and one chroma slot for the quantization
+ * tables and reads them by "is this component 0", but a file picks a table
+ * per component and is free to point several components at the same one, or
+ * to use them in the other order. When it does, the chroma slot holds a
+ * table the file never sent - all zeros - and every chroma coefficient
+ * dequantizes to nothing, which is a neutral grey picture out of a perfectly
+ * good JPEG. Put what each component actually selected where the decoder
+ * will look, before fix_quant_tables() folds the IDCT shift into it.
+ * ponytail: the Huffman slots are picked the same hardcoded way and could go
+ * wrong for the same reason; no file seen here does it, so they are left. */
+INLINE void fix_quant_selects(struct jpeg *p_jpeg)
+{
+    int16_t sel[2][QUANT_TABLE_LENGTH];
+    int i, n = (p_jpeg->components > 1) ? 2 : 1;
+
+    for (i = 0; i < n; i++)
+        MEMCPY(sel[i],
+               p_jpeg->quanttable[p_jpeg->frameheader[i].quanttable_select & 3],
+               sizeof sel[0]);
+
+    for (i = 0; i < n; i++)
+        MEMCPY(p_jpeg->quanttable[i], sel[i], sizeof sel[0]);
+}
+
 INLINE void fix_quant_tables(struct jpeg *p_jpeg)
 {
     int shift, i, j;
@@ -2146,6 +2170,7 @@ int clip_jpeg_fd(int fd, int flags,
         (p_jpeg->x_size << p_jpeg->h_scale[0]) >> 3,
         (p_jpeg->y_size << p_jpeg->v_scale[0]) >> 3,
         bm->width, bm->height);
+    fix_quant_selects(p_jpeg);
     fix_quant_tables(p_jpeg);
 
     int decode_w = BIT_N(p_jpeg->h_scale[0]) - 1;
