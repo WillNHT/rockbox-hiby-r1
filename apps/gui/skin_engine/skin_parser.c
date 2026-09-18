@@ -66,6 +66,7 @@
 #include "skin_engine.h"
 #ifndef __PCTOOL__
 #include "skin_art_fx.h"
+#include "skin_lyrics.h"
 #endif
 #include "settings.h"
 #include "settings_list.h"
@@ -401,6 +402,124 @@ static int parse_art_fx(struct skin_element *element,
 #endif
 
     token->value.data = PTRTOSKINOFFSET(skin_buffer, fx);
+    return 0;
+}
+
+/* %Cv(x, y, w, h [, cover|contain|stretch]),
+ * %Cf(x, y, w, h, file [, cover|contain|stretch]) */
+static const char *parse_skin_file;     /* the skin being parsed, or NULL */
+
+static int parse_video(struct skin_element *element,
+                       struct wps_token *token,
+                       struct wps_data *wps_data)
+{
+    struct skin_video *sv = skin_buffer_alloc(sizeof(*sv));
+    int fit_param = token->type == SKIN_TOKEN_VIDEO_CLIP ? 5 : 4;
+
+    if (!sv)
+        return WPS_ERROR_INVALID_PARAM;
+    memset(sv, 0, sizeof(*sv));
+    sv->x = get_param(element, 0)->data.number;
+    sv->y = get_param(element, 1)->data.number;
+    sv->w = get_param(element, 2)->data.number;
+    sv->h = get_param(element, 3)->data.number;
+    sv->path = PTRTOSKINOFFSET(skin_buffer, NULL);
+    if (sv->w <= 0 || sv->h <= 0)
+        return WPS_ERROR_INVALID_PARAM;
+
+    if (element->params_count > fit_param)
+    {
+        const char *fit = get_param_text(element, fit_param);
+        if (!strcmp(fit, "contain"))
+            sv->fit = 1;
+        else if (!strcmp(fit, "stretch"))
+            sv->fit = 2;
+        else if (strcmp(fit, "cover"))
+            return WPS_ERROR_INVALID_PARAM;
+    }
+
+    if (token->type == SKIN_TOKEN_VIDEO_CLIP)
+    {
+        /* Next to the skin's pictures: <skin dir>/<skin name>/<file> */
+        const char *file = get_param_text(element, 4);
+        char path[MAX_PATH];
+        char *copy;
+        const char *dot = parse_skin_file ? strrchr(parse_skin_file, '.')
+                                          : NULL;
+        if (dot)
+            snprintf(path, sizeof(path), "%.*s/%s",
+                     (int)(dot - parse_skin_file), parse_skin_file, file);
+        else
+            snprintf(path, sizeof(path), "%s/%s", BACKDROP_DIR, file);
+        copy = skin_buffer_alloc(strlen(path) + 1);
+        if (!copy)
+            return WPS_ERROR_INVALID_PARAM;
+        strcpy(copy, path);
+        sv->path = PTRTOSKINOFFSET(skin_buffer, copy);
+    }
+
+    token->value.data = PTRTOSKINOFFSET(skin_buffer, sv);
+    /* It moves, so the skin needs the animation frame rate. */
+    wps_data->animation_enabled = true;
+    return 0;
+}
+
+/* %yl([n]) */
+static int parse_lyrics_line(struct skin_element *element,
+                             struct wps_token *token,
+                             struct wps_data *wps_data)
+{
+    (void)wps_data;
+    token->value.l = 0;
+    if (element->params_count > 0 && !isdefault(get_param(element, 0)))
+        token->value.l = get_param(element, 0)->data.number;
+    return 0;
+}
+
+/* %yb(x, y, w, h [, inactive colour [, left|center|right [, gap]]]) */
+static int parse_lyrics_block(struct skin_element *element,
+                              struct wps_token *token,
+                              struct wps_data *wps_data)
+{
+    struct skin_lyrics *ly = skin_buffer_alloc(sizeof(*ly));
+
+    if (!ly)
+        return WPS_ERROR_INVALID_PARAM;
+    memset(ly, 0, sizeof(*ly));
+    ly->x = get_param(element, 0)->data.number;
+    ly->y = get_param(element, 1)->data.number;
+    ly->w = get_param(element, 2)->data.number;
+    ly->h = get_param(element, 3)->data.number;
+    ly->align = SKIN_LYRICS_CENTER;
+
+    if (element->params_count > 4 && !isdefault(get_param(element, 4)))
+    {
+#if LCD_DEPTH > 1
+        unsigned colour;
+        if (!parse_color(curr_screen, get_param_text(element, 4), &colour))
+            return WPS_ERROR_INVALID_PARAM;
+        ly->inactive = colour;
+        ly->has_inactive = true;
+#endif
+    }
+    if (element->params_count > 5)
+    {
+        const char *a = get_param_text(element, 5);
+        if (!strcmp(a, "left"))
+            ly->align = SKIN_LYRICS_LEFT;
+        else if (!strcmp(a, "right"))
+            ly->align = SKIN_LYRICS_RIGHT;
+        else if (!strcmp(a, "center"))
+            ly->align = SKIN_LYRICS_CENTER;
+        else
+            return WPS_ERROR_INVALID_PARAM;
+    }
+    if (element->params_count > 6)
+        ly->gap = get_param(element, 6)->data.number;
+
+    token->value.data = PTRTOSKINOFFSET(skin_buffer, ly);
+    /* It scrolls, so the skin needs the animation frame rate. */
+    wps_data->animation_enabled = true;
     return 0;
 }
 
@@ -2655,6 +2774,16 @@ static int skin_element_callback(struct skin_element* element, void* data)
                 case SKIN_TOKEN_PLAYLIST_COVER:
                     function = parse_playlist_cover;
                     break;
+                case SKIN_TOKEN_LYRICS_LINE:
+                    function = parse_lyrics_line;
+                    break;
+                case SKIN_TOKEN_LYRICS_BLOCK:
+                    function = parse_lyrics_block;
+                    break;
+                case SKIN_TOKEN_VIDEO_ART:
+                case SKIN_TOKEN_VIDEO_CLIP:
+                    function = parse_video;
+                    break;
                 case SKIN_TOKEN_IMAGE_PRELOAD_DISPLAY:
                 case SKIN_TOKEN_IMAGE_DISPLAY_9SEGMENT:
                     function = parse_image_display;
@@ -2825,7 +2954,9 @@ bool skin_data_load(enum screen_type screen, struct wps_data *wps_data,
 #endif
     /* parse the skin source */
     skin_buffer_init(skin_buffer, buffersize);
+    parse_skin_file = isfile ? buf : NULL;
     struct skin_element *tree = skin_parse(wps_buffer, skin_element_callback, wps_data);
+    parse_skin_file = NULL;
     wps_data->tree = PTRTOSKINOFFSET(skin_buffer, tree);
     if (!SKINOFFSETTOPTR(skin_buffer, wps_data->tree)) {
 #ifdef DEBUG_SKIN_ENGINE

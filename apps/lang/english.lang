@@ -19499,6 +19499,398 @@
   </voice>
 </phrase>
 <phrase>
+  id: LANG_LYRICS
+  desc: playback settings: the lyrics submenu
+  user: core
+  <source>
+    *: "Lyrics"
+  </source>
+  <dest>
+    *: "Lyrics"
+  </dest>
+  <voice>
+    *: "Lyrics"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LYRICS_SHOW
+  desc: lyrics: whether skins show lyrics
+  user: core
+  <source>
+    *: "Show Lyrics"
+  </source>
+  <dest>
+    *: "Show Lyrics"
+  </dest>
+  <voice>
+    *: "Show Lyrics"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LYRICS_SOURCE
+  desc: lyrics: whether a file next to the track or lyrics in its tags are tried first
+  user: core
+  <source>
+    *: "Lyrics Source"
+  </source>
+  <dest>
+    *: "Lyrics Source"
+  </dest>
+  <voice>
+    *: "Lyrics Source"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LYRICS_FILE_FIRST
+  desc: lyrics source: .lrc/.txt file first
+  user: core
+  <source>
+    *: "File First"
+  </source>
+  <dest>
+    *: "File First"
+  </dest>
+  <voice>
+    *: "File First"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LYRICS_EMBEDDED_FIRST
+  desc: lyrics source: tags in the track first
+  user: core
+  <source>
+    *: "Embedded First"
+  </source>
+  <dest>
+    *: "Embedded First"
+  </dest>
+  <voice>
+    *: "Embedded First"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FALLBACK_FONT
+  desc: theme settings: font for characters the theme's fonts lack
+  user: core
+  <source>
+    *: "Fallback Font"
+  </source>
+  <dest>
+    *: "Fallback Font"
+  </dest>
+  <voice>
+    *: "Fallback Font"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_VIDEO
+  desc: settings: the video submenu
+  user: core
+  <source>
+    *: "Video"
+  </source>
+  <dest>
+    *: "Video"
+  </dest>
+  <voice>
+    *: "Video"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_VIDEO_ENABLE
+  desc: video: master switch
+  user: core
+  <source>
+    *: "Video"
+  </source>
+  <dest>
+    *: "Video"
+  </dest>
+  <voice>
+    *: "Video"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_VIDEO_CANVAS
+  desc: video: animated covers in the WPS
+  user: core
+  <source>
+    *: "Animated Covers"
+  </source>
+  <dest>
+    *: "Animated Covers"
+  </dest>
+  <voice>
+    *: "Animated Covers"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_VIDEO_MUSIC
+  desc: video: music videos in the WPS
+  user: core
+  <source>
+    *: "Music Videos"
+  </source>
+  <dest>
+    *: "Music Videos"
+  </dest>
+  <voice>
+    *: "Music Videos"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_VIDEO_SHOW_MUSIC
+  desc: video: the WPS shows the music video instead of the cover
+  user: core
+  <source>
+    *: "Show Music Video"
+  </source>
+  <dest>
+    *: "Show Music Video"
+  </dest>
+  <voice>
+    *: "Show Music Video"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_VIDEO_SHOW_COVER
+  desc: wps context menu: go back from the music video to the cover
+  user: core
+  <source>
+    *: "Show Cover"
+  </source>
+  <dest>
+    *: "Show Cover"
+  </dest>
+  <voice>
+    *: "Show Cover"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_VIDEO_LATENCY
+  desc: video: how long the picture is held back
+  user: core
+  <source>
+    *: "Video Latency"
+  </source>
+  <dest>
+    *: "Video Latency"
+  </dest>
+  <voice>
+    *: "Video Latency"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_VIDEO_BT_LATENCY
+  desc: video: extra delay while Bluetooth plays
+  user: core
+  <source>
+    *: "Bluetooth Latency"
+  </source>
+  <dest>
+    *: "Bluetooth Latency"
+  </dest>
+  <voice>
+    *: "Bluetooth Latency"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_VIDEO_BATTERY_FPS
+  desc: video: frame rate cap on battery
+  user: core
+  <source>
+    *: "Frame Rate on Battery"
+  </source>
+  <dest>
+    *: "Frame Rate on Battery"
+  </dest>
+  <voice>
+    *: "Frame Rate on Battery"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_VIDEO_FPS_FULL
+  desc: video: no frame rate cap
+  user: core
+  <source>
+    *: "Full"
+  </source>
+  <dest>
+    *: "Full"
+  </dest>
+  <voice>
+    *: "Full"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_VIDEO_DECODER
+  desc: video: shows which decoder is installed
+  user: core
+  <source>
+    *: "Decoder"
+  </source>
+  <dest>
+    *: "Decoder"
+  </dest>
+  <voice>
+    *: "Decoder"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_VIDEO_NO_DECODER
+  desc: video: the decoder library is missing
+  user: core
+  <source>
+    *: "Video decoder not installed"
+  </source>
+  <dest>
+    *: "Video decoder not installed"
+  </dest>
+  <voice>
+    *: "Video decoder not installed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_SAVER
+  desc: video: the screensaver submenu
+  user: core
+  <source>
+    *: "Screensaver"
+  </source>
+  <dest>
+    *: "Screensaver"
+  </dest>
+  <voice>
+    *: "Screensaver"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_SAVER_BATTERY
+  desc: screensaver: the one shown on battery
+  user: core
+  <source>
+    *: "On Battery"
+  </source>
+  <dest>
+    *: "On Battery"
+  </dest>
+  <voice>
+    *: "On Battery"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_SAVER_CHARGING
+  desc: screensaver: the one shown while charging
+  user: core
+  <source>
+    *: "While Charging"
+  </source>
+  <dest>
+    *: "While Charging"
+  </dest>
+  <voice>
+    *: "While Charging"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_SAVER_TIMEOUT
+  desc: screensaver: idle time before it starts
+  user: core
+  <source>
+    *: "Start After"
+  </source>
+  <dest>
+    *: "Start After"
+  </dest>
+  <voice>
+    *: "Start After"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_SAVER_BATTERY_FPS
+  desc: screensaver: frame rate on battery
+  user: core
+  <source>
+    *: "Frame Rate on Battery"
+  </source>
+  <dest>
+    *: "Frame Rate on Battery"
+  </dest>
+  <voice>
+    *: "Frame Rate on Battery"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_SAVER_BATTERY_BRIGHTNESS
+  desc: screensaver: brightness on battery
+  user: core
+  <source>
+    *: "Brightness on Battery"
+  </source>
+  <dest>
+    *: "Brightness on Battery"
+  </dest>
+  <voice>
+    *: "Brightness on Battery"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_SAVER_KEEP_ON
+  desc: screensaver: keep the backlight on
+  user: core
+  <source>
+    *: "Keep Screen On"
+  </source>
+  <dest>
+    *: "Keep Screen On"
+  </dest>
+  <voice>
+    *: "Keep Screen On"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_SAVER_WHEN_CHARGING
+  desc: screensaver keep on: only while charging
+  user: core
+  <source>
+    *: "While Charging"
+  </source>
+  <dest>
+    *: "While Charging"
+  </dest>
+  <voice>
+    *: "While Charging"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_SAVER_PREVIEW
+  desc: screensaver: show it now
+  user: core
+  <source>
+    *: "Preview"
+  </source>
+  <dest>
+    *: "Preview"
+  </dest>
+  <voice>
+    *: "Preview"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_VIDEO_PLAYER
+  desc: video player plugin title
+  user: core
+  <source>
+    *: "Video Player"
+  </source>
+  <dest>
+    *: "Video Player"
+  </dest>
+  <voice>
+    *: "Video Player"
+  </voice>
+</phrase>
+<phrase>
   id: LANG_QUICKSCREEN_WHEEL
   desc: in settings_menu. draws the quick screen's four ways as a click wheel
   user: core

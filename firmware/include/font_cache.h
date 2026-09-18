@@ -41,6 +41,7 @@ struct font_cache_entry
 {
     ucschar_t _char_code;
     unsigned char width;
+    bool missing;       /* the font has no glyph of its own for this */
     unsigned char bitmap[1]; /* place holder */
 };
 

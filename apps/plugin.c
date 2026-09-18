@@ -21,6 +21,9 @@
 #define DIRFUNCTIONS_DEFINED
 #define FILEFUNCTIONS_DEFINED
 #include "plugin.h"
+#ifdef HAVE_VIDEO
+#include "video/video_lib.h"
+#endif
 #include "open_plugin.h"
 #include <ctype.h>
 #include <string.h>
@@ -890,6 +893,10 @@ static const struct plugin_api rockbox_api = {
     gui_synclist_scroll_stop,
     add_event_ex,
     remove_event_ex,
+#ifdef HAVE_VIDEO
+    video_lib,
+    video_os_path,
+#endif
 };
 
 static int plugin_buffer_handle;

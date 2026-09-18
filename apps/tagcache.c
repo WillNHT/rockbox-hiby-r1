@@ -77,6 +77,9 @@
 #include "usb.h"
 #include "metadata.h"
 #include "tagcache.h"
+#if defined(HAVE_VIDEO) && !defined(__PCTOOL__)
+#include "video/video_lib.h"
+#endif
 #include "yesno.h"
 #include "core_alloc.h"
 #include "crc32.h"
@@ -2281,6 +2284,11 @@ static void NO_INLINE add_tagcache(char *path, unsigned long mtime)
     /* Check if the file is supported. */
     if (probe_file_format(path) == AFMT_UNKNOWN)
         return ;
+#if defined(HAVE_VIDEO) && !defined(__PCTOOL__)
+    /* A music video or canvas is not a track. */
+    if (video_is_sidecar(path))
+        return ;
+#endif
 
     /* Check if the file is already cached. */
 #if defined(HAVE_TC_RAMCACHE) && defined(HAVE_DIRCACHE)

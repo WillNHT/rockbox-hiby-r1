@@ -25,6 +25,9 @@
 #include <errno.h>
 #include "string-extra.h"
 #include "config.h"
+#ifdef HAVE_VIDEO
+#include "video/screensaver.h"
+#endif
 #include "misc.h"
 #include "system.h"
 #include "lcd.h"
@@ -673,6 +676,11 @@ long default_event_handler_ex(long event, void (*callback)(void *), void *parame
 
     switch(event)
     {
+#ifdef HAVE_VIDEO
+        case SYS_SCREENSAVER:
+            screensaver_run(false);
+            return SYS_SCREENSAVER;
+#endif
         case SYS_BATTERY_UPDATE:
             if(global_settings.talk_battery_level)
             {

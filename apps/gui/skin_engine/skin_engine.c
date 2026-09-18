@@ -39,6 +39,9 @@
 #include "skin_buffer.h"
 #include "statusbar-skinned.h"
 #include "wps_internals.h"
+#ifdef HAVE_VIDEO
+#include "video/screensaver.h"
+#endif
 
 #define FAILSAFENAME "rockbox_failsafe"
 
@@ -73,6 +76,9 @@ static const struct gui_skin_helper * const skin_helpers[SKINNABLE_SCREENS_COUNT
     [WPS] =  SKH(dummy_process, wps_default_skin, true),
 #if CONFIG_TUNER
     [FM_SCREEN] = SKH(dummy_process, default_radio_skin, false),
+#endif
+#ifdef HAVE_VIDEO
+    [SCREENSAVER_SKIN] = SKH(dummy_process, screensaver_default_skin, false),
 #endif
 };
 
@@ -280,6 +286,14 @@ static char* get_skin_filename(char *buf, size_t buf_size,
                 ext = "wps";
             }
             break;
+#ifdef HAVE_VIDEO
+        case SCREENSAVER_SKIN:
+            setting = (char *)screensaver_skin_name();
+            if (!setting)
+                setting = "-";
+            ext = "ss";
+            break;
+#endif
 #if CONFIG_TUNER
         case FM_SCREEN:
 #if defined(HAVE_REMOTE_LCD) && NB_SCREENS > 1
@@ -352,6 +366,20 @@ void skin_set_wps_book_mode(bool on, bool force)
     }
 }
 
+#ifdef HAVE_VIDEO
+void skin_unload_screensaver(void)
+{
+    FOR_NB_SCREENS(i)
+    {
+        if (!skins[SCREENSAVER_SKIN][i].data.wps_loaded)
+            continue;
+        skin_reset_buffers(SCREENSAVER_SKIN, i);
+        gui_skin_reset(&skins[SCREENSAVER_SKIN][i]);
+        skins[SCREENSAVER_SKIN][i].gui_wps.display = &screens[i];
+    }
+}
+#endif
+
 /* This is called to find out if we the screen needs a full update.
  * if true you MUST do a full update as the next call will return false */
 bool skin_do_full_update(enum skinnable_screens skin,
@@ -359,8 +387,9 @@ bool skin_do_full_update(enum skinnable_screens skin,
 {
     struct viewport *vp = *(screens[screen].current_viewport);
 
+    enum current_activity act = get_current_activity();
     bool vp_is_dirty = ((vp->flags & VP_FLAG_VP_SET_CLEAN) == VP_FLAG_VP_DIRTY) &&
-                       get_current_activity() == ACTIVITY_WPS;
+                       (act == ACTIVITY_WPS || act == ACTIVITY_SCREENSAVER);
 
     bool ret = (skins[skin][screen].needs_full_update || vp_is_dirty);
     skins[skin][screen].needs_full_update = false;

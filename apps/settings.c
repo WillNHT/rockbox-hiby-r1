@@ -873,6 +873,28 @@ void sound_settings_apply(void)
 #endif
 }
 
+/* Loads the fallback font named in the settings, dropping the old one. */
+void settings_apply_fallback_font(void)
+{
+    static int loaded_id = -1;
+    char buf[MAX_PATH];
+    const char *name = (const char *)global_settings.fallback_font_file;
+    int id = -1;
+
+    if (name[0] && name[0] != '-')
+    {
+        snprintf(buf, sizeof buf, FONT_DIR "/%s.fnt", name);
+        if (loaded_id >= 0 && font_filename_matches_loaded_id(loaded_id, buf))
+            return;
+        id = font_load_ex(buf, 0, global_settings.glyphs_to_cache);
+    }
+    font_set_fallback(-1);
+    if (loaded_id >= 0)
+        font_unload(loaded_id);
+    loaded_id = id;
+    font_set_fallback(id);
+}
+
 void settings_apply(bool read_disk)
 {
     root_menu_apply_title();
@@ -997,6 +1019,7 @@ void settings_apply(bool read_disk)
                 screens[SCREEN_MAIN].setfont(rc);
             }
         }
+        settings_apply_fallback_font();
 #ifdef HAVE_REMOTE_LCD
         if ( global_settings.remote_font_file[0]
             && global_settings.remote_font_file[0] != '-') {

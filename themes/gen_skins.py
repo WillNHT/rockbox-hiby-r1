@@ -9,8 +9,10 @@ geometry is stated once, here, and the files are generated.
 
     python3 themes/gen_skins.py      (run from the rockbox/ directory)
 
-Writes themes/wps/SnappyV2.wps, SnappyVinyl.wps, SnappyAnimated.wps and
-SnappyGauge.wps.
+Writes themes/wps/SnappyV2.wps, SnappyVinyl.wps, SnappyAnimated.wps,
+SnappyGauge.wps and the lyrics demos SnappyLyrics.wps,
+SnappyLyricsLines.wps and SnappyLyricsCaption.wps, and the video demo
+SnappyCanvas.wps.
 """
 import io
 
@@ -416,8 +418,78 @@ SHEEN_STOPS = (AH - 4 - SHEEN_H) // SHEEN_STEP + 1
 SHEEN_REST = 30
 
 
-def animated(gauge=False):
+def gate(lines, prefix, cond):
+    """Label every plain viewport in `lines` and return the enables that
+    show it only when `cond` (a format with one %s for the %Vd) says so."""
+    out, enables, n = [], [], 0
+    for ln in lines.split("\n"):
+        if ln.startswith("%V("):
+            label = "%s%d" % (prefix, n)
+            n += 1
+            ln = "%%Vl(%s,%s" % (label, ln[3:])
+            enables.append(cond % ("%%Vd(%s)" % label))
+        out.append(ln)
+    return "\n".join(out), enables
+
+
+# The lyrics demos. %yl(n) is a line of text like any other tag; %yb is a
+# block that scrolls with the song and clears its own viewport, so it gets
+# one to itself. See docs/mods/lyrics.md.
+LYRIC_DIM = "8E8C86"
+
+# Two lines where the band was: the one being sung, and the next.
+LYRICS_LINES = """#
+# Lyrics
+# ======
+# Where the peak meter and the codec were, while the track has lyrics:
+# the line being sung in the accent colour, the next one under it, dimmer.
+%%Vl(lyr1,30,%d,-30,36,3)
+%%Vt(0)
+%%Vf(%s)
+%%al%%s%%yl(0)
+#
+%%Vl(lyr2,30,%d,-30,30,2)
+%%Vt(0)
+%%Vf(%s)
+%%al%%s%%yl(1)"""
+
+# One line across the foot of the cover, on a veil.
+LYRICS_CAPTION = """#
+# Lyrics
+# ======
+# One line over the foot of the cover, on a dark veil. %%yb rather than
+# %%yl: a text line fills its background from the backdrop, so on a veil it
+# would sit in a stripe of unveiled cover. The gap pushes the neighbouring
+# lines out of the viewport, so only the one being sung shows, sliding in
+# as it starts.
+%%Vl(cap,%d,%d,%d,52,3)
+%%Vb(0C0D0E)
+%%Vt(55)
+%%Vf(%s)
+%%yb(0,0,0,0,-,center,80)"""
+
+
+# The track's moving picture where the cover is.
+CANVAS = """#
+# Canvas
+# ======
+# The playing track's animated cover, or its music video when the context
+# menu says so, over the cover it replaces. %%Cv draws only when there is
+# a picture; %%?CV enables this viewport only then, so without one the
+# cover underneath is what shows. The sheen is off: it would restore the
+# cover over the picture as it passed.
+%%Vl(vid,%d,%d,%d,%d,-)
+%%Cv(0,0,%d,%d,cover)"""
+
+
+def animated(gauge=False, lyrics=None):
     name = "Snappy Gauge" if gauge else "Snappy Animated"
+    if lyrics == "lines":
+        name = "Snappy Lyrics Lines"
+    elif lyrics == "caption":
+        name = "Snappy Lyrics Caption"
+    elif lyrics == "canvas":
+        name = "Snappy Canvas"
     o = []
     o.append("""#
 #   ____ _  _ ____ ___  ___  _   _   %s
@@ -452,7 +524,19 @@ def animated(gauge=False):
     o.append("%Vd(bg)")
     o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
     o.append("%?C<%Vd(mirror)>")
-    o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>")
+    meter = "%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>"
+    if lyrics == "lines":
+        # The band gives way to the lyrics, and comes back without them.
+        o.append("%%?yf<%%Vd(lyr1)%%Vd(lyr2)|%%Vd(lyr1)%%Vd(lyr2)|%s>"
+                 % meter)
+        band_slot = len(o)
+        o.append("")
+    else:
+        o.append(meter)
+    if lyrics == "caption":
+        o.append("%?C<%?yf<%Vd(cap)|%Vd(cap)|>>")
+    if lyrics == "canvas":
+        o.append("%?CV<%Vd(vid)|%Vd(vid)|>")
     # The volume bar is a viewport of its own again. It used to be drawn
     # inside the backdrop viewport when there was a cover, because a
     # viewport clears its background and a black box across the top of a
@@ -480,7 +564,11 @@ def animated(gauge=False):
     # edge and a breathing rule under the title. Both are gone (#23) - the
     # cover is the picture, and a light running round it only competed.
     frames = SHEEN_STOPS + SHEEN_REST
-    for i in range(SHEEN_STOPS):
+    # The caption sits on the cover, and the sheen restores the cover as it
+    # passes: %yb only redraws when its lines move, so the two would take
+    # turns erasing each other. The caption variant has no sheen.
+    sheen = lyrics not in ("caption", "canvas")
+    for i in range(SHEEN_STOPS if sheen else 0):
         o.append("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%02d)>"
                  % (frames, SHEEN_MS, i + 1, i))
 
@@ -593,8 +681,13 @@ def animated(gauge=False):
                               AX, AY, AS, AH,
                               AH - 2, AH - 4, AS - 2, AH - 4,
                               AX + 10, AY + AH // 2 - 20, AS - 20))
-    o += moving
-    content = [band(BAND_Y, 62, 66), """#
+    if sheen:
+        o += moving
+    the_band = band(BAND_Y, 62, 66)
+    if lyrics == "lines":
+        the_band, enables = gate(the_band, "bd", "%%?yf<||%s>")
+        o[band_slot] = "\n".join(enables)
+    content = [the_band, """#
 # Track
 # -----
 %V(30,690,-30,28,2)
@@ -611,6 +704,14 @@ def animated(gauge=False):
 %V(30,768,-30,30,2)
 %Vt(0)
 %al%pc/%pt%ar%pp/%pe""")
+
+    if lyrics == "lines":
+        content.append(LYRICS_LINES % (BAND_Y, ACCENT, BAND_Y + 36, LYRIC_DIM))
+    elif lyrics == "canvas":
+        content.append(CANVAS % (AX + 2, AY + 2, ART_W, ART_H, ART_W, ART_H))
+    elif lyrics == "caption":
+        content.append(LYRICS_CAPTION % (AX + 2, AY + AH - 2 - 52 - 8,
+                                         ART_W, ACCENT))
 
     if gauge:
         body, enables = hide_while_armed("\n".join(content))
@@ -670,8 +771,96 @@ def animated(gauge=False):
     return "\n".join(o) + "\n"
 
 
+# ------------------------------------------------------- Snappy Lyrics
+
+LYR_Y, LYR_H = 250, 490
+
+
+def lyrics_full():
+    """The whole panel for lyrics, over the blurred cover."""
+    o = ["""#
+#  Snappy Lyrics - the lyrics, full screen, over Snappy Animated's
+#  blurred cover.
+#
+#  * %yb(x, y, w, h, inactive, align, gap) is the block: it scrolls
+#    with the song, eases from line to line, keeps the line being sung in
+#    the middle in the viewport's colour and the rest in the inactive one,
+#    and wraps long lines. It clears its own viewport, so it has one.
+#  * Lyrics without times scroll through the track at an even pace.
+#  * %?yf<synced|plain|none> says what the track has; with none, the
+#    block is empty and a note says so.
+#  * Characters the GeistMono faces lack (CJK, Hangul) come from the
+#    fallback font (Theme Settings > Fallback Font).
+#
+#  Generated by themes/gen_skins.py; do not hand-edit.
+#
+%wd""", PRELOAD, "%Vd(bg)",
+         "%?yf<|%Vd(plainnote)|%Vd(nolyrics)>",
+         "%?mh<%Vd(locked)|%Vd(volbar)>",
+         "%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|"
+         "%?mv(1.5)<%Vd(voldb)|%Vd(clock)>>"]
+    o += dial_border(30, 110, 420, 36)
+    o.append(HEADER)
+    o.append("""#
+# The backdrop
+# ============
+# Snappy Animated's, without the sharp cover: the lyrics are the picture.
+# Same %%Cl size as the other Snappy skins, so they share one album-art
+# slot - see the note above AX in themes/gen_skins.py.
+%%Vl(bg,0,0,-,-,-)
+%%Cb(0,0,480,800,40,70)
+%%Cl(%d,%d,%d,%d,c,c)
+#
+# Track
+# -----
+%%V(30,160,-30,46,4)
+%%Vt(0)
+%%al%%s%%?it<%%it|%%fn>
+#
+%%V(30,206,-30,30,2)
+%%Vt(0)
+%%Vf(%s)
+%%al%%s%%?ia<%%ia|%%?ic<%%ic|>>%%?id< - %%id|>
+#
+# The lyrics
+# ----------
+%%V(30,%d,-30,%d,3)
+%%Vt(0)
+%%yb(0,0,0,0,%s,center,14)
+#
+%%Vl(nolyrics,30,%d,-30,40,3)
+%%Vt(0)
+%%Vf(%s)
+%%acNo lyrics
+#
+%%Vl(plainnote,30,%d,-30,26,2)
+%%Vt(0)
+%%Vf(%s)
+%%acunsynced
+#
+# Footer
+# ======
+%%V(30,768,-30,30,2)
+%%Vt(0)
+%%al%%pc/%%pt%%ar%%pp/%%pe""" % (AX + 2, AY + 2, ART_W, ART_H,
+                            LYRIC_DIM,
+                            LYR_Y, LYR_H, LYRIC_DIM,
+                            LYR_Y + LYR_H // 2 - 20, LYRIC_DIM,
+                            LYR_Y + LYR_H, LYRIC_DIM))
+    return "\n".join(o) + "\n"
+
+
 io.open("themes/wps/SnappyV2.wps", "w", newline="\n").write(snappy_v2())
 io.open("themes/wps/SnappyVinyl.wps", "w", newline="\n").write(snappy_v2(True))
 io.open("themes/wps/SnappyAnimated.wps", "w", newline="\n").write(animated(False))
 io.open("themes/wps/SnappyGauge.wps", "w", newline="\n").write(animated(True))
-print("wrote SnappyV2.wps, SnappyVinyl.wps, SnappyAnimated.wps, SnappyGauge.wps")
+io.open("themes/wps/SnappyLyrics.wps", "w", newline="\n").write(lyrics_full())
+io.open("themes/wps/SnappyLyricsLines.wps", "w",
+        newline="\n").write(animated(False, "lines"))
+io.open("themes/wps/SnappyCanvas.wps", "w",
+        newline="\n").write(animated(False, "canvas"))
+io.open("themes/wps/SnappyLyricsCaption.wps", "w",
+        newline="\n").write(animated(False, "caption"))
+print("wrote SnappyV2.wps, SnappyVinyl.wps, SnappyAnimated.wps, SnappyGauge.wps,"
+      " SnappyLyrics.wps, SnappyLyricsLines.wps, SnappyLyricsCaption.wps,"
+      " SnappyCanvas.wps")

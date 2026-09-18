@@ -34,6 +34,9 @@ enum skinnable_screens {
 #if CONFIG_TUNER
     FM_SCREEN,
 #endif
+#ifdef HAVE_VIDEO
+    SCREENSAVER_SKIN,       /* apps/video/screensaver.c */
+#endif
 
     SKINNABLE_SCREENS_COUNT
 };
@@ -95,6 +98,15 @@ void skin_set_wps_book_mode(bool on, bool force);
 void skin_request_update_locked(bool locked);
 
 bool dbg_skin_engine(void);
+
+#ifdef HAVE_VIDEO
+/* The screensaver changed: load it again on next use. */
+void skin_unload_screensaver(void);
+#endif
+/* Frames a second for animated skins: at most fps (0: no cap), and a
+ * little faster for a while after a video frame was drawn. */
+void skin_animation_fps_cap(int fps);
+void skin_animation_boost(void);
 
 #endif /* !PLUGIN */
 #endif

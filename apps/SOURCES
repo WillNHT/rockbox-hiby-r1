@@ -47,6 +47,14 @@ audiobooks/ab_play.c
 audiobooks/ab_ui.c
 emoji.c
 playlist_cover.c
+lyrics.c
+#ifdef HAVE_VIDEO
+video/video_lib.c
+video/video_surface.c
+video/video_art.c
+video/screensaver.c
+menus/video_menu.c
+#endif
 #ifdef HAVE_COVER_VIEWS
 gui/covers.c
 gui/coverview.c
@@ -136,6 +144,7 @@ gui/skin_engine/skin_backdrops.c
 gui/skin_engine/skin_display.c
 gui/skin_engine/skin_engine.c
 gui/skin_engine/skin_layer.c
+gui/skin_engine/skin_lyrics.c
 gui/skin_engine/skin_parser.c
 gui/skin_engine/skin_render.c
 gui/skin_engine/skin_tokens.c

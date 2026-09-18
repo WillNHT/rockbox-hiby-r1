@@ -76,6 +76,7 @@ minesweeper,games
 mosaique,demos
 mp3_encoder,apps
 mpegplayer,viewers
+videoplayer,viewers
 multiboot_select,apps
 nim,games
 open_plugins,viewers

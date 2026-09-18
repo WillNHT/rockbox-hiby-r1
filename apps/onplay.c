@@ -63,6 +63,9 @@
 #include "viewport.h"
 #include "pathfuncs.h"
 #include "shortcuts.h"
+#ifdef HAVE_VIDEO
+#include "video/video_art.h"
+#endif
 #include "misc.h"
 #ifdef HAVE_DISK_STORAGE
 #include "storage.h"
@@ -1187,9 +1190,47 @@ static int onplaymenu_callback(int action,
                                const struct menu_item_ex *this_item,
                                struct gui_synclist *this_list);
 
+#ifdef HAVE_VIDEO
+/* Between the music video and the cover. The sound is the track's either
+ * way, so this only changes what the WPS draws. */
+static char *music_video_name(int selected_item, void *data,
+                              char *buffer, size_t buffer_len)
+{
+    (void)selected_item; (void)data; (void)buffer; (void)buffer_len;
+    return str(global_settings.video_show_music ? LANG_VIDEO_SHOW_COVER
+                                                : LANG_VIDEO_SHOW_MUSIC);
+}
+static int music_video_toggle(void)
+{
+    video_art_toggle_music_video();
+    settings_save();
+    return 0;
+}
+static int music_video_callback(int action,
+                                const struct menu_item_ex *this_item,
+                                struct gui_synclist *this_list)
+{
+    (void)this_item;
+    (void)this_list;
+    if (action == ACTION_REQUEST_MENUITEM &&
+        !(global_settings.video_enabled && global_settings.video_music &&
+          video_art_track_has_music_video()))
+        return ACTION_EXIT_MENUITEM;
+    if (action == ACTION_EXIT_MENUITEM)
+        return ACTION_EXIT_AFTER_THIS_MENUITEM;
+    return action;
+}
+MENUITEM_FUNCTION_DYNTEXT(music_video_item, 0, music_video_toggle,
+                          music_video_name, NULL, NULL,
+                          music_video_callback, Icon_Audio);
+#endif
+
 /* used when onplay() is called in the CONTEXT_WPS context */
 MAKE_ONPLAYMENU( wps_onplay_menu, ID2P(LANG_ONPLAY_MENU_TITLE),
            onplaymenu_callback, Icon_Audio,
+#ifdef HAVE_VIDEO
+           &music_video_item,
+#endif
            &wps_playlist_menu, &cat_playlist_menu,
            &sound_settings, &playback_settings,
 #ifdef HAVE_TAGCACHE

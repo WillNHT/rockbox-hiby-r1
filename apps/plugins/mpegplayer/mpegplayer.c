@@ -495,7 +495,26 @@ CONFIG_KEYPAD == SANSA_M200_PAD
 #define MPEG_RW         BUTTON_LEFT
 #define MPEG_FF         BUTTON_RIGHT
 
-#elif CONFIG_KEYPAD == SHANLING_Q1_PAD || (CONFIG_KEYPAD == HIBY_R3PROII_PAD || CONFIG_KEYPAD == HIBY_R1_PAD)
+#elif CONFIG_KEYPAD == HIBY_R1_PAD
+/* The keys as the WPS has them (docs/mods/hibyr1-keymap.md): Power plays
+ * and pauses, a long Power stops, Play/Next seek, Power + Play is the
+ * menu. The touch grid stays as the second set. */
+#define MPEG_MENU       (BUTTON_POWER|BUTTON_LEFT)
+#define MPEG_STOP       (BUTTON_POWER|BUTTON_REPEAT)
+#define MPEG_PAUSE      (BUTTON_POWER|BUTTON_REL)
+#define MPEG_VOLDOWN    BUTTON_DOWN
+#define MPEG_VOLUP      BUTTON_UP
+#define MPEG_RW         BUTTON_LEFT
+#define MPEG_FF         BUTTON_RIGHT
+#define MPEG_RC_MENU    (BUTTON_TOPRIGHT|BUTTON_REL)
+#define MPEG_RC_STOP    BUTTON_TOPLEFT
+#define MPEG_RC_PAUSE   BUTTON_CENTER
+#define MPEG_VOLDOWN2   BUTTON_BOTTOMMIDDLE
+#define MPEG_VOLUP2     BUTTON_TOPMIDDLE
+#define MPEG_RW2        BUTTON_MIDLEFT
+#define MPEG_FF2        BUTTON_MIDRIGHT
+
+#elif CONFIG_KEYPAD == SHANLING_Q1_PAD || CONFIG_KEYPAD == HIBY_R3PROII_PAD
 /* use touchscreen */
 
 #elif CONFIG_KEYPAD == RG_NANO_PAD

@@ -113,6 +113,9 @@ struct font {
     int long_offset;
     int font_id;
 #endif
+    /* Where the default glyph's bitmap is, -1 unknown. Last, because
+     * sysfont.c is generated with a positional initializer. */
+    int32_t      default_bitmap_offset;
 
 };
 
@@ -137,6 +140,16 @@ int font_getstringnsize(const unsigned char *str, size_t maxbytes, int *w, int *
 int font_getstringsize(const unsigned char *str, int *w, int *h, int fontnumber);
 int font_get_width(struct font* ft, ucschar_t ch);
 const unsigned char * font_get_bits(struct font* ft, ucschar_t ch);
+
+/* Glyph fallback: a second font that lends the glyphs a line's own font
+ * does not have - CJK in lyrics set in a Latin face, say. A glyph is
+ * missing when its code point is outside the font's range or shares the
+ * default glyph's bitmap, which is how the converters fill the gaps.
+ * font_glyph_font() returns the font to measure and draw ch with. */
+bool font_has_glyph(struct font *pf, ucschar_t ch);
+void font_set_fallback(int font_id);
+int font_get_fallback(void);
+struct font *font_glyph_font(struct font *pf, ucschar_t ch);
 
 /* Emoji: pictures drawn in place of glyphs no font has.
  *

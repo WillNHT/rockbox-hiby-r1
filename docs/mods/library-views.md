@@ -35,7 +35,7 @@ Playlists/Road Trip.jpg      (or .jpeg, .png)
 
 If there is no such image, the playlist uses the cover of its first track. Covers are always drawn square. Dynamic playlists (database queries, the current queue) have no cover.
 
-`.gif` and `.webp` covers are recognised but not drawn yet; animated covers come with [#19](https://github.com/WillNHT/rockbox-hiby-r1/issues/19). An animated `.png` shows its first frame.
+`.gif` and `.webp` covers are drawn by the video decoder (see [Video](video.md)): in a list they show their first frame, and a WPS `%Cp` animates them. Without the decoder installed they count as no cover. An animated `.png` shows its first frame.
 
 ### In a WPS
 

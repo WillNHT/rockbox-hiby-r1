@@ -70,7 +70,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y automake bison build-essential ccache flex libc6-dev libgmp3-dev libmpfr-dev \
-        libsdl1.2-dev libtool-bin texinfo zip gawk wget libmpc-dev gettext gtk-doc-tools
+        libsdl1.2-dev libtool-bin texinfo zip gawk wget libmpc-dev gettext gtk-doc-tools zlib1g-dev
         
     - name: root suid tar
       # workaround for caching system files
@@ -141,6 +141,34 @@ jobs:
           build/**/*.log
           build/**/*.dmp
           build/**/*.dump
+
+    - name: Cache the video decoder
+      id: rbvcache
+      if: matrix.type != 'B'
+      uses: actions/cache@v6
+      with:
+        path: /tmp/rbvideo-out
+        key: ${{ runner.os }}-rbvideo-${{ hashFiles('tools/rbvideo/build.sh', 'tools/rbvideo/rbvideo.c', 'apps/video/rbvideo.h') }}
+
+    - name: Give tar back its own privileges
+      if: matrix.type != 'B' && steps.rbvcache.outputs.cache-hit != 'true'
+      # The caching workaround above leaves /bin/tar setuid root, so
+      # anything it unpacks afterwards belongs to root and its own
+      # configure cannot write in it.
+      run: sudo chmod u-s /bin/tar
+
+    - name: Build the video decoder
+      if: matrix.type != 'B' && steps.rbvcache.outputs.cache-hit != 'true'
+      run: |
+        export PATH=/tmp/local/bin:$PATH
+        sh tools/rbvideo/build.sh r1 /tmp/rbvideo-out
+
+    - name: Upload the video decoder
+      if: matrix.type != 'B'
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{matrix.name}}-video
+        path: /tmp/rbvideo-out/librbvideo.so
 
     - name: Upload log
       uses: actions/upload-artifact@v7
