@@ -63,6 +63,10 @@ Every issue you pick up gets a PR, and every PR points back at its issue:
   work moves - status that no label covers goes in a comment.
 * **Comment the outcome on the issue** when the PR is up: what was done, the PR
   link, anything still open.
+* **Agent opens, human approves.** An agent PR is authored and assigned to the
+  `claude` account, never to a human, and `WillNHT` goes on it as reviewer.
+  Nobody merges their own work, so never approve or merge a PR you opened - the
+  review is the human's.
 
 ## Proof
 
