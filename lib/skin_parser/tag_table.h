@@ -207,6 +207,11 @@ enum skin_token_type {
     SKIN_TOKEN_TRACK_STARTING,
     SKIN_TOKEN_TRACK_ENDING,
 
+    /* Pseudo-radio: the station folder the playing track belongs to, empty
+     * when what is playing is not a station track. A skin conditions on it
+     * to know it is a radio at all. */
+    SKIN_TOKEN_RADIO_STATION,
+
     /* Playlist */
     SKIN_TOKEN_PLAYLIST_ENTRIES,
     SKIN_TOKEN_PLAYLIST_NAME,

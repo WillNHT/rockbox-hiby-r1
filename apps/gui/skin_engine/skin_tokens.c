@@ -46,6 +46,7 @@
 /* Image stuff */
 #include "albumart.h"
 #include "playlist.h"
+#include "pradio.h"
 #include "playback.h"
 #include "skin_display.h"
 #include "metadata.h"
@@ -1362,6 +1363,12 @@ const char *get_token_value(struct gui_wps *gwps,
             return skinlist_needs_scrollbar(gwps->display->screen_type) ? "s" : "";
         case SKIN_TOKEN_PLAYLIST_NAME:
             return playlist_name(NULL, buf, buf_size);
+
+        case SKIN_TOKEN_RADIO_STATION:
+            if (state->id3 &&
+                pradio_station_name(state->id3->path, buf, buf_size))
+                return buf;
+            return NULL;
 
         case SKIN_TOKEN_PLAYLIST_POSITION:
             if (!get_cuesheetid3_token(token, state->id3, offset, buf, buf_size))
