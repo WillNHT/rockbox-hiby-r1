@@ -9,9 +9,7 @@ buflib_mempool.c
 #elif CONFIG_BUFLIB_BACKEND == BUFLIB_BACKEND_MALLOC
 buflib_malloc.c
 #endif
-#if !(defined(HIBY_LINUX) && defined(BOOTLOADER))
 core_alloc.c
-#endif
 general.c
 powermgmt.c
 #if (CONFIG_PLATFORM & PLATFORM_HOSTED)
