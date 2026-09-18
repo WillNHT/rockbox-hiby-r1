@@ -12,13 +12,18 @@ is no station database and no scan - the folder tree is the dial.
 
 ## Stations
 
-Stations are the immediate subfolders of the radio folder:
+Stations are the immediate subfolders of the radio folder, and the tracks
+sit directly inside a station:
 
 ```
-/Radio
+/radio
   /Late Night
+     set-01.mp3
+     set-02.mp3
   /Field Tapes
+     harbour.flac
   /Long Sets
+     ...
 ```
 
 A radio folder with no subfolders is one station, so the simplest setup is a
@@ -34,8 +39,8 @@ folder, not a tree.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| Radio Folder | `/Radio` | Where the stations are. |
-| Minimum Length | 20 min | How long a recording must be to be preferred. |
+| Radio Folder | `/radio` | Where the stations are. |
+| Minimum Length | 10 min | How long a recording must be to be preferred. |
 | Tuning Static | On | The hiss played while tuning in. |
 | Radio WPS | Same as Music | The WPS used while a station plays. |
 | Radio Screensaver | Same as usual | The screensaver used while a station plays. |
@@ -48,7 +53,8 @@ layout editor.
 
 A three minute pop song entered at 60% is a song with its first minute cut
 off. An hour-long set entered at 60% is a radio. The floor is what keeps the
-difference.
+difference. Ten minutes by default, which is low enough to let a long album
+track or a podcast episode count and high enough to keep singles out.
 
 It is a preference rather than a filter: tuning reads the tags of a handful
 of randomly chosen files and takes the first one over the floor, so a station
@@ -64,17 +70,23 @@ Uniformly over the whole recording except the last minute. A radio has no
 reason to prefer the beginning, and the beginning is the one part you could
 have had by pressing play.
 
+The generator is seeded from the tick on every tune. Rockbox seeds `rand()`
+with a constant, so without that every boot would tune to the same track at
+the same second - which is the one thing a radio must not do.
+
 ### The static
 
 A short burst of white noise over the gap between the station list and the
-first sample - the gap it exists to cover. It goes through the same mixer
-channel as the keyclick.
+first sample - the gap it exists to cover. Tuning in while something else is
+still playing is the ordinary case, so the static goes through the same mixer
+channel as the keyclick and ducks the music the same way, at the Cue depth in
+[Audio Prioritisation](audio-prioritisation.md).
 
 ## In config.cfg
 
 ```
-radio folder path: /Radio
-radio minimum length: 20
+radio folder path: /radio
+radio minimum length: 10
 radio static: on
 radio wps:
 radio screensaver:

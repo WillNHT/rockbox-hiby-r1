@@ -202,6 +202,12 @@ static int build_playlist(const char *dir)
 static int pick_track(int n, unsigned long *length)
 {
     static struct playlist_track_info info;
+
+    /* Rockbox seeds rand() with a constant, so without this every boot
+     * tunes to the same track at the same second - which is the one thing
+     * a radio must not do. Same treatment the shuffle gets. */
+    srand(current_tick);
+
     int pick = rand() % n;
 
     *length = 0;
@@ -242,9 +248,13 @@ static bool tune(int station)
     int track = pick_track(n, &length);
 
     /* The static plays over the gap between the last screen and the first
-     * sample, which is the gap it exists to cover. */
+     * sample, which is the gap it exists to cover. Tuning in while
+     * something else is still playing is the ordinary case, so it ducks
+     * the music the way the other device sounds do - a cue, because
+     * missing it is missing the only thing that says the dial moved. */
     if (global_settings.radio_static)
     {
+        beep_duck(PRADIO_STATIC_MS, global_settings.sound_duck_cue);
         beep_play_noise(PRADIO_STATIC_MS, PRADIO_STATIC_AMP);
         sleep(HZ * PRADIO_STATIC_MS / 1000);
     }
