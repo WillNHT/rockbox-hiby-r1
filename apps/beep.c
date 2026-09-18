@@ -69,6 +69,15 @@ void beep_duck(unsigned int duration, int percent)
 
 static bool beep_noise;         /* Generating noise, not a square wave */
 static void beep_generate_noise(int16_t *buf, int count, int amplitude);
+static void beep_generate_fx(int16_t *buf, int count);
+
+/* Non-zero duration means the radio generator has the channel - see the
+ * note above beep_play_fx(). */
+static struct beep_fx beep_fx;
+static int      fx_done;        /* samples generated so far          */
+static int      fx_total;       /* samples in the whole sound        */
+static int32_t  fx_lp;          /* one-pole lowpass state            */
+static uint32_t fx_tone_phase;
 static uint32_t beep_phase;     /* Phase of square wave generator */
 static uint32_t beep_step;      /* Step of square wave generator on each sample */
 #ifdef BEEP_GENERIC
@@ -98,11 +107,117 @@ beep_get_more(const void **start, size_t *size)
         beep_count -= count;
         *start = beep_buf;
         *size = count * 2 * sizeof (int16_t);
-        if (beep_noise)
+        if (beep_fx.duration)
+            beep_generate_fx(beep_buf, count);
+        else if (beep_noise)
             beep_generate_noise(beep_buf, count, beep_amplitude);
         else
             beep_generate((void *)beep_buf, count, &beep_phase,
                           beep_step, beep_amplitude);
+    }
+}
+
+/** Radio noises **/
+
+/* One generator covers the whole family of sounds a radio makes, because
+ * they are all the same thing with different knobs: hiss is noise, a
+ * heterodyne whistle is noise with a gliding tone through it, a dropout is
+ * noise with its level pulled out from under it, interference is noise
+ * chopped into bursts, and a thump is noise with the top taken off. Five
+ * separate generators would be five copies of this loop.
+ *
+ * Deliberately not sample playback. The beep channel takes raw PCM with no
+ * decoder behind it, so shipping five WAVs would mean a WAV reader, five
+ * files that have to be on the card, and a card read on a UI event.
+ * ponytail: that is also what "user-replaceable sound files" (issue #64
+ * item 6) would need - the knobs below are the customisation there is
+ * until someone wants it enough to pay for the reader. */
+void beep_play_fx(const struct beep_fx *fx)
+{
+    mixer_channel_stop(PCM_MIXER_CHAN_BEEP);
+
+    if (!fx || fx->duration == 0 || fx->amplitude <= 0)
+        return;
+
+    beep_fx = *fx;
+    if (beep_fx.amplitude > INT16_MAX)
+        beep_fx.amplitude = INT16_MAX;
+
+    beep_noise = true;
+    fx_done = 0;
+    fx_lp = 0;
+    fx_tone_phase = 0;
+    fx_total = beep_count = BEEP_COUNT(mixer_get_frequency(), fx->duration);
+
+    const void *start;
+    size_t size;
+
+    beep_get_more(&start, &size);
+
+    mixer_channel_set_amplitude(PCM_MIXER_CHAN_BEEP, MIX_AMP_UNITY);
+    mixer_channel_play_data(PCM_MIXER_CHAN_BEEP,
+                            beep_count ? beep_get_more : NULL,
+                            start, size);
+}
+
+static void beep_generate_fx(int16_t *buf, int count)
+{
+    const uint32_t fout = mixer_get_frequency();
+    int i;
+
+    for (i = 0; i < count; i++, fx_done++)
+    {
+        /* Where we are through the sound, 0..256. Everything that changes
+         * over the sound is a straight line in this. */
+        int pos = fx_total > 0 ? (int)((int64_t)fx_done * 256 / fx_total) : 0;
+        int env;
+
+        switch (beep_fx.shape)
+        {
+            case FX_FLAT:   env = 256;                        break;
+            case FX_FADEIN: env = pos;                        break;
+            case FX_FADEOUT:env = 256 - pos;                  break;
+            /* Out and back: what a station sounds like passing behind
+             * something. Loudest at the ends, gone in the middle. */
+            case FX_DIP:    env = pos < 128 ? 256 - pos * 2
+                                            : (pos - 128) * 2; break;
+            /* In and out: a swell, the shape of tuning past a station. */
+            default:        env = pos < 128 ? pos * 2
+                                            : (256 - pos) * 2; break;
+        }
+
+        int amp = beep_fx.amplitude * env / 256;
+        int s = (rand() % (2 * amp + 1)) - amp;
+
+        /* One-pole lowpass. 0 leaves white noise alone; higher numbers take
+         * the hiss off until what is left is a rumble. */
+        if (beep_fx.lowpass > 0)
+        {
+            fx_lp += (s - fx_lp) >> beep_fx.lowpass;
+            /* Smoothing costs level; half the shift back is about right and
+             * the clamp catches the rest. */
+            s = (int)(fx_lp << (beep_fx.lowpass / 2));
+            if (s > INT16_MAX)  s = INT16_MAX;
+            if (s < -INT16_MAX) s = -INT16_MAX;
+        }
+
+        /* A tone gliding across the noise: the heterodyne whistle you get
+         * turning a dial past a carrier. */
+        if (beep_fx.tone_start > 0)
+        {
+            int hz = beep_fx.tone_start +
+                     (beep_fx.tone_end - beep_fx.tone_start) * pos / 256;
+            fx_tone_phase += fp_div(hz, fout, 32);
+            int t = ((int32_t)fx_tone_phase < 0 ? -amp : amp) / 2;
+            s = (s + t) / 2;
+        }
+
+        /* Bursts: the sound cuts out for stretches of it. */
+        if (beep_fx.gate_pct > 0 && (rand() % 100) < beep_fx.gate_pct)
+            s = 0;
+
+        *buf++ = (int16_t)s;
+        *buf++ = (int16_t)s;
     }
 }
 

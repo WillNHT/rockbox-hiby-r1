@@ -20117,3 +20117,32 @@
     *: "Track Change Static Duration"
   </voice>
 </phrase>
+
+<phrase>
+  id: LANG_RADIO_STATIC_STRENGTH
+  desc: radio settings: how loud the radio noises are
+  user: core
+  <source>
+    *: "Static Strength"
+  </source>
+  <dest>
+    *: "Static Strength"
+  </dest>
+  <voice>
+    *: "Static Strength"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_AMBIENCE
+  desc: radio settings: the occasional uninvited noise on the band
+  user: core
+  <source>
+    *: "Band Noise"
+  </source>
+  <dest>
+    *: "Band Noise"
+  </dest>
+  <voice>
+    *: "Band Noise"
+  </voice>
+</phrase>

@@ -43,5 +43,13 @@ void pradio_pause(bool paused);
 /* The station folder a radio track belongs to, trailing slash included, at
  * whatever depth the file is. False when the path isn't a station track. */
 bool pradio_station_dir(const char *path, char *buf, size_t size);
+/* The station's folder name on its own - what a radio skin shows instead of
+ * an album. False when the path isn't a station track. */
+bool pradio_station_name(const char *path, char *buf, size_t size);
+/* The set going off. Call while the station is still playing. */
+void pradio_leaving(void);
+/* Called from the WPS loop: every hour or two, something drifts past on
+ * the band. Cheap and a no-op unless a station is playing. */
+void pradio_ambience_tick(void);
 
 #endif /* _PRADIO_H_ */

@@ -878,6 +878,8 @@ long gui_wps_show(void)
             }
         }
 
+        pradio_ambience_tick();
+
         /* A book, a station and a song can want different WPSes. Leave
          * with the one that is loaded, then come back with the other. */
         {
@@ -1241,6 +1243,7 @@ long gui_wps_show(void)
                 if (!is_keys_locked())
 #endif
                     bookmark = true;
+                pradio_leaving();
                 exit = true;
                 break;
 

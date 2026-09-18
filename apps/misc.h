@@ -234,6 +234,29 @@ void beep_play(unsigned int frequency, unsigned int duration,
  * the pseudo-radio tunes through. */
 void beep_play_noise(unsigned int duration, unsigned int amplitude);
 
+/* The shape of a radio noise over its length. */
+enum beep_fx_shape
+{
+    FX_FLAT = 0,    /* level all the way through          */
+    FX_FADEIN,      /* silence up to full                 */
+    FX_FADEOUT,     /* full down to silence               */
+    FX_DIP,         /* loud, gone, loud - passing behind  */
+    FX_SWELL,       /* gone, loud, gone - tuning past     */
+};
+
+/* One parametric noise voice, enough for every sound a radio makes. See
+ * beep_play_fx() in beep.c for what each knob is for. */
+struct beep_fx
+{
+    unsigned int duration;      /* ms; 0 is silence                     */
+    int amplitude;              /* peak, as beep_play_noise()            */
+    int shape;                  /* enum beep_fx_shape                    */
+    int lowpass;                /* 0 white, up to ~6 for a rumble        */
+    int tone_start, tone_end;   /* Hz glided across it; 0 for no tone    */
+    int gate_pct;               /* 0..100 of it chopped out at random    */
+};
+void beep_play_fx(const struct beep_fx *fx);
+
 enum system_sound
 {
     SOUND_KEYCLICK = 0,
