@@ -1,0 +1,121 @@
+name: Upstream tracking
+
+# The R1 has more than one modding effort going on at once, and none of them
+# are our upstream in the git sense - there is nothing to merge. So once a
+# week we read what they changed and write down what is worth taking, as
+# issues, with credit to whoever wrote it.
+#
+# Friday 05:00 UTC+7, which is Thursday 22:00 UTC. Same secret as claude.yml.
+on:
+  schedule:
+    - cron: "0 22 * * 4"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "How many days back to read"
+        default: "7"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 1
+
+    # Collected here rather than in the prompt so the model reads a fixed
+    # digest instead of deciding for itself what to fetch.
+    - name: Collect the week
+      id: digest
+      env:
+        GH_TOKEN: ${{ github.token }}
+        DAYS: ${{ inputs.days || '7' }}
+      run: |
+        SINCE=$(date -u -d "$DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)
+        echo "since=$SINCE" >> "$GITHUB_OUTPUT"
+        {
+          echo "Commits since $SINCE."
+          echo
+          while IFS='|' read -r repo ref; do
+            [ -n "$repo" ] || continue
+            echo "## $repo${ref:+ (branch $ref)}"
+            gh api "repos/$repo/commits" -X GET \
+               -f since="$SINCE" ${ref:+-f sha="$ref"} --paginate \
+               --jq '.[] | "- \(.sha[0:9]) \(.commit.author.date[0:10]) \(.commit.author.name): \(.commit.message | split("\n")[0])"' \
+               2>/dev/null || echo "- (could not be read)"
+            echo
+          done <<'REPOS'
+        bidhata/Hiby-R1-Mod|
+        hiby-modding/hiby_os_crack|
+        bidhata/hiby-r1-rockbox-bt|
+        bahusoid/rockbox|Mod25.12.07
+        REPOS
+        } > /tmp/digest.md
+        cat /tmp/digest.md
+
+    - uses: anthropics/claude-code-action@v1
+      with:
+        claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+        claude_args: |
+          --allowedTools "Bash(cat /tmp/digest.md),Bash(gh api:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh search issues:*),Grep,Glob,Read,WebFetch"
+        prompt: |
+          Weekly upstream tracking for ${{ github.repository }}, a Rockbox fork
+          for the HiBy R1. These four projects work on the same device or the
+          same base mod. None of them is a git upstream - nothing merges, every
+          change has to be read and ported by hand.
+
+          1. Read the week: cat /tmp/digest.md
+             It lists every commit since ${{ steps.digest.outputs.since }} in:
+               - bidhata/Hiby-R1-Mod
+               - hiby-modding/hiby_os_crack
+               - bidhata/hiby-r1-rockbox-bt
+               - bahusoid/rockbox, branch Mod25.12.07
+             Use `gh api repos/OWNER/REPO/commits/SHA` to read a diff when the
+             subject line is not enough to judge it.
+
+          2. Read CLAUDE.md and docs/index.md so you know what this fork
+             already has. Use Grep before claiming something is missing here -
+             a lot of these changes are already in, or were deliberately done
+             differently.
+
+          3. Keep only what is worth porting. Drop anything that is: already
+             in this fork, specific to hardware we do not have, a revert or a
+             fixup of something within the same week, or a version bump.
+             At most five proposals per run. If nothing qualifies, open no
+             issues and say so - an empty week is a normal result.
+
+          4. Before opening anything, check for an existing proposal:
+             gh issue list --label upstream --state all --limit 100
+             Do not re-propose something already raised, open or closed.
+
+          5. Open one issue per proposal:
+             gh issue create --title "..." --label "upstream" --label "claude" \
+               --label "needs: triage" --body "..."
+
+             Title: proposal(<area>): <what it adds>, imperative, under ~60
+             chars. Body, short:
+               - **Source** - repo, branch, commit SHAs, and a link to each.
+               - **Credit** - the author name from the commit and the project
+                 it came from, named in a sentence a human would write, not a
+                 field. This is the point of the exercise: nothing here is
+                 ours, and the issue has to say whose it is.
+               - **What it does** - two or three sentences.
+               - **How it would land here** - as-is, or with what tweaks, and
+                 which files in this tree it touches. Say so plainly if you
+                 are not sure.
+               - **Licence** - the source project's licence if you can see it,
+                 and a flag if it is not GPL-compatible.
+
+          Do not open a pull request, do not change any file, and do not
+          comment on unrelated issues. Finish with one line saying how many
+          proposals you opened and why the rest were dropped.
