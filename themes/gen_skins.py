@@ -11,7 +11,8 @@ geometry is stated once, here, and the files are generated.
 
 Writes themes/wps/SnappyV2.wps, SnappyVinyl.wps, SnappyAnimated.wps,
 SnappyGauge.wps and the lyrics demos SnappyLyrics.wps,
-SnappyLyricsLines.wps and SnappyLyricsCaption.wps.
+SnappyLyricsLines.wps and SnappyLyricsCaption.wps, and the video demo
+SnappyCanvas.wps.
 """
 import io
 
@@ -468,12 +469,27 @@ LYRICS_CAPTION = """#
 %%yb(0,0,0,0,-,center,80)"""
 
 
+# The track's moving picture where the cover is.
+CANVAS = """#
+# Canvas
+# ======
+# The playing track's animated cover, or its music video when the context
+# menu says so, over the cover it replaces. %%Cv draws only when there is
+# a picture; %%?CV enables this viewport only then, so without one the
+# cover underneath is what shows. The sheen is off: it would restore the
+# cover over the picture as it passed.
+%%Vl(vid,%d,%d,%d,%d,-)
+%%Cv(0,0,%d,%d,cover)"""
+
+
 def animated(gauge=False, lyrics=None):
     name = "Snappy Gauge" if gauge else "Snappy Animated"
     if lyrics == "lines":
         name = "Snappy Lyrics Lines"
     elif lyrics == "caption":
         name = "Snappy Lyrics Caption"
+    elif lyrics == "canvas":
+        name = "Snappy Canvas"
     o = []
     o.append("""#
 #   ____ _  _ ____ ___  ___  _   _   %s
@@ -519,6 +535,8 @@ def animated(gauge=False, lyrics=None):
         o.append(meter)
     if lyrics == "caption":
         o.append("%?C<%?yf<%Vd(cap)|%Vd(cap)|>>")
+    if lyrics == "canvas":
+        o.append("%?CV<%Vd(vid)|%Vd(vid)|>")
     # The volume bar is a viewport of its own again. It used to be drawn
     # inside the backdrop viewport when there was a cover, because a
     # viewport clears its background and a black box across the top of a
@@ -549,7 +567,7 @@ def animated(gauge=False, lyrics=None):
     # The caption sits on the cover, and the sheen restores the cover as it
     # passes: %yb only redraws when its lines move, so the two would take
     # turns erasing each other. The caption variant has no sheen.
-    sheen = lyrics != "caption"
+    sheen = lyrics not in ("caption", "canvas")
     for i in range(SHEEN_STOPS if sheen else 0):
         o.append("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%02d)>"
                  % (frames, SHEEN_MS, i + 1, i))
@@ -689,6 +707,8 @@ def animated(gauge=False, lyrics=None):
 
     if lyrics == "lines":
         content.append(LYRICS_LINES % (BAND_Y, ACCENT, BAND_Y + 36, LYRIC_DIM))
+    elif lyrics == "canvas":
+        content.append(CANVAS % (AX + 2, AY + 2, ART_W, ART_H, ART_W, ART_H))
     elif lyrics == "caption":
         content.append(LYRICS_CAPTION % (AX + 2, AY + AH - 2 - 52 - 8,
                                          ART_W, ACCENT))
@@ -837,7 +857,10 @@ io.open("themes/wps/SnappyGauge.wps", "w", newline="\n").write(animated(True))
 io.open("themes/wps/SnappyLyrics.wps", "w", newline="\n").write(lyrics_full())
 io.open("themes/wps/SnappyLyricsLines.wps", "w",
         newline="\n").write(animated(False, "lines"))
+io.open("themes/wps/SnappyCanvas.wps", "w",
+        newline="\n").write(animated(False, "canvas"))
 io.open("themes/wps/SnappyLyricsCaption.wps", "w",
         newline="\n").write(animated(False, "caption"))
 print("wrote SnappyV2.wps, SnappyVinyl.wps, SnappyAnimated.wps, SnappyGauge.wps,"
-      " SnappyLyrics.wps, SnappyLyricsLines.wps, SnappyLyricsCaption.wps")
+      " SnappyLyrics.wps, SnappyLyricsLines.wps, SnappyLyricsCaption.wps,"
+      " SnappyCanvas.wps")

@@ -48,6 +48,13 @@ audiobooks/ab_ui.c
 emoji.c
 playlist_cover.c
 lyrics.c
+#ifdef HAVE_VIDEO
+video/video_lib.c
+video/video_surface.c
+video/video_art.c
+video/screensaver.c
+menus/video_menu.c
+#endif
 #ifdef HAVE_COVER_VIEWS
 gui/covers.c
 gui/coverview.c

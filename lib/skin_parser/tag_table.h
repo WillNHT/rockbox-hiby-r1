@@ -359,6 +359,15 @@ enum skin_token_type {
     SKIN_TOKEN_LYRICS_FOUND,
     SKIN_TOKEN_LYRICS_BLOCK,
     SKIN_TOKEN_LYRICS_PROGRESS,
+
+    /* Moving pictures - see apps/video/.
+     * %Cv(x, y, w, h [, fit])  the track's music video or animated cover
+     * %?CV<canvas|music video|none>  which one %Cv is showing
+     * %Cf(x, y, w, h, file [, fit])  a clip from the skin's folder, looping
+     * Appended, like everything else here - see the note above. */
+    SKIN_TOKEN_VIDEO_ART,
+    SKIN_TOKEN_VIDEO_ART_KIND,
+    SKIN_TOKEN_VIDEO_CLIP,
 };
 
 /*

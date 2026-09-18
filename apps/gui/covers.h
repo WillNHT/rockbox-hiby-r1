@@ -37,6 +37,13 @@ bool covers_init(void);
 /* Draw the cover for path centred in a size x size square at x,y of the
  * current viewport. False, with nothing drawn, when there is none. */
 bool cover_draw(struct screen *d, const char *path, int x, int y, int size);
+#ifdef HAVE_VIDEO
+/* The same, but an animated .gif or .webp cover moves: each call draws
+ * its current frame, and a still cover only when full. Returns 2 for an
+ * animated cover, 1 for a still one drawn, 0 for nothing drawn. */
+int cover_draw_animated(struct screen *d, const char *path,
+                        int x, int y, int size, bool full);
+#endif
 
 /* A plain tile for items without a cover: a filled square with the first
  * letter of text in it. */

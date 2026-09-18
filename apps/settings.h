@@ -1037,6 +1037,22 @@ struct user_settings
 #ifdef HAVE_COVER_VIEWS
     int library_view;        /* enum coverview_style */
 #endif
+#ifdef HAVE_VIDEO
+    bool video_enabled;      /* master switch for everything that moves */
+    bool video_canvas;       /* animated covers */
+    bool video_music;        /* music videos */
+    bool video_show_music;   /* the WPS shows the music video (context menu) */
+    int  video_latency;      /* ms the picture is held back */
+    int  video_bt_latency;   /* ms more while Bluetooth plays */
+    int  video_battery_fps;  /* frame cap on battery, 0 = none */
+    /* Screensavers: skins in WPS_DIR (.ss), "-" for none. */
+    unsigned char saver_battery[MAX_FILENAME+1];
+    unsigned char saver_charging[MAX_FILENAME+1];
+    int  saver_timeout;      /* seconds idle, 0 = never */
+    int  saver_battery_fps;
+    int  saver_battery_brightness;
+    int  saver_keep_on;      /* enum saver_keep_on */
+#endif
 #ifdef HAVE_LYRICS
     bool lyrics_enabled;
     int  lyrics_source;      /* enum lyrics_source_order */

@@ -74,6 +74,10 @@
 #include "lcd-transition.h"
 #include "gui/coverview.h"
 #include "lyrics.h"
+#ifdef HAVE_VIDEO
+#include "video/video_art.h"
+#include "video/screensaver.h"
+#endif
 
 #if defined(DX50) || defined(DX90)
 #include "governor-ibasso.h"
@@ -524,6 +528,32 @@ static int32_t list_pad_getlang(int value, int unit)
         case  0: return LANG_OFF;
         default: return TALK_ID(value, unit);
     }
+}
+#endif
+
+#ifdef HAVE_VIDEO
+static const char* formatter_fps_0_is_full(char *buffer, size_t buffer_size,
+                                           int val, const char *unit)
+{
+    (void)unit;
+    if (val == 0)
+        return str(LANG_VIDEO_FPS_FULL);
+    snprintf(buffer, buffer_size, "%d fps", val);
+    return buffer;
+}
+
+static int32_t getlang_fps_0_is_full(int value, int unit)
+{
+    (void)unit;
+    if (value == 0)
+        return LANG_VIDEO_FPS_FULL;
+    return TALK_ID(value, UNIT_INT);
+}
+
+static void video_settings_changed(bool on)
+{
+    (void)on;
+    video_art_release();
 }
 #endif
 
@@ -2716,6 +2746,49 @@ const struct settings_list settings[] = {
    OFFON_SETTING(0, ab_autoscan, LANG_AB_AUTOSCAN, true,
                  "audiobook scan at startup", NULL),
    OFFON_SETTING(0, emoji_enabled, LANG_EMOJI, true, "emoji", NULL),
+#ifdef HAVE_VIDEO
+   /* Off until asked for: decoding video is the most expensive thing this
+    * player can be told to do. */
+   OFFON_SETTING(0, video_enabled, LANG_VIDEO_ENABLE, false, "video",
+                 video_settings_changed),
+   OFFON_SETTING(0, video_canvas, LANG_VIDEO_CANVAS, true,
+                 "video canvas", video_settings_changed),
+   OFFON_SETTING(0, video_music, LANG_VIDEO_MUSIC, true,
+                 "video music videos", video_settings_changed),
+   OFFON_SETTING(0, video_show_music, LANG_VIDEO_SHOW_MUSIC, false,
+                 "video show music video", video_settings_changed),
+   INT_SETTING(0, video_latency, LANG_VIDEO_LATENCY, 0, "video latency",
+               UNIT_MS, -500, 1000, 10, NULL, NULL, NULL),
+   /* LDAC and AAC hold the sound back by about this much. */
+   INT_SETTING(0, video_bt_latency, LANG_VIDEO_BT_LATENCY, 200,
+               "video bluetooth latency", UNIT_MS, 0, 1000, 10,
+               NULL, NULL, NULL),
+   INT_SETTING(0, video_battery_fps, LANG_VIDEO_BATTERY_FPS, 15,
+               "video battery fps", UNIT_INT, 0, 30, 5,
+               formatter_fps_0_is_full, getlang_fps_0_is_full, NULL),
+   TEXT_SETTING(0, saver_battery, "screensaver battery", "Saver Clock Dim",
+                WPS_DIR "/", ".ss"),
+   TEXT_SETTING(0, saver_charging, "screensaver charging", "Saver Canvas",
+                WPS_DIR "/", ".ss"),
+   INT_SETTING(F_TIME_SETTING, saver_timeout, LANG_SAVER_TIMEOUT, 60,
+               "screensaver timeout", UNIT_SEC, 0, 1800, 15,
+               formatter_time_unit_0_is_off, getlang_time_unit_0_is_off,
+               NULL),
+   INT_SETTING(0, saver_battery_fps, LANG_SAVER_BATTERY_FPS, 4,
+               "screensaver battery fps", UNIT_INT, 1, 30, 1,
+               NULL, NULL, NULL),
+#ifdef HAVE_BACKLIGHT_BRIGHTNESS
+   INT_SETTING(F_NO_WRAP, saver_battery_brightness,
+               LANG_SAVER_BATTERY_BRIGHTNESS, MIN_BRIGHTNESS_SETTING,
+               "screensaver battery brightness", UNIT_INT,
+               MIN_BRIGHTNESS_SETTING, MAX_BRIGHTNESS_SETTING, 1,
+               NULL, NULL, NULL),
+#endif
+   CHOICE_SETTING(0, saver_keep_on, LANG_SAVER_KEEP_ON, SAVER_KEEP_CHARGING,
+                  "screensaver keep screen on", "never,charging,always",
+                  NULL, 3, ID2P(LANG_NEVER), ID2P(LANG_SAVER_WHEN_CHARGING),
+                  ID2P(LANG_ALWAYS)),
+#endif
 #ifdef HAVE_LYRICS
    OFFON_SETTING(0, lyrics_enabled, LANG_LYRICS_SHOW, true, "lyrics", NULL),
    CHOICE_SETTING(0, lyrics_source, LANG_LYRICS_SOURCE, LYRICS_FILE_FIRST,

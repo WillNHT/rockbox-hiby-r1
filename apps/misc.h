@@ -218,6 +218,7 @@ enum current_activity {
     ACTIVITY_ID3SCREEN,
     ACTIVITY_USBSCREEN,
     ACTIVITY_CUESHEET,
+    ACTIVITY_SCREENSAVER,
 };
 
 /* custom string representation of activity */

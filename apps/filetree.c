@@ -42,6 +42,10 @@
 #include "splash.h"
 #include "cuesheet.h"
 #include "filetree.h"
+#ifdef HAVE_VIDEO
+#include "video/video_lib.h"
+#include "plugin.h"
+#endif
 #include "misc.h"
 #include "strnatcmp.h"
 #include "keyboard.h"
@@ -336,6 +340,13 @@ int ft_load(struct tree_context* c, const char* tempdir)
             continue; /* skip non plugin folders */
         }
 
+#ifdef HAVE_VIDEO
+        /* A track's music video or canvas is part of the track. */
+        if (!dir_attr && *c->dirfilter != SHOW_ALL &&
+            video_is_sidecar(entry->d_name))
+            continue;
+#endif
+
         /* check for known file types */
         if ( !(dir_attr) )
             dptr->attr |= filetype_get_attr((char *)entry->d_name);
@@ -569,6 +580,16 @@ int ft_enter(struct tree_context* c)
 
             case FILE_ATTR_AUDIO:
             {
+#ifdef HAVE_VIDEO
+                /* An .mp4 can be a song or a film. Rockbox knows the
+                 * container as audio either way, so ask the decoder which
+                 * this one is and hand a film to the video player. */
+                if (video_has_picture(buf))
+                {
+                    plugin_load(VIEWERS_DIR "/videoplayer.rock", buf);
+                    break;
+                }
+#endif
                 int res = bookmark_autoload(c->currdir);
                 if (res == BOOKMARK_CANCEL || res == BOOKMARK_DO_RESUME)
                     break;

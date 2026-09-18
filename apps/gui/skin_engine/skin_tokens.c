@@ -83,6 +83,9 @@
 #endif
 #include "playlist_cover.h"
 #include "lyrics.h"
+#ifdef HAVE_VIDEO
+#include "video/video_art.h"
+#endif
 
 #define NOINLINE __attribute__ ((noinline))
 
@@ -1579,6 +1582,19 @@ const char *get_token_value(struct gui_wps *gwps,
             return "c";
 #else
             return NULL;
+#endif
+#if defined(HAVE_VIDEO) && !defined(__PCTOOL__)
+        case SKIN_TOKEN_VIDEO_ART_KIND:
+        {
+            /* %?CV<canvas|music video|none>, or %?CV<any|none> */
+            enum video_art_kind k = video_art_kind();
+            if (k == VIDEO_ART_NONE)
+                return NULL;
+            numeric_ret = (limit < 3 || k == VIDEO_ART_CANVAS) ? 1 : 2;
+            itoa_buf(buf, buf_size, numeric_ret);
+            numeric_buf = buf;
+            goto gtv_ret_numeric_tag_info;
+        }
 #endif
 #if defined(HAVE_LYRICS) && !defined(__PCTOOL__)
         case SKIN_TOKEN_LYRICS_LINE:

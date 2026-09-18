@@ -38,6 +38,9 @@
 #include "skin_engine.h"
 #include "skin_layer.h"
 #include "skin_lyrics.h"
+#ifdef HAVE_VIDEO
+#include "video/video_art.h"
+#endif
 #include "skin_parser.h"
 #include "tag_table.h"
 #include "skin_scan.h"
@@ -220,7 +223,52 @@ static bool do_non_text_tags(struct gui_wps *gwps, struct skin_draw_info *info,
                         SKINOFFSETTOPTR(skin_buffer, token->value.data);
                 char path[MAX_PATH];
                 if (fx && playlist_cover_current(path, sizeof(path)))
+                {
+#ifdef HAVE_VIDEO
+                    bool full = (info->refresh_type & SKIN_REFRESH_ALL)
+                                    == SKIN_REFRESH_ALL;
+                    if (global_settings.video_enabled)
+                    {
+                        /* An animated cover needs the frame rate. */
+                        if (cover_draw_animated(gwps->display, path,
+                                                fx->x, fx->y, fx->w,
+                                                full) == 2)
+                            data->animation_enabled = true;
+                    }
+                    else if (full)
+#endif
                     cover_draw(gwps->display, path, fx->x, fx->y, fx->w);
+                }
+            }
+            break;
+#endif
+#if defined(HAVE_VIDEO) && !defined(__PCTOOL__)
+        case SKIN_TOKEN_VIDEO_ART:
+        case SKIN_TOKEN_VIDEO_CLIP:
+            /* Every pass that reaches it: a hidden %an elsewhere turns the
+             * skin's animation off, and this needs it on to be seen. */
+            data->animation_enabled = true;
+            if (do_refresh)
+            {
+                struct skin_video *sv =
+                        SKINOFFSETTOPTR(skin_buffer, token->value.data);
+                bool full = (info->refresh_type & SKIN_REFRESH_ALL)
+                                == SKIN_REFRESH_ALL;
+                bool drawn;
+                if (!sv)
+                    break;
+                gwps->display->set_viewport_ex(&skin_vp->vp,
+                                               VP_FLAG_VP_SET_CLEAN);
+                if (token->type == SKIN_TOKEN_VIDEO_ART)
+                    drawn = video_art_draw(gwps->display, sv->x, sv->y,
+                                           sv->w, sv->h, sv->fit, full);
+                else
+                    drawn = video_clip_draw(gwps->display,
+                                            SKINOFFSETTOPTR(skin_buffer, sv->path),
+                                            sv->x, sv->y, sv->w, sv->h,
+                                            sv->fit, full);
+                if (drawn)
+                    skin_animation_boost();
             }
             break;
 #endif
@@ -982,7 +1030,8 @@ void skin_render(struct gui_wps *gwps, unsigned refresh_mode)
          * never survive to the next one's check on its own. */
         if ((dirty || data->use_extra_framebuffer ||
              skin_art_backdrop_buffer() != NULL) &&
-            get_current_activity() == ACTIVITY_WPS) /* only clear if in WPS */
+            (get_current_activity() == ACTIVITY_WPS ||
+             get_current_activity() == ACTIVITY_SCREENSAVER)) /* only clear if in WPS */
         {
             display->clear_viewport();
         }

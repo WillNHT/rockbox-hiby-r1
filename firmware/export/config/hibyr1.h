@@ -52,6 +52,10 @@
  * the track or in its tags. 270 KiB of buffers. */
 #define HAVE_LYRICS
 
+/* Video, animated covers, music videos and screensavers (apps/video/),
+ * decoded by librbvideo.so from /.rockbox/lib when it is installed. */
+#define HAVE_VIDEO
+
 /* Blend antialiased glyphs and alpha images in linear light rather than in
  * gamma-encoded RGB565, so a glyph keeps its weight whatever it landed on.
  * Six table lookups per blended pixel; 2.2 KiB of tables. */

@@ -192,6 +192,60 @@ jobs:
         name: emoji
         path: out/*
 
+  # The video decoder: FFmpeg and libwebp behind apps/video/rbvideo.h,
+  # cross-compiled for the player and packed as one shared object. It is
+  # its own download because it is several megabytes and only the video
+  # features need it (Settings > Video).
+  video:
+    needs: version
+    if: needs.version.outputs.bump != 'none'
+    runs-on: ubuntu-latest
+    name: Package video decoder
+    steps:
+    - uses: actions/checkout@v7
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y automake build-essential libtool-bin \
+          pkg-config texinfo wget zip
+    - name: Restore toolchain
+      id: cache
+      uses: actions/cache/restore@v6
+      with:
+        path: /tmp/local
+        key: ${{ runner.os }}-toolchain-y-${{ hashFiles('tools/rockboxdev.sh') }}
+        restore-keys: |
+          ${{ runner.os }}-toolchain-y-
+    - name: Build toolchain
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: |
+        cd tools
+        chmod +x rockboxdev.sh
+        sudo ./rockboxdev.sh --target=y --prefix=/tmp/local
+    - name: Cache the decoder's own build
+      id: rbvcache
+      uses: actions/cache@v6
+      with:
+        path: /tmp/rbvideo-out
+        key: ${{ runner.os }}-rbvideo-${{ hashFiles('tools/rbvideo/build.sh', 'tools/rbvideo/rbvideo.c', 'apps/video/rbvideo.h') }}
+    - name: Build librbvideo.so
+      if: steps.rbvcache.outputs.cache-hit != 'true'
+      run: |
+        export PATH=/tmp/local/bin:$PATH
+        sh tools/rbvideo/build.sh r1 /tmp/rbvideo-out
+    - name: Pack
+      run: |
+        mkdir -p pkg/.rockbox/lib out
+        cp /tmp/rbvideo-out/librbvideo.so pkg/.rockbox/lib/
+        cp tools/rbvideo/README.md pkg/.rockbox/lib/README-librbvideo.txt
+        (cd pkg && zip -qr ../out/rockbox-hibyr1-video.zip .rockbox)
+        ls -l out
+    - uses: actions/upload-artifact@v7
+      with:
+        name: video
+        path: out/*
+        if-no-files-found: error
+
   # A stock HiBy update with this fork's bootloader injected: flash it once
   # through the player's own updater to get the Rockbox boot option.
   patched-firmware:
@@ -221,7 +275,7 @@ jobs:
   # the SD card and the player has a complete, themed Rockbox with no
   # other downloads. The separate zips stay for people who want less.
   bundle:
-    needs: [version, build, themes, emoji]
+    needs: [version, build, themes, emoji, video]
     runs-on: ubuntu-latest
     name: Bundle SD card
     steps:
@@ -236,7 +290,7 @@ jobs:
         mkdir -p card out
         # Themes last, so their fonts and .cfg files win over anything of
         # the same name in the base install.
-        for z in rockbox-hibyr1.zip rockbox-hibyr1-fonts.zip rockbox-hibyr1-themes.zip rockbox-hibyr1-emoji.zip; do
+        for z in rockbox-hibyr1.zip rockbox-hibyr1-fonts.zip rockbox-hibyr1-themes.zip rockbox-hibyr1-emoji.zip rockbox-hibyr1-video.zip; do
           unzip -oq "parts/$z" -d card
         done
         echo "$TAG" > card/.rockbox/fork-version.txt
@@ -249,7 +303,7 @@ jobs:
         if-no-files-found: error
 
   publish:
-    needs: [version, build, themes, emoji, bundle, patched-firmware]
+    needs: [version, build, themes, emoji, video, bundle, patched-firmware]
     if: always() && needs.bundle.result == 'success'
     runs-on: ubuntu-latest
     name: Publish release
@@ -278,6 +332,7 @@ jobs:
         | \`rockbox-hibyr1-fonts.zip\` | Optional. Unzip to the card root, over the above. |
         | \`rockbox-hibyr1-themes.zip\` | Optional. This fork's themes; unzip to the card root, then pick one under Theme Settings. |
         | \`rockbox-hibyr1-emoji.zip\` | Optional. Colour emoji (Noto Emoji); unzip to the card root. |
+        | \`rockbox-hibyr1-video.zip\` | Optional. The video decoder (FFmpeg, libwebp), needed by Settings > Video: animated covers, music videos, screensavers and the video player. Unzip to the card root. |
         | \`bootloader.r1\` | Bootloader, for use with \`tools/r1_patcher\`. |
         | \`r1_rb.upt\` | Stock HiBy firmware with the bootloader injected (if present). Copy to the card root and run the player's firmware update; only needed once. |
 

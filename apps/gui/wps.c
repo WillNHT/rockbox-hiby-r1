@@ -22,6 +22,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include "config.h"
+#ifdef HAVE_VIDEO
+#include "video/screensaver.h"
+#endif
 
 #include "system.h"
 #include "file.h"
@@ -1237,6 +1240,15 @@ long gui_wps_show(void)
                 gwps_leave_wps(true);
                 return cue_or_playlist_viewer();
                 break;
+#ifdef HAVE_VIDEO
+            case SYS_SCREENSAVER:
+                /* The screensaver takes the screen the way a menu does, and
+                 * gives it back the same way. */
+                gwps_leave_wps(true);
+                screensaver_run(false);
+                restore = true;
+                break;
+#endif
             default:
                 switch(default_event_handler(button))
                 {   /* music has been stopped by the default handler */
