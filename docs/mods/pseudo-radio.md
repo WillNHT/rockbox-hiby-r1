@@ -179,3 +179,12 @@ radio screensaver:
 | Stations | Tuned in, part-way through | Settings |
 | --- | --- | --- |
 | ![Station list](screenshots/radio-stations.png) | ![Playing](screenshots/radio-wps.png) | ![Settings](screenshots/radio-settings.png) |
+
+| The radio WPS | The menu entry |
+| --- | --- |
+| ![SnappyRadio](screenshots/radio-skin.png) | ![Radio icon](screenshots/radio-icon.png) |
+
+The station in that shot is `/radio/Late Night`, the file on air is three
+folders below it, and the cover is the station's - `cover.jpg` next to the
+station folder, not next to the file, and not the artwork the file happens
+to embed.
