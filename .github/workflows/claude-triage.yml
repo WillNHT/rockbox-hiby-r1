@@ -1,0 +1,44 @@
+name: Claude issue triage
+
+# Labels new issues from .github/labels.yml and asks for anything missing.
+# Same secret as claude.yml.
+on:
+  issues:
+    types: [opened, reopened]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 1
+    - uses: anthropics/claude-code-action@v1
+      with:
+        claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+        claude_args: |
+          --allowedTools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh label list:*),Bash(gh search issues:*),Grep,Glob,Read"
+        prompt: |
+          Triage issue #${{ github.event.issue.number }} in ${{ github.repository }}.
+
+          1. Read it: gh issue view ${{ github.event.issue.number }}
+          2. Read .github/labels.yml for the taxonomy. Use only labels from it.
+          3. Apply exactly one "type:" label, one or two "area:" labels, and any
+             "needs:" label that applies. Add "upstream" if it belongs in Rockbox
+             or the base mod rather than this fork. Add "needs: device test" if it
+             cannot be confirmed without an R1 in hand.
+          4. Search open issues for a duplicate; if you are confident, label
+             "duplicate" and say which issue it duplicates.
+          5. Apply them with: gh issue edit ${{ github.event.issue.number }} --add-label "..."
+
+          Then comment once, at most six lines: where in the tree it likely lives
+          (file paths), and the specific missing facts if any - firmware version,
+          theme, a reproduction, whether it happens on a clean config. Do not
+          speculate about a fix and do not restate the issue back at the reporter.
+          If the issue is clear and complete, label it and say nothing else.

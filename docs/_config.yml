@@ -1,0 +1,13 @@
+# GitHub Pages serves this folder (Settings > Pages > master / docs).
+title: Rockbox for the HiBy R1
+description: A Rockbox fork for the HiBy R1 - touch stick, layered skin engine, library covers, audiobooks.
+theme: jekyll-theme-cayman
+exclude:
+  - COPYING
+  - COPYING-MANUAL
+  - LICENSES
+  - gpl-2.0.html
+  - logo
+  - profontdoc.txt
+  - sample.colours
+  - sample.icons
