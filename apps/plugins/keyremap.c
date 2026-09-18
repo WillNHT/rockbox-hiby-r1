@@ -688,7 +688,7 @@ static void keyremap_import_user_keys(void)
     char buf[MAX_PATH];
     struct browse_context browse = {
         .dirfilter = SHOW_ALL,
-        .flags = BROWSE_SELECTONLY,
+        .flags = BROWSE_SELECTONLY | BROWSE_DIRFILTER,
         .title = "Select Keymap",
         .icon = Icon_Plugin,
         .buf = buf,
@@ -863,6 +863,9 @@ static int parse_action_import_entry(int context, char * pbuf, size_t bufsz)
             else if (field == 1 || field == 2) /* button / pre_btn */
             {
                 char *pbtn = pfield;
+                pf = pfield + rb->strlen(pfield);
+                while (pf > pfield && pf[-1] == ' ') /* trailing space would end up in the button name */
+                    *(--pf) = '\0';
                 pf = pfield;
                 while ((ch = *(pf)) != '\0')
                 {
