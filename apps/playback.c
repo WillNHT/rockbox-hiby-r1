@@ -55,6 +55,7 @@
 
 #ifdef HAVE_ALBUMART
 #include "albumart.h"
+#include "pradio.h"
 #endif
 
 #ifdef HAVE_PLAY_FREQ
@@ -1980,7 +1981,13 @@ static int audio_load_albumart(struct track_info *infop,
         user_data.dim = &albumart_slots[i].dim;
 
         char path[MAX_PATH];
-        const bool prefer_image_file = global_settings.album_art == AA_PREFER_IMAGE_FILE;
+        /* A station's cover belongs to the station, so it wins over the
+         * file's embedded art the way it does not for ordinary music:
+         * whatever a station's files embed is the artwork of whatever they
+         * were ripped from, which is not the thing you tuned to. */
+        const bool prefer_image_file =
+            global_settings.album_art == AA_PREFER_IMAGE_FILE ||
+            pradio_is_station_track(track_id3->path);
 
         if (prefer_image_file
             && find_albumart(track_id3, path, sizeof(path), &albumart_slots[i].dim))

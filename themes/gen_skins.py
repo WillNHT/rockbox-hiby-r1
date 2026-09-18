@@ -482,8 +482,10 @@ CANVAS = """#
 %%Cv(0,0,%d,%d,cover)"""
 
 
-def animated(gauge=False, lyrics=None):
+def animated(gauge=False, lyrics=None, radio=False):
     name = "Snappy Gauge" if gauge else "Snappy Animated"
+    if radio:
+        name = "Snappy Radio"
     if lyrics == "lines":
         name = "Snappy Lyrics Lines"
     elif lyrics == "caption":
@@ -687,7 +689,34 @@ def animated(gauge=False, lyrics=None):
     if lyrics == "lines":
         the_band, enables = gate(the_band, "bd", "%%?yf<||%s>")
         o[band_slot] = "\n".join(enables)
-    content = [the_band, """#
+    if radio:
+        # A station is not an album and a recording is not a track. The two
+        # lines swap jobs: the small one carries whatever file happens to be
+        # on, the big one carries the station, because the station is the
+        # thing you tuned to and the file is an implementation detail of it.
+        content = [the_band, """#
+# Station
+# -------
+%V(30,690,-30,28,2)
+%Vt(0)
+%s%al%?it<%it|%fn>
+#
+%V(30,718,-30,46,4)
+%Vt(0)
+%al%s%?rs<%rs|%?ia<%ia|radio>>"""]
+
+        # No elapsed, no total, no "3 of 52". A radio has no duration you
+        # are entitled to know and no queue you are allowed to see; showing
+        # them is what made this look like a file player with the file names
+        # changed. What is left is the one thing a radio does tell you.
+        content.append("""#
+# Footer
+# ======
+%V(30,768,-30,30,2)
+%Vt(0)
+%ac%?mp<off air|on air|paused|on air|on air>""")
+    else:
+        content = [the_band, """#
 # Track
 # -----
 %V(30,690,-30,28,2)
@@ -698,7 +727,7 @@ def animated(gauge=False, lyrics=None):
 %Vt(0)
 %al%s%?it<%it|%fn>"""]
 
-    content.append("""#
+        content.append("""#
 # Footer
 # ======
 %V(30,768,-30,30,2)
@@ -859,8 +888,10 @@ io.open("themes/wps/SnappyLyricsLines.wps", "w",
         newline="\n").write(animated(False, "lines"))
 io.open("themes/wps/SnappyCanvas.wps", "w",
         newline="\n").write(animated(False, "canvas"))
+io.open("themes/wps/SnappyRadio.wps", "w",
+        newline="\n").write(animated(False, None, True))
 io.open("themes/wps/SnappyLyricsCaption.wps", "w",
         newline="\n").write(animated(False, "caption"))
 print("wrote SnappyV2.wps, SnappyVinyl.wps, SnappyAnimated.wps, SnappyGauge.wps,"
       " SnappyLyrics.wps, SnappyLyricsLines.wps, SnappyLyricsCaption.wps,"
-      " SnappyCanvas.wps")
+      " SnappyCanvas.wps, SnappyRadio.wps")

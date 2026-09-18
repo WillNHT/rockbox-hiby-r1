@@ -1038,8 +1038,11 @@ struct user_settings
     char radio_folder[MAX_PATHNAME+1];
     char radio_wps[MAX_FILENAME+1];      /* empty: the music one */
     char radio_saver[MAX_FILENAME+1];    /* empty: the usual screensaver */
+    char radio_last[MAX_FILENAME+1];     /* station tuned last; empty: none */
     int  radio_min_length;   /* minutes a recording needs to be a station */
     bool radio_static;       /* the hiss played while tuning in */
+    int  radio_static_strength; /* percent, scales every radio noise */
+    bool radio_ambience;     /* the occasional uninvited noise on the band */
     /* The same static, on an ordinary user-initiated track skip - the old
      * transistor-radio feel of changing station by hand. */
     bool track_static;

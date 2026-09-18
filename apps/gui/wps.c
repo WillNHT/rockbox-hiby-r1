@@ -148,11 +148,13 @@ void wps_do_action(enum wps_do_action_type action, bool updatewps)
     if (action == WPS_PLAY) /* unpause_action */
     {
         audiobooks_before_resume();
+        pradio_pause(false); /* seek before resuming, as pause_rewind does */
         audio_resume();
     }
     else /* WPS_PAUSE pause_action */
     {
         audio_pause();
+        pradio_pause(true);
 
         if (global_settings.pause_rewind) {
             unsigned long elapsed = audio_current_track()->elapsed;
@@ -876,6 +878,8 @@ long gui_wps_show(void)
             }
         }
 
+        pradio_ambience_tick();
+
         /* A book, a station and a song can want different WPSes. Leave
          * with the one that is loaded, then come back with the other. */
         {
@@ -1090,6 +1094,11 @@ long gui_wps_show(void)
             case ACTION_WPS_SKIPPREV:
                 last_left = current_tick;
 
+                /* tuned in to the radio: a different station, not the
+                   previous track of this one */
+                if (pradio_skip())
+                    break;
+
                 if (global_settings.track_static)
                 {
                     beep_duck(global_settings.track_static_ms,
@@ -1114,6 +1123,11 @@ long gui_wps_show(void)
                    OR if skip length set, hop by predetermined amount. */
             case ACTION_WPS_SKIPNEXT:
                 last_right = current_tick;
+
+                /* tuned in to the radio: a different station, not the
+                   next track of this one */
+                if (pradio_skip())
+                    break;
 
                 if (global_settings.track_static)
                 {
@@ -1216,7 +1230,20 @@ long gui_wps_show(void)
 
                 /* stop and exit wps */
             case ACTION_WPS_STOP:
-                bookmark = true;
+                /* On a target with no hardware hold switch this is also
+                 * the held-power shutdown gesture (see keymap-hibyr1.c's
+                 * locked WPS context) - the one binding that survives a
+                 * key lock. Skipping the bookmark prompt while locked
+                 * keeps a hold-to-shutdown from firing it on the way to a
+                 * poweroff that is about to tear it all down anyway,
+                 * without touching the keymap itself. */
+#ifdef HAS_BUTTON_HOLD
+                if (!button_hold())
+#else
+                if (!is_keys_locked())
+#endif
+                    bookmark = true;
+                pradio_leaving();
                 exit = true;
                 break;
 

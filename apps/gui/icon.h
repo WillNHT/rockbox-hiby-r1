@@ -35,7 +35,12 @@ enum themable_icons {
      * set on the device - including the ones the user installed from other
      * authors, which cannot be regenerated from here. A negative id costs
      * no cell, and a book made of rectangles inherits the list's own
-     * foreground colour and is the right size at any icon height. */
+     * foreground colour and is the right size at any icon height.
+     * Icon_Tuner is drawn in the list's foreground colour alone, with no
+     * palette of its own, so the one drawing belongs equally to the stock
+     * theme and to Snappy's monochrome instead of needing a variant per
+     * theme that no theme author could regenerate. */
+    Icon_Tuner = -3,
     Icon_Book = -2,
     NOICON = -1,
     Icon_NOICON = NOICON, /* Dont put this in a .bmp */
