@@ -23,6 +23,8 @@ Grab a build from the [releases page](https://github.com/WillNHT/rockbox-hiby-r1
   grid and carousel; `%Cp` in a WPS.
 * [Audiobooks library](mods/audiobooks-library.md) - covers, series, narrators,
   progress, Continue Listening, per-book speed, sleep timer.
+* [Audio prioritisation](mods/audio-prioritisation.md) - device sounds duck the
+  music so they can be heard over it.
 * [Audiobook Mod](mods/audiobook-mod.md) - the audiobook profile from the base mod.
 * [Shared recent bookmarks](mods/shared-recent-bookmarks.md) - resume on another player
   from the same SD card.

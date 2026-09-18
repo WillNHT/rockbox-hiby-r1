@@ -1033,6 +1033,13 @@ struct user_settings
     int  ab_finished_pct;    /* a book this far through counts as finished */
     bool ab_autoscan;        /* rescan at startup when the library changed */
     bool emoji_enabled;      /* colour emoji from /.rockbox/emoji */
+    /* Audio prioritisation: a device sound with music under it is barely
+     * audible, so the music steps aside while it plays. One depth per
+     * class of sound - see system_sound_play(). */
+    bool sound_duck;
+    int  sound_duck_click;   /* keyclicks and list edges */
+    int  sound_duck_alert;   /* track skip, end of playlist */
+    int  sound_duck_cue;     /* lock, unlock, stick arming */
 #ifdef HAVE_COVER_VIEWS
     int library_view;        /* enum coverview_style */
 #endif
