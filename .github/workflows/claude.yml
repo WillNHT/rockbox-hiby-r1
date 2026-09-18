@@ -1,0 +1,40 @@
+name: Claude
+
+# Mention @claude in an issue, an issue comment, a PR comment or a review and
+# Claude picks it up in this repo. Needs one of these repository secrets:
+#   CLAUDE_CODE_OAUTH_TOKEN  (from the Claude GitHub App: /install-github-app)
+#   ANTHROPIC_API_KEY        (a plain API key)
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [opened, assigned]
+
+jobs:
+  claude:
+    if: |
+      contains(github.event.comment.body, '@claude') ||
+      contains(github.event.review.body, '@claude') ||
+      contains(github.event.issue.body, '@claude')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 1
+    - uses: anthropics/claude-code-action@v1
+      with:
+        claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+        # CLAUDE.md carries the house rules; this only adds the CI-only bits.
+        claude_args: |
+          --allowedTools "Bash(make -C tools/stick_test test),Bash(git diff:*),Bash(git log:*)"
