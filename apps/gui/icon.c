@@ -104,6 +104,56 @@ void screen_put_iconxy(struct screen * display,
     const int is_rtl = lang_is_rtl();
     const struct bitmap *iconset;
 
+    if (icon == Icon_Tuner)
+    {
+        int m = height / 8;
+        int bx = xpos + m / 2, by = ypos + m;
+        int bw = width - m, bh = height - 2 * m;
+        int i;
+
+        if (is_rtl)
+            bx = display->getwidth() - bx - bw;
+
+        if (bw < 8 || bh < 8)
+            return;
+
+        /* A table radio seen front-on: an aerial, a case, a speaker grille
+         * filling the left of it and a tuning scale with its knob on the
+         * right. The dial is the half that says "radio" rather than
+         * "speaker", so it keeps its width even at list size. Drawn rather
+         * than themed - see the note in icon.h - and in nothing but the
+         * list's own foreground colour, so it reads the same way in a
+         * colour icon set and in a monochrome one. */
+        int cy = by + bh / 3;               /* top of the case  */
+        int ch = bh - bh / 3;               /* case height      */
+        int in = MAX(2, bw / 10);           /* inset from case  */
+        int gw = (bw - 3 * in) / 2;         /* grille width     */
+        int dx = bx + 2 * in + gw;          /* dial left edge   */
+
+        /* the aerial, leaning out of the top right corner */
+        display->vline(bx + bw - 1 - in, by, cy);
+        display->hline(bx + bw - 2 - in, bx + bw - 1, by);
+
+        /* the case */
+        display->drawrect(bx, cy, bw, ch);
+
+        /* the speaker grille */
+        for (i = 1; (cy + in + i * 2) < cy + ch - in; i++)
+            display->hline(bx + in, bx + in + gw - 1, cy + in + i * 2);
+
+        /* the tuning scale, as ticks along the top of the right half */
+        {
+            int th = MAX(2, ch / 5);
+            for (i = 0; dx + i * 3 < bx + bw - in; i++)
+                display->vline(dx + i * 3, cy + in, cy + in + th);
+
+            /* and the knob under it */
+            int kw = MAX(3, ch / 3);
+            display->fillrect(dx, cy + ch - in - kw, kw, kw);
+        }
+        return;
+    }
+
     if (icon == Icon_Book)
     {
         int m = height / 8;
