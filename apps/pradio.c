@@ -46,7 +46,6 @@
 #include "audio.h"
 #include "dir.h"
 #include "file.h"
-#include "filetypes.h"
 #include "lang.h"
 #include "list.h"
 #include "menu.h"
@@ -162,39 +161,19 @@ static bool long_enough(unsigned long length)
     return mins <= 0 || length >= (unsigned long)mins * 60 * 1000UL;
 }
 
-/* Fill the playlist with a station's audio files. Returns how many. */
+/* Fill the playlist with a station's audio files, at any depth under it -
+ * a station is one folder to point at, not one flat folder to populate by
+ * hand. Returns how many tracks. */
 static int build_playlist(const char *dir)
 {
     if (playlist_create(dir, NULL) < 0)
         return 0;
 
-    DIR *d = opendir(dir);
-    if (!d)
+    if (playlist_insert_directory(NULL, dir, PLAYLIST_INSERT_LAST,
+                                  false, true) < 0)
         return 0;
 
-    int n = 0;
-    struct dirent *e;
-    while ((e = readdir(d)))
-    {
-        if (e->d_name[0] == '.')
-            continue;
-        struct dirinfo info = dir_get_info(d, e);
-        if (info.attribute & ATTR_DIRECTORY)
-            continue;
-        if ((filetype_get_attr(e->d_name) & FILE_ATTR_MASK) != FILE_ATTR_AUDIO)
-            continue;
-
-        char full[MAX_PATH];
-        path_append(full, dir, e->d_name, sizeof full);
-        if (playlist_insert_track(NULL, full, PLAYLIST_INSERT_LAST,
-                                  false, false) >= 0)
-            n++;
-    }
-    closedir(d);
-
-    if (n > 0)
-        playlist_sync(NULL);
-    return n;
+    return playlist_amount_ex(NULL);
 }
 
 /* Pick a track, preferring one over the length floor. Returns its index and
