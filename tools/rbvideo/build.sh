@@ -14,6 +14,7 @@ TARGET=${1:?usage: build.sh r1|host OUTDIR}
 OUT=${2:?usage: build.sh r1|host OUTDIR}
 FFMPEG_VER=${FFMPEG_VER:-8.0}
 WEBP_VER=${WEBP_VER:-1.5.0}
+ZLIB_VER=${ZLIB_VER:-1.3.1}
 DL=${RBV_DL:-$HOME/.cache/rbvideo}
 JOBS=${JOBS:-$(nproc)}
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -28,6 +29,7 @@ mkdir -p "$WORK" "$PREFIX"
 fetch() {
     [ -f "$DL/$2" ] || wget -q -O "$DL/$2" "$1/$2"
 }
+fetch https://zlib.net/fossils zlib-$ZLIB_VER.tar.gz
 fetch https://ffmpeg.org/releases ffmpeg-$FFMPEG_VER.tar.xz
 fetch https://storage.googleapis.com/downloads.webmproject.org/releases/webp libwebp-$WEBP_VER.tar.gz
 
@@ -55,6 +57,23 @@ host)
     exit 1
     ;;
 esac
+
+# --------------------------------------------------------------- zlib
+# Built here rather than taken from the toolchain: the APNG decoder needs
+# it, and a toolchain's libz.a is not position-independent, so it cannot
+# go inside a shared object. Everything ends up inside librbvideo.so, so
+# the player needs no zlib of its own.
+if [ ! -f "$PREFIX/lib/libz.a" ]; then
+    rm -rf "$WORK/zlib-$ZLIB_VER"
+    tar -xzf "$DL/zlib-$ZLIB_VER.tar.gz" -C "$WORK"
+    (
+        cd "$WORK/zlib-$ZLIB_VER"
+        CC="$CC" CFLAGS="$CFLAGS" ./configure --prefix="$PREFIX" --static \
+            >"$WORK/zlib-configure.log"
+        make -j"$JOBS" libz.a >"$WORK/zlib-make.log" 2>&1
+        make install >/dev/null
+    )
+fi
 
 # ------------------------------------------------------------ libwebp
 if [ ! -f "$PREFIX/lib/libwebpdemux.a" ]; then
@@ -87,7 +106,8 @@ if [ ! -f "$PREFIX/lib/libavcodec.a" ]; then
         configure_ffmpeg() {
         # shellcheck disable=SC2086
         ./configure $FF_ARCH $1 --prefix="$PREFIX" \
-            --cc="$CC" --extra-cflags="$CFLAGS" \
+            --cc="$CC" --extra-cflags="$CFLAGS -I$PREFIX/include" \
+            --extra-ldflags="-L$PREFIX/lib" \
             --enable-pic --enable-static --disable-shared \
             --disable-programs --disable-doc --disable-network \
             --disable-autodetect --disable-debug \
@@ -123,6 +143,8 @@ link_shim() {
         -Wl,-soname,librbvideo.so \
         -lpthread -lm
 }
-link_shim -lz || link_shim ""
+# zlib goes inside the object: the player's system may not have one, and
+# a missing libz.so would make the whole library unloadable.
+link_shim "$PREFIX/lib/libz.a" || link_shim -lz || link_shim ""
 ${CROSS}strip --strip-unneeded "$OUT/librbvideo.so"
 ls -la "$OUT/librbvideo.so"
