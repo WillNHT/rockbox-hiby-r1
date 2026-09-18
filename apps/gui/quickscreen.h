@@ -43,6 +43,8 @@ enum quickscreen_return {
     QUICKSCREEN_IN_USB = 0x1,
     QUICKSCREEN_GOTO_SHORTCUTS_MENU = 0x2,
     QUICKSCREEN_CHANGED = 0x4,
+    /* Handled inside quick_screen_quick(), so callers never see it. */
+    QUICKSCREEN_GOTO_QUEUE = 0x8,
 };
 
 extern int quick_screen_quick(int button_enter);
