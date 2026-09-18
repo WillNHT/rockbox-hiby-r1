@@ -55,8 +55,13 @@ waiting on one locally unless the task is about the build itself.
 
 Every issue you pick up gets a PR, and every PR points back at its issue:
 
-* **One issue, one PR.** Open it against `master` with `Closes #<n>` in the body
-  so merging closes the issue.
+* **One batch, one PR.** When a session is handed several issues, they all land
+  in a single PR against `master`, one commit per issue, with a `Closes #<n>`
+  line per issue it finishes and `Refs #<n>` for one it only advances. One PR
+  means one build for the human to flash and test, and no two branches fighting
+  over the same file. Only open a second PR when a change genuinely cannot share
+  a branch with the rest. A single issue handed over on its own still gets its
+  own PR - the rule is one PR per batch, not one PR per repo.
 * **Label the issue** from `.github/labels.yml` before you start: one `type:`,
   one `area:`, one `severity:`, plus `needs:`/`blocked`/`upstream` where they
   apply, and drop `needs: triage` once it is sorted. Keep them current as the
