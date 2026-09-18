@@ -20089,3 +20089,31 @@
     *: "Nothing to tune into"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_TRACK_STATIC
+  desc: playback settings: static/noise on a user-initiated track skip
+  user: core
+  <source>
+    *: "Track Change Static"
+  </source>
+  <dest>
+    *: "Track Change Static"
+  </dest>
+  <voice>
+    *: "Track Change Static"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TRACK_STATIC_MS
+  desc: playback settings: how long the track change static plays
+  user: core
+  <source>
+    *: "Track Change Static Duration"
+  </source>
+  <dest>
+    *: "Track Change Static Duration"
+  </dest>
+  <voice>
+    *: "Track Change Static Duration"
+  </voice>
+</phrase>

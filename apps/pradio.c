@@ -46,7 +46,6 @@
 #include "audio.h"
 #include "dir.h"
 #include "file.h"
-#include "filetypes.h"
 #include "lang.h"
 #include "list.h"
 #include "menu.h"
@@ -162,39 +161,19 @@ static bool long_enough(unsigned long length)
     return mins <= 0 || length >= (unsigned long)mins * 60 * 1000UL;
 }
 
-/* Fill the playlist with a station's audio files. Returns how many. */
+/* Fill the playlist with a station's audio files, at any depth under it -
+ * a station is one folder to point at, not one flat folder to populate by
+ * hand. Returns how many tracks. */
 static int build_playlist(const char *dir)
 {
     if (playlist_create(dir, NULL) < 0)
         return 0;
 
-    DIR *d = opendir(dir);
-    if (!d)
+    if (playlist_insert_directory(NULL, dir, PLAYLIST_INSERT_LAST,
+                                  false, true) < 0)
         return 0;
 
-    int n = 0;
-    struct dirent *e;
-    while ((e = readdir(d)))
-    {
-        if (e->d_name[0] == '.')
-            continue;
-        struct dirinfo info = dir_get_info(d, e);
-        if (info.attribute & ATTR_DIRECTORY)
-            continue;
-        if ((filetype_get_attr(e->d_name) & FILE_ATTR_MASK) != FILE_ATTR_AUDIO)
-            continue;
-
-        char full[MAX_PATH];
-        path_append(full, dir, e->d_name, sizeof full);
-        if (playlist_insert_track(NULL, full, PLAYLIST_INSERT_LAST,
-                                  false, false) >= 0)
-            n++;
-    }
-    closedir(d);
-
-    if (n > 0)
-        playlist_sync(NULL);
-    return n;
+    return playlist_amount_ex(NULL);
 }
 
 /* Pick a track, preferring one over the length floor. Returns its index and
@@ -244,6 +223,11 @@ static bool tune(int station)
         return false;
     }
 
+    /* Otherwise a station with several files always opens the same way and
+     * plays them in the same order - a jukebox with extra steps. */
+    if (n > 1)
+        playlist_shuffle(current_tick, -1);
+
     unsigned long length = 0;
     int track = pick_track(n, &length);
 
@@ -261,6 +245,53 @@ static bool tune(int station)
 
     playlist_start(track, random_offset(length), 0);
     return true;
+}
+
+/* --- skipping while tuned in ------------------------------------------- */
+
+/* Which station a radio track's path belongs to, or -1 if the radio folder
+ * itself is the only station. */
+static int station_of(const char *path)
+{
+    const char *root = global_settings.radio_folder;
+    size_t rootlen = strlen(root);
+    while (rootlen > 1 && root[rootlen - 1] == '/')
+        rootlen--;
+
+    const char *rel = path + rootlen;
+    while (*rel == '/')
+        rel++;
+
+    for (int i = 0; i < nstations; i++)
+    {
+        size_t len = strlen(stations[i]);
+        if (!strncasecmp(rel, stations[i], len) &&
+            (rel[len] == '/' || rel[len] == '\0'))
+            return i;
+    }
+    return -1;
+}
+
+/* User-initiated prev/next while tuned in: a radio dial moves to another
+ * station, it does not step to the next track of the one already playing. */
+bool pradio_skip(void)
+{
+    if (!pradio_playing())
+        return false;
+
+    scan_stations();
+
+    if (nstations <= 1)
+        return tune(nstations == 1 ? 0 : -1);
+
+    struct mp3entry *id3 = audio_current_track();
+    int current = id3 ? station_of(id3->path) : -1;
+
+    int station = rand() % nstations;
+    if (current >= 0 && station == current)
+        station = (station + 1) % nstations;
+
+    return tune(station);
 }
 
 /* --- settings --------------------------------------------------------- */

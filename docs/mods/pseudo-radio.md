@@ -30,8 +30,15 @@ A radio folder with no subfolders is one station, so the simplest setup is a
 folder with files in it and nothing else to configure. **Any Station** at the
 top of the list picks a station for you first, then tunes it.
 
-Only the files directly inside a station are played; a station is a flat
-folder, not a tree.
+A station is everything under its folder, any number of levels deep, so a
+station can be organised into its own subfolders without breaking scanning.
+
+## While tuned in
+
+Prev/next moves the dial instead of stepping through the station's files -
+a radio does not let you skip to the next track of the thing playing, it
+switches you to something else. A station with more than one file also
+plays them in a shuffled order rather than always the same one.
 
 ## Settings
 
