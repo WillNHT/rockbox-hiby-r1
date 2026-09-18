@@ -82,6 +82,10 @@
                                 /* 3% of 30min file == 54s step size */
 #define MIN_FF_REWIND_STEP 500
 
+/* Same burst as the pseudo-radio's tuning static (apps/pradio.c) - the same
+ * "something changed" cue, on an ordinary track skip instead of a tune. */
+#define TRACK_STATIC_AMP 2200
+
 static struct wps_state wps_state;
 static void transition_note_track(struct wps_state *state, bool animate);
 
@@ -1086,6 +1090,15 @@ long gui_wps_show(void)
             case ACTION_WPS_SKIPPREV:
                 last_left = current_tick;
 
+                if (global_settings.track_static)
+                {
+                    beep_duck(global_settings.track_static_ms,
+                             global_settings.sound_duck_alert);
+                    beep_play_noise(global_settings.track_static_ms,
+                                    TRACK_STATIC_AMP);
+                    sleep(HZ * global_settings.track_static_ms / 1000);
+                }
+
                 /* if we're in A/B repeat mode and the current position
                    is past the A marker, jump back to the A marker... */
                 if ( ab_repeat_mode_enabled() && ab_after_A_marker(state->id3->elapsed) )
@@ -1101,6 +1114,15 @@ long gui_wps_show(void)
                    OR if skip length set, hop by predetermined amount. */
             case ACTION_WPS_SKIPNEXT:
                 last_right = current_tick;
+
+                if (global_settings.track_static)
+                {
+                    beep_duck(global_settings.track_static_ms,
+                             global_settings.sound_duck_alert);
+                    beep_play_noise(global_settings.track_static_ms,
+                                    TRACK_STATIC_AMP);
+                    sleep(HZ * global_settings.track_static_ms / 1000);
+                }
 
                 /* if we're in A/B repeat mode and the current position is
                    before the A marker, jump to the A marker... */

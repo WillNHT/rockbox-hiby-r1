@@ -33,6 +33,20 @@ nearly silent. The music returns 150 ms after the sound ends, which is long
 enough that a run of chirps - the arming run, or the two-note lock cue -
 holds one duck rather than flapping the volume between notes.
 
+## Track Change Static
+
+**Settings - Playback**
+
+A burst of white noise on a user-initiated prev/next, the same static the
+[pseudo-radio](pseudo-radio.md) plays while tuning in - the old habit of a
+station change never arriving clean. It ducks at Alert Depth, the same as
+the track-skip beep it replaces the silence around.
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| Track Change Static | On | Master switch. |
+| Track Change Static Duration | 1000 ms | How long it plays (100-3000 ms). |
+
 ## In config.cfg
 
 ```
@@ -40,6 +54,8 @@ audio prioritization: on
 audio prioritization click: 25
 audio prioritization alert: 45
 audio prioritization cue: 70
+track change static: on
+track change static duration: 1000
 ```
 
 ## Screenshots
