@@ -1194,7 +1194,19 @@ long gui_wps_show(void)
 
                 /* stop and exit wps */
             case ACTION_WPS_STOP:
-                bookmark = true;
+                /* On a target with no hardware hold switch this is also
+                 * the held-power shutdown gesture (see keymap-hibyr1.c's
+                 * locked WPS context) - the one binding that survives a
+                 * key lock. Skipping the bookmark prompt while locked
+                 * keeps a hold-to-shutdown from firing it on the way to a
+                 * poweroff that is about to tear it all down anyway,
+                 * without touching the keymap itself. */
+#ifdef HAS_BUTTON_HOLD
+                if (!button_hold())
+#else
+                if (!is_keys_locked())
+#endif
+                    bookmark = true;
                 exit = true;
                 break;
 
