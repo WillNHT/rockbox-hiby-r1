@@ -136,6 +136,10 @@ static bool fade_out_complete = false;
 /* Voice */
 static bool soft_mode = false;
 
+/* Audio prioritisation: how far the music steps aside while a device sound
+ * plays. MIX_AMP_UNITY when it is not ducked. */
+static unsigned int duck_gain = MIX_AMP_UNITY;
+
 #ifdef HAVE_CROSSFADE
 /* Crossfade related state */
 
@@ -1319,6 +1323,9 @@ static void pcmbuf_update_volume(void)
     if (soft_mode)
         vol >>= 2;
 
+    if (duck_gain != MIX_AMP_UNITY)
+        vol = (vol >> 8) * (duck_gain >> 8);
+
     mixer_channel_set_amplitude(PCM_MIXER_CHAN_PLAYBACK, vol);
 }
 
@@ -1392,6 +1399,29 @@ void pcmbuf_soft_mode(bool shhh)
                 tick_remove_task(pcmbuf_fade_tick) : -1;
 
     soft_mode = shhh;
+    pcmbuf_update_volume();
+
+    if (res == 0)
+        tick_add_task(pcmbuf_fade_tick);
+}
+
+/* Duck the channel by 'percent' so a device sound can be heard over it.
+ * 0 puts it back. */
+void pcmbuf_duck(int percent)
+{
+    unsigned int gain = percent > 0 ?
+        MIX_AMP_UNITY - (MIX_AMP_UNITY / 100) * MIN(percent, 100) :
+        MIX_AMP_UNITY;
+
+    if (gain == duck_gain)
+        return;
+
+    /* Same reason as pcmbuf_soft_mode(): keep the fade tick out of the
+       read-modify-write below. */
+    int res = fade_state != PCM_NOT_FADING ?
+                tick_remove_task(pcmbuf_fade_tick) : -1;
+
+    duck_gain = gain;
     pcmbuf_update_volume();
 
     if (res == 0)

@@ -2810,6 +2810,17 @@ const struct settings_list settings[] = {
     * Vietnamese), and it is in the fonts pack. */
    TEXT_SETTING(F_THEMESETTING|F_NEEDAPPLY, fallback_font_file,
                 "fallback font", "16-GNU-Unifont", FONT_DIR "/", ".fnt"),
+   OFFON_SETTING(0, sound_duck, LANG_SOUND_DUCK, true,
+                 "audio prioritization", NULL),
+   INT_SETTING(0, sound_duck_click, LANG_SOUND_DUCK_CLICK, 25,
+               "audio prioritization click", UNIT_PERCENT, 0, 90, 5,
+               NULL, NULL, NULL),
+   INT_SETTING(0, sound_duck_alert, LANG_SOUND_DUCK_ALERT, 45,
+               "audio prioritization alert", UNIT_PERCENT, 0, 90, 5,
+               NULL, NULL, NULL),
+   INT_SETTING(0, sound_duck_cue, LANG_SOUND_DUCK_CUE, 70,
+               "audio prioritization cue", UNIT_PERCENT, 0, 90, 5,
+               NULL, NULL, NULL),
 #ifdef HAVE_COVER_VIEWS
    /* Albums, tracks, playlists and audiobooks. Shelves by default: a card
     * per row keeps up/down as the only way through, which is the stick. */

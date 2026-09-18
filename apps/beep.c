@@ -24,11 +24,48 @@
 #include "settings.h"
 #include "pcm.h"
 #include "pcm_mixer.h"
+#include "pcmbuf.h"
+#include "timeout.h"
 #include "misc.h"
 #include "fixedpoint.h"
 
 /** Beep generation, CPU optimized **/
 #include "asm/beep.c"
+
+/** Audio prioritisation **/
+
+/* A device sound is only useful if it can be heard over what is playing, so
+ * the music steps aside for as long as the sound lasts and a little after.
+ * The tail keeps a run of chirps from flapping the volume between notes. */
+#define DUCK_TAIL_MS    150
+
+static struct timeout duck_tmo;
+static int duck_depth;          /* 0 when the music is at full volume */
+
+static int duck_release(struct timeout *tmo)
+{
+    (void)tmo;
+    duck_depth = 0;
+    pcmbuf_duck(0);
+    return 0;                   /* <= 0 unregisters */
+}
+
+/* Step the music aside by 'percent' for the length of a sound. Several
+ * sounds overlapping keep the deepest of them until they have all ended. */
+void beep_duck(unsigned int duration, int percent)
+{
+    if (percent <= 0 || !global_settings.sound_duck)
+        return;
+
+    if (percent > duck_depth)
+    {
+        duck_depth = percent;
+        pcmbuf_duck(percent);
+    }
+
+    timeout_register(&duck_tmo, duck_release,
+                     HZ * (duration + DUCK_TAIL_MS) / 1000 + 1, 0);
+}
 
 static bool beep_noise;         /* Generating noise, not a square wave */
 static void beep_generate_noise(int16_t *buf, int count, int amplitude);

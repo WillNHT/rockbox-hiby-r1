@@ -484,6 +484,14 @@ MAKE_MENU(keyclick_menu, ID2P(LANG_KEYCLICK), 0, Icon_NOICON,
            &keyclick, &keyclick_repeats, &keyclick_sources_menu);
 #endif
 
+/* Audio prioritisation menu */
+MENUITEM_SETTING(sound_duck, &global_settings.sound_duck, NULL);
+MENUITEM_SETTING(sound_duck_click, &global_settings.sound_duck_click, NULL);
+MENUITEM_SETTING(sound_duck_alert, &global_settings.sound_duck_alert, NULL);
+MENUITEM_SETTING(sound_duck_cue, &global_settings.sound_duck_cue, NULL);
+MAKE_MENU(sound_duck_menu, ID2P(LANG_SOUND_DUCK), 0, Icon_NOICON,
+          &sound_duck, &sound_duck_click, &sound_duck_alert, &sound_duck_cue);
+
 #if CONFIG_CHARGING
 MENUITEM_SETTING(car_adapter_mode, &global_settings.car_adapter_mode, NULL);
 MENUITEM_SETTING(car_adapter_mode_delay, &global_settings.car_adapter_mode_delay, NULL);
@@ -607,6 +615,7 @@ MAKE_MENU(system_menu, ID2P(LANG_SYSTEM),
             &buttonlight_brightness,
 #endif
             &keyclick_menu,
+            &sound_duck_menu,
 #ifdef HAVE_TOUCHPAD_SENSITIVITY_SETTING
             &touchpad_sensitivity,
 #endif
