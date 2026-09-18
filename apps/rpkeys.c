@@ -159,6 +159,7 @@ static int chirp_tick(struct timeout *tmo)
         return 0;                /* <= 0 unregisters */
     }
 
+    beep_duck(CHIRP_STEP_MS, global_settings.sound_duck_cue);
     beep_play(chirp_seq[chirp_step], CHIRP_STEP_MS, CHIRP_AMPLITUDE);
     chirp_step++;
     return HZ * CHIRP_STEP_MS / 1000;
@@ -209,6 +210,7 @@ void rpkeys_chirp_step(int step, int total, bool rising)
      * that is paced by the hold itself needs no sequencer. */
     timeout_cancel(&chirp_tmo);
     chirp_seq = NULL;
+    beep_duck(CHIRP_STEP_MS, global_settings.sound_duck_cue);
     beep_play(hz, CHIRP_STEP_MS, CHIRP_AMPLITUDE);
 }
 

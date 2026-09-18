@@ -72,6 +72,7 @@ int pcmbuf_descs(void);
 void pcmbuf_fade(bool fade, bool in);
 bool pcmbuf_fading(void);
 void pcmbuf_soft_mode(bool shhh);
+void pcmbuf_duck(int percent);
 
 /* Time and position */
 unsigned int pcmbuf_get_position_key(void);

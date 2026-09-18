@@ -19907,3 +19907,59 @@
     quickscreen: "Quick Screen as a Wheel"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_SOUND_DUCK
+  desc: in settings_menu. lowers the music under a device sound
+  user: core
+  <source>
+    *: "Audio Prioritisation"
+  </source>
+  <dest>
+    *: "Audio Prioritisation"
+  </dest>
+  <voice>
+    *: "Audio Prioritisation"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_SOUND_DUCK_CLICK
+  desc: in settings_menu -> Audio Prioritisation. depth for keyclicks
+  user: core
+  <source>
+    *: "Click Depth"
+  </source>
+  <dest>
+    *: "Click Depth"
+  </dest>
+  <voice>
+    *: "Click Depth"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_SOUND_DUCK_ALERT
+  desc: in settings_menu -> Audio Prioritisation. depth for playback alerts
+  user: core
+  <source>
+    *: "Alert Depth"
+  </source>
+  <dest>
+    *: "Alert Depth"
+  </dest>
+  <voice>
+    *: "Alert Depth"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_SOUND_DUCK_CUE
+  desc: in settings_menu -> Audio Prioritisation. depth for lock and arming cues
+  user: core
+  <source>
+    *: "Cue Depth"
+  </source>
+  <dest>
+    *: "Cue Depth"
+  </dest>
+  <voice>
+    *: "Cue Depth"
+  </voice>
+</phrase>

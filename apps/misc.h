@@ -224,6 +224,10 @@ enum current_activity {
 /* custom string representation of activity */
 #define MAKE_ACT_STR(act) ((char[3]){'>', 'A'+ (act), 0x0})
 
+/* Step the music aside by 'percent' for 'duration' ms plus a short tail,
+ * so a device sound is audible over it. Does nothing when audio
+ * prioritisation is off. */
+void beep_duck(unsigned int duration, int percent);
 void beep_play(unsigned int frequency, unsigned int duration,
                unsigned int amplitude);
 
