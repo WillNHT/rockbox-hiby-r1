@@ -532,6 +532,7 @@ MENUITEM_SETTING(touchpad_deadzone, &global_settings.touchpad_deadzone, NULL);
 
 #ifdef HAVE_QUICKSCREEN
 MENUITEM_SETTING(shortcuts_replaces_quickscreen, &global_settings.shortcuts_replaces_qs, NULL);
+MENUITEM_SETTING(quickscreen_wheel, &global_settings.quickscreen_wheel, NULL);
 #endif
 
 #ifndef HAS_BUTTON_HOLD
@@ -582,6 +583,7 @@ MAKE_MENU(system_menu, ID2P(LANG_SYSTEM),
 #endif
 #ifdef HAVE_QUICKSCREEN
             &shortcuts_replaces_quickscreen,
+            &quickscreen_wheel,
 #endif
 #ifdef HAVE_MORSE_INPUT
             &morse_input,

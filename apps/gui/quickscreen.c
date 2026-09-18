@@ -346,6 +346,99 @@ static void quickscreen_fix_viewports(struct gui_quickscreen *qs,
     vps[QUICKSCREEN_RIGHT].flags  |= VP_FLAG_ALIGN_RIGHT;
 }
 
+/* sin(i * 11.25 degrees) * 256, one turn in 32 steps; cos comes off the same
+ * table a quarter turn along. Same trick the stick overlay uses: at these
+ * radii a 32-gon is a circle, and it costs no divides. */
+#define WHEEL_STEPS 32
+static const int16_t wheel_sin[WHEEL_STEPS] =
+{
+       0,   50,   98,  142,  181,  213,  237,  251,
+     256,  251,  237,  213,  181,  142,   98,   50,
+       0,  -50,  -98, -142, -181, -213, -237, -251,
+    -256, -251, -237, -213, -181, -142,  -98,  -50,
+};
+#define WHEEL_COS(i) (wheel_sin[((i) + 8) & (WHEEL_STEPS - 1)])
+
+static void wheel_point(int ox, int oy, int i, int rad, int *px, int *py)
+{
+    *px = ox + (rad * wheel_sin[i & (WHEEL_STEPS - 1)]) / 256;
+    *py = oy - (rad * WHEEL_COS(i)) / 256;
+}
+
+static void wheel_ring(struct screen *display, int ox, int oy, int rad)
+{
+    int i, x0, y0, x1, y1;
+
+    wheel_point(ox, oy, 0, rad, &x0, &y0);
+    for (i = 1; i <= WHEEL_STEPS; i++)
+    {
+        wheel_point(ox, oy, i, rad, &x1, &y1);
+        display->drawline(x0, y0, x1, y1);
+        x0 = x1;
+        y0 = y1;
+    }
+}
+
+/* The four ways drawn as a click wheel: an outer ring, a hub, and the four
+ * quadrant cuts between them, with the direction arrows sitting in the band.
+ * The labels stay where they are - the wheel goes in the space between them,
+ * which is exactly the gap the arrows had to themselves before. */
+static bool gui_quickscreen_draw_wheel(const struct gui_quickscreen *qs,
+                                       struct screen *display,
+                                       struct viewport *vp_icons)
+{
+    const int ox = vp_icons->width / 2;
+    const int oy = vp_icons->height / 2;
+    int r_out = MIN(vp_icons->width, vp_icons->height) / 2 - 1;
+    int r_hub, r_band;
+
+    /* Too small to read as a wheel - the caller falls back to the arrows. */
+    if (r_out < CENTER_ICONAREA_SIZE / 2)
+        return false;
+
+    r_hub = (r_out * 2) / 5;   /* the click wheel's centre button */
+    r_band = (r_out + r_hub) / 2;
+
+    wheel_ring(display, ox, oy, r_out);
+    wheel_ring(display, ox, oy, r_hub);
+
+    /* Quadrant cuts at the diagonals, so each way owns a quarter. */
+    for (int i = 4; i < WHEEL_STEPS; i += 8)
+    {
+        int x0, y0, x1, y1;
+        wheel_point(ox, oy, i, r_hub, &x0, &y0);
+        wheel_point(ox, oy, i, r_out, &x1, &y1);
+        display->drawline(x0, y0, x1, y1);
+    }
+
+    if (quickscreen_item_used(qs, QUICKSCREEN_TOP))
+        display->mono_bitmap(bitmap_icons_7x8[Icon_UpArrow],
+                             ox - 4, oy - r_band - 4, 7, 8);
+    if (quickscreen_item_used(qs, QUICKSCREEN_BOTTOM))
+        display->mono_bitmap(bitmap_icons_7x8[Icon_DownArrow],
+                             ox - 4, oy + r_band - 4, 7, 8);
+    if (quickscreen_item_used(qs, QUICKSCREEN_LEFT))
+        display->mono_bitmap(bitmap_icons_7x8[Icon_FastBackward],
+                             ox - r_band - 4, oy - 4, 7, 8);
+    if (quickscreen_item_used(qs, QUICKSCREEN_RIGHT))
+        display->mono_bitmap(bitmap_icons_7x8[Icon_FastForward],
+                             ox + r_band - 4, oy - 4, 7, 8);
+
+    /* The page name rides the hub, the way the centre button carries what
+     * pressing it would do. It only goes in if it fits inside the circle;
+     * clipped text in there reads as damage, not as a label. */
+    if (qs->page->lang_id)
+    {
+        const unsigned char *page_title = P2STR(ID2P(qs->page->lang_id));
+        int w, h;
+        display->getstringsize(page_title, &w, &h);
+        if (w <= r_hub * 2 - 2 && h <= r_hub * 2 - 2)
+            display->putsxy(ox - w/2, oy - h/2, page_title);
+    }
+
+    return true;
+}
+
 static void gui_quickscreen_draw(const struct gui_quickscreen *qs,
                                  struct screen *display,
                                  struct viewport *parent,
@@ -386,6 +479,14 @@ static void gui_quickscreen_draw(const struct gui_quickscreen *qs,
     }
     /* draw the icons */
     display->set_viewport(vp_icons);
+
+    if (global_settings.quickscreen_wheel &&
+        gui_quickscreen_draw_wheel(qs, display, vp_icons))
+    {
+        skin_render_deferred(display, parent);
+        display->set_viewport(last_vp);
+        return;
+    }
 
     if (quickscreen_item_used(qs, QUICKSCREEN_TOP))
     {
@@ -569,8 +670,14 @@ static int quickscreen_touchscreen_button(void)
         return ACTION_QS_LEFT;
     case right:
         return ACTION_QS_RIGHT;
-    default:
+    case 0:
         return ACTION_STD_CANCEL;
+    default:
+        /* A corner. It used to cancel along with the centre, which cost
+         * nothing while cancel only ever closed the screen. Now that it
+         * also backs out of a page, a tap that missed the direction it was
+         * aiming for would quietly undo a level, so corners do nothing. */
+        return ACTION_NONE;
     }
 }
 #endif

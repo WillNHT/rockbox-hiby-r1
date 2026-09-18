@@ -2523,6 +2523,8 @@ const struct settings_list settings[] = {
                   qs_is_changed, qs_set_default),
    OFFON_SETTING(0, shortcuts_replaces_qs, LANG_USE_SHORTCUTS_INSTEAD_OF_QS,
                   false, "shortcuts instead of quickscreen", NULL),
+   OFFON_SETTING(0, quickscreen_wheel, LANG_QUICKSCREEN_WHEEL,
+                  false, "quickscreen wheel", NULL),
 #endif
 #ifdef HAVE_SPEAKER
     CHOICE_SETTING(0, speaker_mode, LANG_ENABLE_SPEAKER, 0, "speaker mode",
