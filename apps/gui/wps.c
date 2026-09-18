@@ -70,6 +70,7 @@
 #include "skin_engine/skin_art_fx.h"
 #include "open_plugin.h"
 #include "audiobooks/audiobooks.h"
+#include "pradio.h"
 #include "transition.h"
 #include "string-extra.h"
 
@@ -871,15 +872,19 @@ long gui_wps_show(void)
             }
         }
 
-        /* A book and a song can want different WPSes. Leave with the one
-         * that is loaded, then come back with the other. */
+        /* A book, a station and a song can want different WPSes. Leave
+         * with the one that is loaded, then come back with the other. */
         {
             bool book = state->id3 && audiobooks_is_book(state->id3->path);
-            if (book != skin_wps_book_mode())
+            bool station = state->id3 &&
+                           pradio_is_station_track(state->id3->path);
+            if (book != skin_wps_book_mode() ||
+                station != skin_wps_radio_mode())
             {
                 if (!restore)
                     gwps_leave_wps(true);
                 skin_set_wps_book_mode(book, false);
+                skin_set_wps_radio_mode(station, false);
                 restore = true;
             }
         }

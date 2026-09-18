@@ -208,11 +208,20 @@ static void rename_row(int row)
 static void set_folder_row(int row)
 {
     char buf[MAX_PATHNAME+1];
-    bool books = root_menu_is_audiobooks(layout.order[row]);
-    char *dest = books ? global_settings.audiobook_folder
-                       : global_settings.custom_folder;
-    size_t dest_sz = books ? sizeof(global_settings.audiobook_folder)
-                           : sizeof(global_settings.custom_folder);
+    int t = layout.order[row];
+    char *dest = global_settings.custom_folder;
+    size_t dest_sz = sizeof(global_settings.custom_folder);
+
+    if (root_menu_is_audiobooks(t))
+    {
+        dest = global_settings.audiobook_folder;
+        dest_sz = sizeof(global_settings.audiobook_folder);
+    }
+    else if (root_menu_is_pseudo_radio(t))
+    {
+        dest = global_settings.radio_folder;
+        dest_sz = sizeof(global_settings.radio_folder);
+    }
     struct browse_context browse = {
         .dirfilter = SHOW_ALL,
         .flags = BROWSE_DIRFILTER | BROWSE_SELECTONLY | BROWSE_NO_CONTEXT_MENU,
@@ -246,7 +255,8 @@ static void item_menu(int row)
 {
     bool hidden = row >= layout.visible;
     bool folder = root_menu_is_custom_folder(layout.order[row]) ||
-                  root_menu_is_audiobooks(layout.order[row]);
+                  root_menu_is_audiobooks(layout.order[row]) ||
+                  root_menu_is_pseudo_radio(layout.order[row]);
     int sel;
 
     if (folder)

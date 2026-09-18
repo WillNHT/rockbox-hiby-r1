@@ -2747,6 +2747,14 @@ const struct settings_list settings[] = {
                NULL, NULL, NULL),
    OFFON_SETTING(0, ab_autoscan, LANG_AB_AUTOSCAN, true,
                  "audiobook scan at startup", NULL),
+   TEXT_SETTING(0, radio_folder, "radio folder path", "/radio", NULL, NULL),
+   TEXT_SETTING(0, radio_wps, "radio wps", "", NULL, NULL),
+   TEXT_SETTING(0, radio_saver, "radio screensaver", "", NULL, NULL),
+   INT_SETTING(F_TIME_SETTING, radio_min_length, LANG_RADIO_MIN_LENGTH, 10,
+               "radio minimum length", UNIT_MIN, 0, 180, 5,
+               formatter_time_unit_0_is_off, getlang_time_unit_0_is_off, NULL),
+   OFFON_SETTING(0, radio_static, LANG_RADIO_STATIC, true,
+                 "radio static", NULL),
    OFFON_SETTING(0, emoji_enabled, LANG_EMOJI, true, "emoji", NULL),
 #ifdef HAVE_VIDEO
    /* Off until asked for: decoding video is the most expensive thing this

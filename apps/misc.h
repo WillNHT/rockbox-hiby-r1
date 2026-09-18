@@ -230,6 +230,9 @@ enum current_activity {
 void beep_duck(unsigned int duration, int percent);
 void beep_play(unsigned int frequency, unsigned int duration,
                unsigned int amplitude);
+/* White noise for the same duration, through the same channel: the static
+ * the pseudo-radio tunes through. */
+void beep_play_noise(unsigned int duration, unsigned int amplitude);
 
 enum system_sound
 {

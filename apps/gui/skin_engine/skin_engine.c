@@ -54,6 +54,8 @@ char* default_radio_skin(enum screen_type screen);
 static bool skins_initialised = false;
 /* A book is playing: the WPS is global_settings.audiobook_wps. */
 static bool wps_book_mode = false;
+/* A station is playing: the WPS is global_settings.radio_wps. */
+static bool wps_radio_mode = false;
 
 static char* get_skin_filename(char *buf, size_t buf_size,
                                enum skinnable_screens skin, enum screen_type screen);
@@ -283,6 +285,8 @@ static char* get_skin_filename(char *buf, size_t buf_size,
                 setting = global_settings.wps_file;
                 if (wps_book_mode && global_settings.audiobook_wps[0])
                     setting = global_settings.audiobook_wps;
+                else if (wps_radio_mode && global_settings.radio_wps[0])
+                    setting = global_settings.radio_wps;
                 ext = "wps";
             }
             break;
@@ -343,15 +347,17 @@ bool skin_wps_book_mode(void)
     return wps_book_mode;
 }
 
-void skin_set_wps_book_mode(bool on, bool force)
+/* Books and stations pick the WPS the same way, so the switch is written
+ * once and told which flag it owns. */
+static void set_wps_mode(bool *mode, bool on, bool force)
 {
-    if (on == wps_book_mode && !force)
+    if (on == *mode && !force)
         return;
 
     /* Only a change of file needs a reload. */
     char before[MAX_PATH], after[MAX_PATH];
     get_skin_filename(before, sizeof before, WPS, SCREEN_MAIN);
-    wps_book_mode = on;
+    *mode = on;
     get_skin_filename(after, sizeof after, WPS, SCREEN_MAIN);
     if (!force && !strcmp(before, after))
         return;
@@ -364,6 +370,21 @@ void skin_set_wps_book_mode(bool on, bool force)
         gui_skin_reset(&skins[WPS][i]);
         skins[WPS][i].gui_wps.display = &screens[i];
     }
+}
+
+void skin_set_wps_book_mode(bool on, bool force)
+{
+    set_wps_mode(&wps_book_mode, on, force);
+}
+
+bool skin_wps_radio_mode(void)
+{
+    return wps_radio_mode;
+}
+
+void skin_set_wps_radio_mode(bool on, bool force)
+{
+    set_wps_mode(&wps_radio_mode, on, force);
 }
 
 #ifdef HAVE_VIDEO

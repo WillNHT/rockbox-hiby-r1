@@ -27,6 +27,7 @@
 #include "appevents.h"
 #include "misc.h"
 #include "settings.h"
+#include "pradio.h"
 #include "viewport.h"
 #include "screen_access.h"
 #include "rbpaths.h"
@@ -58,6 +59,12 @@ static bool on_charger(void)
 
 static const char *chosen(void)
 {
+    /* A station gets its own, if it has been given one: the radio is a
+     * screen you leave running, so it is the case that reaches the
+     * screensaver most. */
+    if (global_settings.radio_saver[0] && pradio_playing())
+        return (const char *)global_settings.radio_saver;
+
     const char *name = on_charger() ?
         (const char *)global_settings.saver_charging :
         (const char *)global_settings.saver_battery;

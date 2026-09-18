@@ -19,6 +19,7 @@
  *
  ****************************************************************************/
 #include "config.h"
+#include <stdlib.h>
 #include "system.h"
 #include "settings.h"
 #include "pcm.h"
@@ -66,6 +67,8 @@ void beep_duck(unsigned int duration, int percent)
                      HZ * (duration + DUCK_TAIL_MS) / 1000 + 1, 0);
 }
 
+static bool beep_noise;         /* Generating noise, not a square wave */
+static void beep_generate_noise(int16_t *buf, int count, int amplitude);
 static uint32_t beep_phase;     /* Phase of square wave generator */
 static uint32_t beep_step;      /* Step of square wave generator on each sample */
 #ifdef BEEP_GENERIC
@@ -95,8 +98,24 @@ beep_get_more(const void **start, size_t *size)
         beep_count -= count;
         *start = beep_buf;
         *size = count * 2 * sizeof (int16_t);
-        beep_generate((void *)beep_buf, count, &beep_phase,
-                      beep_step, beep_amplitude);
+        if (beep_noise)
+            beep_generate_noise(beep_buf, count, beep_amplitude);
+        else
+            beep_generate((void *)beep_buf, count, &beep_phase,
+                          beep_step, beep_amplitude);
+    }
+}
+
+/* White noise, both channels the same: it is meant to be heard as one
+ * sound in the middle of the head rather than as stereo weather. rand() is
+ * good enough - this is the hiss between stations, not a dither source. */
+static void beep_generate_noise(int16_t *buf, int count, int amplitude)
+{
+    for (int i = 0; i < count; i++)
+    {
+        int16_t s = (int16_t)((rand() % (2 * amplitude + 1)) - amplitude);
+        *buf++ = s;
+        *buf++ = s;
     }
 }
 
@@ -106,6 +125,7 @@ void beep_play(unsigned int frequency, unsigned int duration,
                unsigned int amplitude)
 {
     mixer_channel_stop(PCM_MIXER_CHAN_BEEP);
+    beep_noise = false;
 
     if (frequency == 0 || duration == 0 || amplitude == 0)
         return;
@@ -131,6 +151,34 @@ void beep_play(unsigned int frequency, unsigned int duration,
     size_t size;
 
     /* Generate first frame here */
+    beep_get_more(&start, &size);
+
+    mixer_channel_set_amplitude(PCM_MIXER_CHAN_BEEP, MIX_AMP_UNITY);
+    mixer_channel_play_data(PCM_MIXER_CHAN_BEEP,
+                            beep_count ? beep_get_more : NULL,
+                            start, size);
+}
+
+/* Static. The same path as beep_play(), noise in place of the square wave:
+ * the mixer channel, the buffer and the callback are all already here, and
+ * a second one of each would buy nothing. */
+void beep_play_noise(unsigned int duration, unsigned int amplitude)
+{
+    mixer_channel_stop(PCM_MIXER_CHAN_BEEP);
+
+    if (duration == 0 || amplitude == 0)
+        return;
+
+    if (amplitude > INT16_MAX)
+        amplitude = INT16_MAX;
+
+    beep_noise = true;
+    beep_amplitude = amplitude;
+    beep_count = BEEP_COUNT(mixer_get_frequency(), duration);
+
+    const void *start;
+    size_t size;
+
     beep_get_more(&start, &size);
 
     mixer_channel_set_amplitude(PCM_MIXER_CHAN_BEEP, MIX_AMP_UNITY);
