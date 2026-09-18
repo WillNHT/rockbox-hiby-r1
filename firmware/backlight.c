@@ -122,6 +122,13 @@ static unsigned int backlight_thread_id = 0;
 int backlight_brightness = DEFAULT_BRIGHTNESS_SETTING;
 #endif
 static int backlight_timer SHAREDBSS_ATTR;
+/* A backlight_on() has been posted but the backlight thread has not acted on
+ * it yet. The button driver asks is_backlight_lit() synchronously, inside the
+ * same tick in which it called backlight_on(); without this it would still
+ * read the stale "not lit" and swallow the press *after* the one that already
+ * woke the screen - and keep swallowing for as long as the answer stayed
+ * stale. */
+static bool backlight_wake_pending = false;
 static int backlight_timeout_normal = 5*HZ;
 #if CONFIG_CHARGING
 static int backlight_timeout_plugged = 5*HZ;
@@ -553,6 +560,7 @@ static void do_backlight_blank(void);
 static inline void do_backlight_off(void)
 {
     backlight_timer = 0;
+    backlight_wake_pending = false;
 
 #ifdef HAVE_BACKLIGHT_DIM_IDLE
     /* The timeout dims rather than blanks. A screen that goes black is a
@@ -597,6 +605,10 @@ static void backlight_update_state(void)
 {
 
     int timeout = backlight_get_current_timeout();
+
+    /* Whatever this call settles on is the truth from here; the guess the
+     * button driver was running on has served its purpose. */
+    backlight_wake_pending = false;
 
     /* Backlight == OFF in the setting? */
     if (UNLIKELY(timeout < 0))
@@ -953,6 +965,7 @@ void backlight_on(void)
 {
     if(!ignore_backlight_on)
     {
+        backlight_wake_pending = true;
         queue_remove_from_head(&backlight_queue, BACKLIGHT_ON);
         queue_post(&backlight_queue, BACKLIGHT_ON, 0);
 
@@ -960,6 +973,18 @@ void backlight_on(void)
         led_hw_on();
 #endif
     }
+}
+
+/* A press the user made on a screen that is out. backlight_on_ignore() exists
+ * so the action layer can stop *other modules* from lighting the panel behind
+ * its back; it was never meant to stop the user. Honouring it here left the
+ * screen dark, which left is_backlight_lit() false, which made the button
+ * driver treat the next press as another wake - a loop with no way out. */
+void backlight_wake(void)
+{
+    ignore_backlight_on = false;
+    backlight_ignored_timer = 0;
+    backlight_on();
 }
 
 void backlight_on_ignore(bool value, int timeout)
@@ -1003,7 +1028,7 @@ bool is_backlight_on(bool ignore_always_off)
  * "Always off" reports lit, since no press could change it. */
 bool is_backlight_lit(void)
 {
-    if (backlight_timer > 0)
+    if (backlight_timer > 0 || backlight_wake_pending)
         return true;
     return backlight_get_current_timeout() <= 0;
 }
@@ -1215,6 +1240,7 @@ void backlight_init(void)
 #endif
 
 void backlight_on(void) {}
+void backlight_wake(void) {}
 void backlight_off(void) {}
 void backlight_set_timeout(int value) {(void)value;}
 

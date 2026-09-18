@@ -19498,3 +19498,20 @@
     *: "Carousel"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_QUICKSCREEN_WHEEL
+  desc: in settings_menu. draws the quick screen's four ways as a click wheel
+  user: core
+  <source>
+    *: none
+    quickscreen: "Quick Screen as a Wheel"
+  </source>
+  <dest>
+    *: none
+    quickscreen: "Quick Screen as a Wheel"
+  </dest>
+  <voice>
+    *: none
+    quickscreen: "Quick Screen as a Wheel"
+  </voice>
+</phrase>
