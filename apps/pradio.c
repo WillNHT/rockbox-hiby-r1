@@ -244,6 +244,11 @@ static bool tune(int station)
         return false;
     }
 
+    /* Otherwise a station with several files always opens the same way and
+     * plays them in the same order - a jukebox with extra steps. */
+    if (n > 1)
+        playlist_shuffle(current_tick, -1);
+
     unsigned long length = 0;
     int track = pick_track(n, &length);
 
@@ -261,6 +266,53 @@ static bool tune(int station)
 
     playlist_start(track, random_offset(length), 0);
     return true;
+}
+
+/* --- skipping while tuned in ------------------------------------------- */
+
+/* Which station a radio track's path belongs to, or -1 if the radio folder
+ * itself is the only station. */
+static int station_of(const char *path)
+{
+    const char *root = global_settings.radio_folder;
+    size_t rootlen = strlen(root);
+    while (rootlen > 1 && root[rootlen - 1] == '/')
+        rootlen--;
+
+    const char *rel = path + rootlen;
+    while (*rel == '/')
+        rel++;
+
+    for (int i = 0; i < nstations; i++)
+    {
+        size_t len = strlen(stations[i]);
+        if (!strncasecmp(rel, stations[i], len) &&
+            (rel[len] == '/' || rel[len] == '\0'))
+            return i;
+    }
+    return -1;
+}
+
+/* User-initiated prev/next while tuned in: a radio dial moves to another
+ * station, it does not step to the next track of the one already playing. */
+bool pradio_skip(void)
+{
+    if (!pradio_playing())
+        return false;
+
+    scan_stations();
+
+    if (nstations <= 1)
+        return tune(nstations == 1 ? 0 : -1);
+
+    struct mp3entry *id3 = audio_current_track();
+    int current = id3 ? station_of(id3->path) : -1;
+
+    int station = rand() % nstations;
+    if (current >= 0 && station == current)
+        station = (station + 1) % nstations;
+
+    return tune(station);
 }
 
 /* --- settings --------------------------------------------------------- */

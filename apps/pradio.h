@@ -31,5 +31,9 @@ int  pradio_screen(void);
 bool pradio_is_station_track(const char *path);
 /* Whether a radio track is what is playing right now. */
 bool pradio_playing(void);
+/* User-initiated prev/next while tuned in: retunes to another station
+ * instead of skipping a track. Returns false (does nothing) when the radio
+ * isn't what's playing, so the caller falls back to its normal skip. */
+bool pradio_skip(void);
 
 #endif /* _PRADIO_H_ */

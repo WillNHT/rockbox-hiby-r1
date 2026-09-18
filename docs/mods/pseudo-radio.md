@@ -33,6 +33,13 @@ top of the list picks a station for you first, then tunes it.
 Only the files directly inside a station are played; a station is a flat
 folder, not a tree.
 
+## While tuned in
+
+Prev/next moves the dial instead of stepping through the station's files -
+a radio does not let you skip to the next track of the thing playing, it
+switches you to something else. A station with more than one file also
+plays them in a shuffled order rather than always the same one.
+
 ## Settings
 
 **Main Menu - Radio - Radio Settings**

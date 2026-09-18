@@ -49,6 +49,7 @@
 #include "misc.h"
 #include "sound.h"
 #include "onplay.h"
+#include "pradio.h"
 #include "abrepeat.h"
 #include "playback.h"
 #include "splash.h"
@@ -1086,6 +1087,11 @@ long gui_wps_show(void)
             case ACTION_WPS_SKIPPREV:
                 last_left = current_tick;
 
+                /* tuned in to the radio: a different station, not the
+                   previous track of this one */
+                if (pradio_skip())
+                    break;
+
                 /* if we're in A/B repeat mode and the current position
                    is past the A marker, jump back to the A marker... */
                 if ( ab_repeat_mode_enabled() && ab_after_A_marker(state->id3->elapsed) )
@@ -1101,6 +1107,11 @@ long gui_wps_show(void)
                    OR if skip length set, hop by predetermined amount. */
             case ACTION_WPS_SKIPNEXT:
                 last_right = current_tick;
+
+                /* tuned in to the radio: a different station, not the
+                   next track of this one */
+                if (pradio_skip())
+                    break;
 
                 /* if we're in A/B repeat mode and the current position is
                    before the A marker, jump to the A marker... */
