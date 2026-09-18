@@ -51,6 +51,43 @@ The stick tests are the fast gate - run them for any input change. A full
 device build is CI's job (`.github/workflows/build.yml`); do not burn tokens
 waiting on one locally unless the task is about the build itself.
 
+## Issues and PRs
+
+Every issue you pick up gets a PR, and every PR points back at its issue:
+
+* **One issue, one PR.** Open it against `master` with `Closes #<n>` in the body
+  so merging closes the issue.
+* **Label the issue** from `.github/labels.yml` before you start: one `type:`,
+  one `area:`, one `severity:`, plus `needs:`/`blocked`/`upstream` where they
+  apply, and drop `needs: triage` once it is sorted. Keep them current as the
+  work moves - status that no label covers goes in a comment.
+* **Comment the outcome on the issue** when the PR is up: what was done, the PR
+  link, anything still open.
+* **Agent opens, human approves.** An agent PR is authored and assigned to the
+  `claude` account, never to a human, and `WillNHT` goes on it as reviewer.
+  Nobody merges their own work, so never approve or merge a PR you opened - the
+  review is the human's.
+
+## Proof
+
+A claim is not evidence. Anything user-visible ships with a screenshot in the PR
+description, and in the issue comment when it answers the report:
+
+* Capture frames by driving the simulator headlessly - `~/rb/wtNNsim.sh` to
+  build, then `~/rb/wtNNsimctl.sh script.txt outdir`. Commit shots under
+  `docs/mods/screenshots/` only when they belong in the docs; otherwise attach
+  them to the PR.
+* Before/after pairs for anything that changes existing behaviour.
+* Non-visual work proves itself with pasted command output: the stick test run,
+  the config.cfg round trip, the failing-then-passing repro.
+
+## CI
+
+A PR is not done until **every** check is green. Push, watch the run, fix what
+it reports, push again - never hand over a PR with a red or pending check, and
+never ask for a merge around one. If a failure is genuinely unrelated to the
+change, say so on the PR and quote the log line that shows it.
+
 ## Commits and PRs
 
 Conventional Commits, enforced on the **PR title** by
@@ -66,8 +103,8 @@ Types: `build chore ci docs feat fix perf refactor revert style test theme`.
 Subject under ~50 chars, imperative, no trailing period. A body only when the
 *why* is not obvious from the diff. Breaking change: `feat!:`.
 
-PR description: what changed, why, how it was tested, and a screenshot for
-anything visual.
+PR description: what changed, why, how it was tested, the screenshot, and
+`Closes #<n>`.
 
 ## Being cost-effective
 
@@ -87,3 +124,7 @@ These are the rules that keep an agent session cheap without making it worse:
   or a design discussion.
 * **Say less.** Terse output, no restating the diff in prose, no summary tables
   of what you just did. Code and commit messages stay written normally.
+* **Keep caveman and ponytail on.** `caveman` keeps the prose terse, `ponytail`
+  keeps the diff to the laziest thing that works; both belong in every session
+  here. If either skill is not installed, ask the user to install it instead of
+  working without it.
