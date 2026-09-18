@@ -173,6 +173,8 @@ MAKE_MENU(unplug_menu, ID2P(LANG_HEADPHONE_UNPLUG), 0, Icon_NOICON,
 //This one to alt
 MENUITEM_SETTING(skip_length, &global_settings.skip_length, NULL);
 MENUITEM_SETTING(prevent_skip, &global_settings.prevent_skip, NULL);
+MENUITEM_SETTING(track_static, &global_settings.track_static, NULL);
+MENUITEM_SETTING(track_static_ms, &global_settings.track_static_ms, NULL);
 MENUITEM_SETTING(rewind_across_tracks, &global_settings.rewind_across_tracks, NULL);
 MENUITEM_SETTING(resume_rewind, &global_settings.resume_rewind, NULL);
 MENUITEM_SETTING(pause_rewind, &global_settings.pause_rewind, NULL);
@@ -226,6 +228,7 @@ MAKE_MENU(playback_settings,ID2P(LANG_PLAYBACK),0,
          ,&unplug_menu
 #endif
          ,&skip_length, &prevent_skip
+          ,&track_static, &track_static_ms
           ,&rewind_across_tracks
 
           ,&resume_rewind
