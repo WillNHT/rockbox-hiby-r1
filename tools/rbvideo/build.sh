@@ -82,8 +82,11 @@ if [ ! -f "$PREFIX/lib/libavcodec.a" ]; then
     tar -xJf "$DL/ffmpeg-$FFMPEG_VER.tar.xz" -C "$WORK"
     (
         cd "$WORK/ffmpeg-$FFMPEG_VER"
+        # zlib is what the APNG decoder needs; without it FFmpeg quietly
+        # drops that one and everything else still builds.
+        configure_ffmpeg() {
         # shellcheck disable=SC2086
-        ./configure $FF_ARCH --prefix="$PREFIX" \
+        ./configure $FF_ARCH $1 --prefix="$PREFIX" \
             --cc="$CC" --extra-cflags="$CFLAGS" \
             --enable-pic --enable-static --disable-shared \
             --disable-programs --disable-doc --disable-network \
@@ -97,20 +100,29 @@ if [ ! -f "$PREFIX/lib/libavcodec.a" ]; then
             --enable-decoder=aac,aac_latm,mp3,mp3float,mp2,mp2float,ac3,opus,vorbis,flac,pcm_s16le,pcm_s16be,pcm_u8,pcm_f32le,wmav1,wmav2 \
             --enable-parser=h264,hevc,mpeg4video,mpegvideo,h263,vp8,vp9,aac,aac_latm,mpegaudio,ac3,opus,vorbis,flac,png,gif,vc1,mjpeg \
             --enable-bsf=h264_mp4toannexb,hevc_mp4toannexb,aac_adtstoasc,vp9_superframe_split \
-            >"$WORK/ffmpeg-configure.log" || { tail -30 "$WORK/ffmpeg-configure.log"; exit 1; }
+            >"$WORK/ffmpeg-configure.log" 2>&1
+        }
+        configure_ffmpeg --enable-zlib ||
+        configure_ffmpeg "" ||
+            { tail -30 "$WORK/ffmpeg-configure.log"; exit 1; }
         make -j"$JOBS" >"$WORK/ffmpeg-make.log" 2>&1 || { tail -30 "$WORK/ffmpeg-make.log"; exit 1; }
         make install >/dev/null
     )
 fi
 
 # --------------------------------------------------------------- shim
-# Everything static inside one shared object; only rbv_api is exported.
-$CC $CFLAGS -DRBV_WEBP -fvisibility=hidden -shared \
-    -I"$PREFIX/include" -I"$ROOT/apps/video" \
-    -o "$OUT/librbvideo.so" "$HERE/rbvideo.c" \
-    -L"$PREFIX/lib" -lavformat -lavcodec -lswscale -lswresample -lavutil \
-    -lwebpdemux -lwebp -lsharpyuv \
-    -Wl,--gc-sections -Wl,--exclude-libs,ALL -Wl,-z,defs -Wl,-soname,librbvideo.so \
-    -lpthread -lm
+# Everything static inside one shared object; only the API table is
+# exported. -lz only when FFmpeg was built against zlib.
+link_shim() {
+    $CC $CFLAGS -DRBV_WEBP -fvisibility=hidden -shared \
+        -I"$PREFIX/include" -I"$ROOT/apps/video" \
+        -o "$OUT/librbvideo.so" "$HERE/rbvideo.c" \
+        -L"$PREFIX/lib" -lavformat -lavcodec -lswscale -lswresample -lavutil \
+        -lwebpdemux -lwebp -lsharpyuv $1 \
+        -Wl,--gc-sections -Wl,--exclude-libs,ALL -Wl,-z,defs \
+        -Wl,-soname,librbvideo.so \
+        -lpthread -lm
+}
+link_shim -lz || link_shim ""
 ${CROSS}strip --strip-unneeded "$OUT/librbvideo.so"
 ls -la "$OUT/librbvideo.so"

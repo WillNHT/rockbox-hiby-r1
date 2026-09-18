@@ -207,7 +207,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y automake build-essential libtool-bin \
-          pkg-config texinfo wget zip
+          pkg-config texinfo wget zip zlib1g-dev
     - name: Restore toolchain
       id: cache
       uses: actions/cache/restore@v6
