@@ -41,3 +41,9 @@ audio prioritization click: 25
 audio prioritization alert: 45
 audio prioritization cue: 70
 ```
+
+## Screenshots
+
+| The menu | A depth |
+| --- | --- |
+| ![Audio Prioritisation menu](screenshots/audio-prioritisation-menu.png) | ![Click Depth](screenshots/audio-prioritisation-depth.png) |
