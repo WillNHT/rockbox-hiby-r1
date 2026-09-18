@@ -19,6 +19,7 @@
 #define _PRADIO_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 
 /* Pseudo-radio: long recordings played from the middle, the way a radio
  * you tune into is already halfway through whatever it is playing. Not
@@ -35,5 +36,12 @@ bool pradio_playing(void);
  * instead of skipping a track. Returns false (does nothing) when the radio
  * isn't what's playing, so the caller falls back to its normal skip. */
 bool pradio_skip(void);
+/* Pause/unpause bookkeeping: a station keeps playing while you are away, so
+ * resuming after a long pause drops in further along instead of where it
+ * stopped. No-op unless the radio is what's playing. */
+void pradio_pause(bool paused);
+/* The station folder a radio track belongs to, trailing slash included, at
+ * whatever depth the file is. False when the path isn't a station track. */
+bool pradio_station_dir(const char *path, char *buf, size_t size);
 
 #endif /* _PRADIO_H_ */

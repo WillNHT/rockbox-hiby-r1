@@ -148,11 +148,13 @@ void wps_do_action(enum wps_do_action_type action, bool updatewps)
     if (action == WPS_PLAY) /* unpause_action */
     {
         audiobooks_before_resume();
+        pradio_pause(false); /* seek before resuming, as pause_rewind does */
         audio_resume();
     }
     else /* WPS_PAUSE pause_action */
     {
         audio_pause();
+        pradio_pause(true);
 
         if (global_settings.pause_rewind) {
             unsigned long elapsed = audio_current_track()->elapsed;

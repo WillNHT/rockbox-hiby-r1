@@ -30,6 +30,9 @@
 #include "pathfuncs.h"
 #include "settings.h"
 #include "wps.h"
+#ifndef PLUGIN
+#include "pradio.h"
+#endif
 
 /* Define LOGF_ENABLE to enable logf output in this file */
 /*#define LOGF_ENABLE*/
@@ -157,6 +160,24 @@ bool search_albumart_files(const struct mp3entry *id3, const char *size_string,
         size_string++;
         track_first = 0;
     }
+
+    /* A radio station's cover belongs to the station, not to whichever file
+     * deep inside it happens to be tuned in - and the station folder can be
+     * several levels above the file, further than the parent-directory pass
+     * below ever reaches. */
+#ifndef PLUGIN
+    if (pradio_station_dir(trackname, dir, sizeof(dir)))
+    {
+        pathlen = snprintf(path, sizeof(path),
+                           "%scover%s." EXT, dir, size_string);
+        if (try_exts(path, pathlen))
+        {
+            strmemccpy(buf, path, buflen);
+            logf("Station art found: %s", path);
+            return true;
+        }
+    }
+#endif
 
     strip_filename(dir, sizeof(dir), trackname);
     dirlen = strlen(dir);

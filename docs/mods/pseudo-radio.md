@@ -40,6 +40,25 @@ a radio does not let you skip to the next track of the thing playing, it
 switches you to something else. A station with more than one file also
 plays them in a shuffled order rather than always the same one.
 
+Pausing does not stop the station. Come back after more than half a minute
+and playback drops in as far along as the time you were away, wrapping round
+the recording - so a pause over lunch returns to a different part of the
+programme, not to the syllable you left on. Shorter pauses resume where they
+were, because a phone call is not an afternoon. This is measured from the
+running clock, so a pause across a power cycle is not counted.
+
+### Station cover
+
+A station's artwork is `cover.jpg` (or `.png`/`.bmp`) in the station folder:
+
+```
+/radio/Late Night/cover.jpg
+```
+
+It is used for every file in the station, however many subfolders deep the
+file itself sits, and it wins over the ordinary album-art search. Without one
+the normal album-art rules apply.
+
 ## Settings
 
 **Main Menu - Radio - Radio Settings**

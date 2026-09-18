@@ -52,6 +52,7 @@
 #include "metadata.h"
 #include "misc.h"
 #include "pathfuncs.h"
+#include "playback.h"
 #include "playlist.h"
 #include "root_menu.h"
 #include "screens.h"
@@ -72,6 +73,10 @@
  * for it. */
 #define PRADIO_STATIC_MS    320
 #define PRADIO_STATIC_AMP   2200
+
+/* How long a pause has to be before coming back lands somewhere else. Below
+ * this it is a phone call, not the afternoon. */
+#define PRADIO_DRIFT_MIN_MS (30 * 1000)
 
 static char stations[PRADIO_MAX_STATIONS][MAX_FILENAME + 1];
 static int  nstations;
@@ -292,6 +297,73 @@ bool pradio_skip(void)
         station = (station + 1) % nstations;
 
     return tune(station);
+}
+
+/* --- the station folder ------------------------------------------------ */
+
+/* The station folder a radio track sits under, with its trailing slash, at
+ * whatever depth the file itself is. String work only - the folder is the
+ * first component under the radio folder by definition, so there is nothing
+ * to go to disk for. */
+bool pradio_station_dir(const char *path, char *buf, size_t size)
+{
+    if (!pradio_is_station_track(path))
+        return false;
+
+    const char *root = global_settings.radio_folder;
+    size_t rootlen = strlen(root);
+    while (rootlen > 1 && root[rootlen - 1] == '/')
+        rootlen--;
+
+    const char *rel = path + rootlen;
+    while (*rel == '/')
+        rel++;
+
+    const char *slash = strchr(rel, '/');
+    if (!slash)
+        return false; /* the file sits in the radio folder itself */
+
+    size_t len = slash - path;
+    if (len + 2 > size)
+        return false;
+
+    memcpy(buf, path, len);
+    buf[len] = '/';
+    buf[len + 1] = '\0';
+    return true;
+}
+
+/* --- time passing while paused ----------------------------------------- */
+
+static long pause_tick;
+
+/* A station does not wait for you. Come back after a while and it has moved
+ * on by as much as you were away, which is the whole difference between
+ * tuning in and pressing play.
+ * ponytail: current_tick, so a pause across a power cycle is not counted -
+ * needs the RTC if "resume tomorrow" has to drift too. */
+void pradio_pause(bool paused)
+{
+    if (paused)
+    {
+        pause_tick = pradio_playing() ? current_tick : 0;
+        return;
+    }
+
+    if (pause_tick == 0 || !pradio_playing())
+        return;
+
+    unsigned long away = (unsigned long)(current_tick - pause_tick) * 1000 / HZ;
+    pause_tick = 0;
+    if (away < PRADIO_DRIFT_MIN_MS)
+        return;
+
+    struct mp3entry *id3 = audio_current_track();
+    if (!id3 || id3->length == 0)
+        return;
+
+    audio_pre_ff_rewind();
+    audio_ff_rewind((id3->elapsed + away) % id3->length);
 }
 
 /* --- settings --------------------------------------------------------- */
