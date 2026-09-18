@@ -52,6 +52,11 @@
 #include "albumart.h"
 #include "playlist_cover.h"
 #include "covers.h"
+#ifdef HAVE_VIDEO
+#include "video/video_lib.h"
+#include "video/video_surface.h"
+#include "video/video_art.h"
+#endif
 
 #define COVER_SLOTS  12
 #define SLOT_BYTES   (COVER_MAX_SIZE * COVER_MAX_SIZE * sizeof(fb_data))
@@ -115,12 +120,20 @@ static bool decode_image(const char *path, int size, struct bitmap *bm)
 {
     int rc = -1;
 
-    /* Animated covers (.gif, animated .webp) wait for issue #19, which
-     * brings the decoder and the frame timing. Until then they count as
-     * no cover, and the playlist falls back to its first track.
-     * An animated PNG is drawn as its first frame by the PNG decoder. */
+    /* .gif and .webp come from the video decoder (apps/video), as their
+     * first frame; without it they count as no cover and the playlist
+     * falls back to its first track. An animated PNG is drawn as its
+     * first frame by the PNG decoder. */
     if (has_ext(path, ".gif") || has_ext(path, ".webp"))
+    {
+#if defined(HAVE_VIDEO) && LCD_DEPTH == 16
+        bitmap_prepare(bm, size);
+        return video_decode_still(path, size, size, RBV_FIT_CONTAIN,
+                                  (fb_data *)bm->data);
+#else
         return false;
+#endif
+    }
 
     int fd = open(path, O_RDONLY);
     if (fd < 0)
@@ -251,6 +264,33 @@ static const struct bitmap *cover_get(const char *path, int size)
     out.data = (unsigned char *)core_get_data(pix_handle) + slot * SLOT_BYTES;
     return &out;
 }
+
+#ifdef HAVE_VIDEO
+int cover_draw_animated(struct screen *d, const char *path,
+                        int x, int y, int size, bool full)
+{
+    static char resolved[MAX_PATH];
+    const char *img = path;
+
+    if (d->screen_type != SCREEN_MAIN || d->depth < 16)
+        return 0;
+    if (has_ext(path, ".m3u") || has_ext(path, ".m3u8"))
+    {
+        if (!playlist_cover_find(path, resolved, sizeof(resolved)))
+            img = NULL;
+        else
+            img = resolved;
+    }
+    if (img && video_is_image_anim(img))
+    {
+        if (video_clip_draw(d, img, x, y, size, size, RBV_FIT_CONTAIN, full))
+            return 2;
+    }
+    if (!full)
+        return 0;
+    return cover_draw(d, path, x, y, size) ? 1 : 0;
+}
+#endif
 
 bool cover_draw(struct screen *d, const char *path, int x, int y, int size)
 {

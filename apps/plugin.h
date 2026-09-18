@@ -118,6 +118,9 @@ struct ogg_file;
 #include "color_picker.h"
 #include "buflib.h"
 #include "buffering.h"
+#ifdef HAVE_VIDEO
+#include "video/rbvideo.h"
+#endif
 #include "tagcache.h"
 #include "tagtree.h"
 #include "viewport.h"
@@ -179,7 +182,7 @@ struct ogg_file;
  * when this happens please take the opportunity to sort in
  * any new functions "waiting" at the end of the list.
  */
-#define PLUGIN_API_VERSION 274
+#define PLUGIN_API_VERSION 275
 
 /* 239 Marks the removal of ARCHOS HWCODEC and CHARCELL */
 
@@ -1052,6 +1055,14 @@ struct plugin_api {
                                             void *event_data,
                                             void *user_data),
                             void *user_data);
+
+#ifdef HAVE_VIDEO
+    /* The video decoder (apps/video/rbvideo.h), or NULL when it is not
+     * installed, and the operating system's name for a Rockbox path,
+     * which is what the decoder opens. */
+    const struct rbv_api *(*video_lib)(void);
+    const char *(*video_os_path)(const char *path, char *buf, size_t size);
+#endif
 };
 
 /* plugin header */

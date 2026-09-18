@@ -401,6 +401,39 @@ static int emoji_callback(int action,
 MENUITEM_SETTING(emoji_item, &global_settings.emoji_enabled, emoji_callback);
 #endif
 
+/* Fallback Font: a font from FONT_DIR whose glyphs fill in for the ones
+ * the theme's fonts lack. Picked like a font, but it does not replace
+ * the UI font, so it is its own browser rather than the file tree's. */
+static int browse_fallback_font(void)
+{
+    char buf[MAX_PATH];
+    char selected[MAX_FILENAME + 8];
+    struct browse_context browse = {
+        .dirfilter = SHOW_FONT,
+        .flags = BROWSE_SELECTONLY | BROWSE_NO_CONTEXT_MENU | BROWSE_DIRFILTER,
+        .title = str(LANG_FALLBACK_FONT),
+        .icon = Icon_Font,
+        .root = FONT_DIR,
+        .selected = selected,
+        .buf = buf,
+        .bufsize = sizeof(buf),
+    };
+
+    snprintf(selected, sizeof(selected), "%s.fnt",
+             global_settings.fallback_font_file);
+    buf[0] = 0;
+    rockbox_browse(&browse);
+    if (browse.flags & BROWSE_SELECTED)
+    {
+        set_file(buf, (char *)global_settings.fallback_font_file);
+        settings_apply_fallback_font();
+        settings_save();
+    }
+    return 0;
+}
+MENUITEM_FUNCTION(browse_fallback_font_item, 0, ID2P(LANG_FALLBACK_FONT),
+                  browse_fallback_font, NULL, Icon_Font);
+
 static int audiobook_wps(void)
 {
     return audiobooks_choose_wps();
@@ -430,6 +463,7 @@ MAKE_MENU(theme_menu, ID2P(LANG_THEME_MENU),
             NULL, Icon_Wps,
             &browse_themes,
             &browse_fonts,
+            &browse_fallback_font_item,
             &browse_wps,
             &browse_audiobook_wps,
 #ifdef HAVE_REMOTE_LCD

@@ -845,6 +845,22 @@ bool skin_has_sbs(struct gui_wps *gwps)
  * on this device is a viewport rebuild per frame. */
 #define SKIN_ANIMATION_FPS 20
 
+/* Video wants more than a skin animation does; a screensaver on battery
+ * wants less. */
+#define SKIN_VIDEO_FPS 30
+static int anim_fps_cap;
+static long anim_fast_until;
+
+void skin_animation_fps_cap(int fps)
+{
+    anim_fps_cap = fps;
+}
+
+void skin_animation_boost(void)
+{
+    anim_fast_until = current_tick + HZ / 2;
+}
+
 int skin_wait_for_action(enum skinnable_screens skin, int context, int timeout)
 {
     int button = ACTION_NONE;
@@ -869,6 +885,10 @@ int skin_wait_for_action(enum skinnable_screens skin, int context, int timeout)
     }
 
     fps = anim ? SKIN_ANIMATION_FPS : PEAK_METER_FPS;
+    if (anim && TIME_BEFORE(current_tick, anim_fast_until))
+        fps = SKIN_VIDEO_FPS;
+    if (anim_fps_cap > 0 && fps > anim_fps_cap)
+        fps = anim_fps_cap;
 
     if (pm || anim) {
         long next_refresh = current_tick;

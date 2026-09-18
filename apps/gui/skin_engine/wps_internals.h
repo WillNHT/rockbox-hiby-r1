@@ -127,6 +127,13 @@ struct skin_vinyl {
     int accent;
 };
 
+/* %Cv(x, y, w, h [, fit]) and %Cf(x, y, w, h, file [, fit]). */
+struct skin_video {
+    int16_t x, y, w, h;
+    int16_t fit;                /* enum rbv_fit */
+    OFFSETTYPE(char*) path;     /* %Cf: the clip, a full path */
+};
+
 /* %an(frames, period_ms). See parse_animation(). */
 struct skin_animation {
     int frames;

@@ -19,6 +19,9 @@
  *
  ****************************************************************************/
 #include "config.h"
+#ifdef HAVE_VIDEO
+#include "video/screensaver.h"
+#endif
 #include "system.h"
 
 #include "version.h"
@@ -475,6 +478,9 @@ static void init(void)
     if (global_settings.emoji_enabled)
         emoji_init();
     audiobooks_init();
+#ifdef HAVE_VIDEO
+    screensaver_init();
+#endif
 
     audio_init();
     talk_announce_voice_invalid(); /* notify user w/ voice prompt if voice file invalid */

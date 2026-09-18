@@ -40,6 +40,9 @@
 #include "splash.h"
 #include "rpkeys.h"
 #include "stick_glue.h"
+#ifdef HAVE_VIDEO
+#include "video/screensaver.h"
+#endif
 #include "settings.h"
 #include "misc.h"
 
@@ -1253,6 +1256,17 @@ static int get_action_worker(action_last_t *last, action_cur_t *cur)
     {
         return cur->button;
     }
+
+#ifdef HAVE_VIDEO
+    /* Before the physical keys' global meanings: a key that ends the
+     * screensaver does nothing else. */
+    if (screensaver_filter_input(cur->button))
+    {
+        cur->button = BUTTON_NONE;
+        cur->action = ACTION_NONE;
+        return ACTION_NONE;
+    }
+#endif
 
     update_screen_has_lock(last, cur);
 
