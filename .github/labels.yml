@@ -1,0 +1,99 @@
+# The label taxonomy for this repo. Applied by hand or by the triage workflow.
+# Sync after editing:  gh label create/edit ... (see .github/workflows/claude-triage.yml)
+
+# type: what kind of change this is
+- name: "type: bug"
+  color: d73a4a
+  description: Something is broken
+- name: "type: feature"
+  color: a2eeef
+  description: New capability or setting
+- name: "type: docs"
+  color: 0075ca
+  description: Documentation only
+- name: "type: build"
+  color: bfd4f2
+  description: Build system, CI or release tooling
+- name: "type: question"
+  color: d876e3
+  description: A question, not a change
+
+# area: which part of the fork
+- name: "area: stick"
+  color: 5319e7
+  description: Rockpocket Stick and touch input
+- name: "area: skin"
+  color: 5319e7
+  description: Skin engine, WPS, themes
+- name: "area: display"
+  color: 5319e7
+  description: Compositor, layers, backlight, LCD
+- name: "area: library"
+  color: 5319e7
+  description: Library views, database, playlist covers
+- name: "area: audiobooks"
+  color: 5319e7
+  description: Audiobooks library and playback profile
+- name: "area: playback"
+  color: 5319e7
+  description: Audio playback, codecs, skipping, seeking
+- name: "area: keys"
+  color: 5319e7
+  description: Physical keys, keymap, remapping
+- name: "area: bootloader"
+  color: 5319e7
+  description: Bootloader and firmware patching
+- name: "area: ci"
+  color: 5319e7
+  description: Workflows and release automation
+
+# severity: how much it hurts. One per issue, bugs above all.
+- name: "severity: critical"
+  color: b60205
+  description: Bricks the player, loses data or blocks every build
+- name: "severity: major"
+  color: d93f0b
+  description: A core feature is unusable, with no workaround
+- name: "severity: minor"
+  color: fbca04
+  description: Annoying but there is a workaround
+- name: "severity: trivial"
+  color: c2e0c6
+  description: Cosmetic or a small polish
+
+# status: where it is in the process
+- name: "needs: device test"
+  color: fbca04
+  description: Cannot be verified without an R1 in hand
+- name: "needs: info"
+  color: fbca04
+  description: Waiting on the reporter
+- name: "needs: triage"
+  color: fbca04
+  description: Not yet sorted
+- name: "blocked"
+  color: b60205
+  description: Waiting on something else
+
+# provenance
+- name: "upstream"
+  color: c5def5
+  description: Belongs in Rockbox or the base mod, not this fork
+- name: "claude"
+  color: 8a63d2
+  description: Suitable for an agent to pick up, or raised by one
+- name: "good first issue"
+  color: 7057ff
+  description: Good for newcomers
+- name: "help wanted"
+  color: 008672
+  description: Extra attention is needed
+- name: "duplicate"
+  color: cfd3d7
+  description: Already exists
+- name: "wontfix"
+  color: ffffff
+  description: Will not be worked on
+- name: "accessibility"
+  color: f143ab
+  description: Barrier affecting people with disabilities

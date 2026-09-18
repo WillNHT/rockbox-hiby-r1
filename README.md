@@ -7,6 +7,8 @@
 
 # Rockbox for the HiBy R1
 
+Documentation: **[willnht.github.io/rockbox-hiby-r1](https://willnht.github.io/rockbox-hiby-r1/)**
+
 A Rockbox fork for the HiBy R1, built on top of [bahusoid's Rockbox Audiobook Mod](https://github.com/bahusoid/rockbox/tree/Mod25.12.07). It adds a relative touch stick, a skin engine that can layer chrome over album art, animated and album-art themes, and a set of R1-specific input and display changes.
 
 ## Added in this fork
@@ -108,3 +110,17 @@ Features the base mod's author has contributed to the official Rockbox repositor
     *   Various [M4A/AAC playback fixes](https://gerrit.rockbox.org/r/q/owner:bahusoid+status:merged+%22Codecs:+mp4%22).
 
 *   [And many more...](https://github.com/Rockbox/rockbox/commits?author=bahusoid)
+
+---
+
+## Contributing
+
+The [documentation site](https://willnht.github.io/rockbox-hiby-r1/) has a page per
+feature; [CLAUDE.md](CLAUDE.md) is the house style - where our code lives, what not to
+touch, how to build and test, and the commit conventions. It applies to people and to
+agents alike.
+
+PR titles are Conventional Commits and are checked by CI, because the merge commit is
+what versions the release. Issues are labelled from
+[`.github/labels.yml`](.github/labels.yml); new ones are triaged automatically, and
+mentioning **@claude** in an issue or PR comment puts Claude to work on it.

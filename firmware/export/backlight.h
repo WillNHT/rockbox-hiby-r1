@@ -50,6 +50,9 @@ void backlight_hw_brightness_fine(int permille);
 #endif
 void backlight_on_ignore(bool value, int timeout);
 void backlight_on(void);
+/* Light the panel because the user pressed something. Overrides a pending
+ * backlight_on_ignore(), which is there to filter other modules, not keys. */
+void backlight_wake(void);
 void backlight_off(void);
 void backlight_set_timeout(int value);
 

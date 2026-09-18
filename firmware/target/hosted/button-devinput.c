@@ -200,6 +200,10 @@ static bool handle_touchscreen_event(__u16 code, __s32 value)
 int button_read_device(BDATA)
 {
     static int button_bitmap = 0;
+#ifdef BUTTON_TOUCH_WAKES
+    /* the last tap was eaten to wake the screen */
+    static bool touch_wake_swallowed = false;
+#endif
     struct input_event event;
 
 #if defined(HAVE_BUTTON_DATA) && !defined(HAVE_TOUCHSCREEN)
@@ -231,13 +235,28 @@ int button_read_device(BDATA)
 #ifdef BUTTON_TOUCH_WAKES
                         /* A tap on a dimmed or dark screen wakes it and goes
                          * no further. The release finds it lit and only
-                         * marks the touch as up. */
-                        if (event.code == BTN_TOUCH && event.value &&
-                            !is_backlight_lit())
+                         * marks the touch as up.
+                         *
+                         * Only ever one tap in a row: if the screen still
+                         * reads dark on the next tap, something is keeping
+                         * it from coming back and swallowing again would
+                         * leave the touchscreen dead until a reboot. Let the
+                         * tap through instead. */
+                        if (event.code == BTN_TOUCH && event.value)
                         {
-                            if (button_touch_wake_enabled())
-                                backlight_on();
-                            break;
+                            bool dark = !is_backlight_lit();
+                            /* Input locked: the screen stays dark and the
+                             * tap goes nowhere. Getting back in is a key
+                             * combo, which the physical path still sees. */
+                            if (dark && !button_touch_wake_enabled())
+                                break;
+                            if (dark && !touch_wake_swallowed)
+                            {
+                                touch_wake_swallowed = true;
+                                backlight_wake();
+                                break;
+                            }
+                            touch_wake_swallowed = false;
                         }
 #endif
 #ifdef BUTTON_NEED_DEV_INPUT_ID

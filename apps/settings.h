@@ -1068,6 +1068,7 @@ struct user_settings
 #endif
 #ifdef HAVE_QUICKSCREEN
     bool shortcuts_replaces_qs;
+    bool quickscreen_wheel;  /* draw the four ways as a click wheel */
 #endif
 
 #ifdef HAVE_PLAY_FREQ
