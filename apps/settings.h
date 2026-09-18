@@ -1033,6 +1033,13 @@ struct user_settings
     int  ab_rewind_amount;   /* seconds */
     int  ab_finished_pct;    /* a book this far through counts as finished */
     bool ab_autoscan;        /* rescan at startup when the library changed */
+    /* Pseudo-radio. The folder is the dial: its subfolders are stations,
+     * and a folder with none is a single station. */
+    char radio_folder[MAX_PATHNAME+1];
+    char radio_wps[MAX_FILENAME+1];      /* empty: the music one */
+    char radio_saver[MAX_FILENAME+1];    /* empty: the usual screensaver */
+    int  radio_min_length;   /* minutes a recording needs to be a station */
+    bool radio_static;       /* the hiss played while tuning in */
     bool emoji_enabled;      /* colour emoji from /.rockbox/emoji */
 #ifdef HAVE_COVER_VIEWS
     int library_view;        /* enum coverview_style */

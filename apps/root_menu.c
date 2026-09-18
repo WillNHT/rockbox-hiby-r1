@@ -39,6 +39,7 @@
 #include "talk.h"
 #include "audio.h"
 #include "audiobooks/audiobooks.h"
+#include "pradio.h"
 #include "shortcuts.h"
 
 #ifdef HAVE_HOTSWAP
@@ -483,6 +484,13 @@ static int audiobooks(void* param)
     return audiobooks_screen();
 }
 
+/* The station list: see apps/pradio.c. */
+static int pseudo_radio(void* param)
+{
+    (void)param;
+    return pradio_screen();
+}
+
 static int load_bmarks(void* param)
 {
     (void)param;
@@ -530,6 +538,7 @@ static const struct root_items items[] = {
     [GO_TO_SHORTCUTMENU] = { do_shortcut_menu, NULL, NULL },
     [GO_TO_CUSTOMFOLDER] = { browser, (void*)GO_TO_CUSTOMFOLDER, &file_menu },
     [GO_TO_AUDIOBOOKS]   = { audiobooks, NULL, NULL },
+    [GO_TO_PSEUDO_RADIO] = { pseudo_radio, NULL, NULL },
 
 };
 //static const int nb_items = sizeof(items)/sizeof(*items);
@@ -551,6 +560,9 @@ MENUITEM_RETURNVALUE(custom_folder_item, ID2P(LANG_CUSTOM_FOLDER),
 
 MENUITEM_RETURNVALUE(audiobooks_item, ID2P(LANG_AUDIOBOOKS),
                         GO_TO_AUDIOBOOKS, NULL, Icon_Book);
+
+MENUITEM_RETURNVALUE(pseudo_radio_item, ID2P(LANG_PSEUDO_RADIO),
+                        GO_TO_PSEUDO_RADIO, NULL, Icon_Audio);
 
 MENUITEM_RETURNVALUE(file_browser, ID2P(LANG_DIR_BROWSER), GO_TO_FILEBROWSER,
                         NULL, Icon_file_view_menu);
@@ -628,6 +640,7 @@ static struct menu_table menu_table[] = {
     { "shortcuts", &shortcut_menu },
     { "custom folder", &custom_folder_item },
     { "audiobooks", &audiobooks_item },
+    { "pseudo radio", &pseudo_radio_item },
 };
 #define MAX_MENU_ITEMS (sizeof(menu_table) / sizeof(struct menu_table))
 static struct menu_item_ex *root_menu__[MAX_MENU_ITEMS];
@@ -867,6 +880,13 @@ bool root_menu_is_audiobooks(int table_index)
     if (table_index < 0 || table_index >= (int)MAX_MENU_ITEMS)
         return false;
     return menu_table[table_index].item == &audiobooks_item;
+}
+
+bool root_menu_is_pseudo_radio(int table_index)
+{
+    if (table_index < 0 || table_index >= (int)MAX_MENU_ITEMS)
+        return false;
+    return menu_table[table_index].item == &pseudo_radio_item;
 }
 
 const char *root_menu_custom_name(const struct menu_item_ex *item)
@@ -1345,6 +1365,7 @@ void root_menu(void)
 #endif
             case GO_TO_CUSTOMFOLDER:
             case GO_TO_AUDIOBOOKS:
+            case GO_TO_PSEUDO_RADIO:
             case GO_TO_FILEBROWSER:
             case GO_TO_PLAYLISTS_SCREEN:
                 previous_browser = next_screen;

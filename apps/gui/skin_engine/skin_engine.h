@@ -95,6 +95,8 @@ void skin_request_full_update(enum skinnable_screens skin);
  * does so even when the file did not change (the setting did). */
 bool skin_wps_book_mode(void);
 void skin_set_wps_book_mode(bool on, bool force);
+bool skin_wps_radio_mode(void);
+void skin_set_wps_radio_mode(bool on, bool force);
 void skin_request_update_locked(bool locked);
 
 bool dbg_skin_engine(void);

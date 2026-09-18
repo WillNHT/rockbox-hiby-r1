@@ -19907,3 +19907,129 @@
     quickscreen: "Quick Screen as a Wheel"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_PSEUDO_RADIO
+  desc: main menu: the pseudo-radio
+  user: core
+  <source>
+    *: "Radio"
+  </source>
+  <dest>
+    *: "Radio"
+  </dest>
+  <voice>
+    *: "Radio"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_ANY
+  desc: radio: tune in across every station
+  user: core
+  <source>
+    *: "Any Station"
+  </source>
+  <dest>
+    *: "Any Station"
+  </dest>
+  <voice>
+    *: "Any Station"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_SETTINGS
+  desc: radio: the settings row in the station list
+  user: core
+  <source>
+    *: "Radio Settings"
+  </source>
+  <dest>
+    *: "Radio Settings"
+  </dest>
+  <voice>
+    *: "Radio Settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_FOLDER
+  desc: radio settings: where the stations are
+  user: core
+  <source>
+    *: "Radio Folder"
+  </source>
+  <dest>
+    *: "Radio Folder"
+  </dest>
+  <voice>
+    *: "Radio Folder"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_WPS
+  desc: radio settings: the WPS used while a station plays
+  user: core
+  <source>
+    *: "Radio WPS"
+  </source>
+  <dest>
+    *: "Radio WPS"
+  </dest>
+  <voice>
+    *: "Radio WPS"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_SAVER
+  desc: radio settings: the screensaver used while a station plays
+  user: core
+  <source>
+    *: "Radio Screensaver"
+  </source>
+  <dest>
+    *: "Radio Screensaver"
+  </dest>
+  <voice>
+    *: "Radio Screensaver"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_MIN_LENGTH
+  desc: radio settings: how long a recording has to be to be a station
+  user: core
+  <source>
+    *: "Minimum Length"
+  </source>
+  <dest>
+    *: "Minimum Length"
+  </dest>
+  <voice>
+    *: "Minimum Length"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_STATIC
+  desc: radio settings: the hiss played while tuning in
+  user: core
+  <source>
+    *: "Tuning Static"
+  </source>
+  <dest>
+    *: "Tuning Static"
+  </dest>
+  <voice>
+    *: "Tuning Static"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_EMPTY
+  desc: radio: the station has nothing to play
+  user: core
+  <source>
+    *: "Nothing to tune into"
+  </source>
+  <dest>
+    *: "Nothing to tune into"
+  </dest>
+  <voice>
+    *: "Nothing to tune into"
+  </voice>
+</phrase>

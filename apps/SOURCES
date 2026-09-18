@@ -44,6 +44,7 @@ menus/main_menu_layout.c
 audiobooks/abdb.c
 audiobooks/abprogress.c
 audiobooks/ab_play.c
+pradio.c
 audiobooks/ab_ui.c
 emoji.c
 playlist_cover.c

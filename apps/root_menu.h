@@ -76,7 +76,11 @@ enum {
      * its own default, because "the audiobooks folder" is a thing enough
      * people have that making everyone point the general-purpose entry at
      * it would waste the general-purpose entry. */
-    GO_TO_AUDIOBOOKS
+    GO_TO_AUDIOBOOKS,
+    /* Pseudo-radio. Not the FM tuner - this device has none. A folder of
+     * long recordings, entered at a random point, which is the one thing
+     * the file browser cannot be talked into doing. */
+    GO_TO_PSEUDO_RADIO
 };
 #ifndef PLUGIN
 extern struct menu_item_ex root_menu_;
@@ -120,6 +124,7 @@ const char *root_menu_name_of(int table_index);
  * row in the Main Menu editor that has a folder to set. */
 bool root_menu_is_custom_folder(int table_index);
 bool root_menu_is_audiobooks(int table_index);
+bool root_menu_is_pseudo_radio(int table_index);
 void root_menu_set_name(int table_index, const char *name);
 #endif
 

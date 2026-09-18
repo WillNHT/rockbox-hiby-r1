@@ -1005,6 +1005,15 @@ static bool set_audiobookdir(void)
 MENUITEM_FUNCTION(set_audiobookdir_item, 0, ID2P(LANG_AUDIOBOOKS),
                   set_audiobookdir, clipboard_callback, Icon_Bookmark);
 
+static bool set_radiodir(void)
+{
+    set_dir_helper(global_settings.radio_folder,
+                   sizeof(global_settings.radio_folder));
+    return false;
+}
+MENUITEM_FUNCTION(set_radiodir_item, 0, ID2P(LANG_PSEUDO_RADIO),
+                  set_radiodir, clipboard_callback, Icon_Audio);
+
 static bool set_startdir(void)
 {
     set_dir_helper(global_settings.start_directory,
@@ -1079,7 +1088,8 @@ MAKE_ONPLAYMENU(set_as_dir_menu, ID2P(LANG_SET_AS),
 #endif
                 &set_startdir_item,
                 &set_menufolder_item,
-                &set_audiobookdir_item);
+                &set_audiobookdir_item,
+                &set_radiodir_item);
 
 static int clipboard_callback(int action,
                               const struct menu_item_ex *this_item,
@@ -1146,6 +1156,7 @@ static int clipboard_callback(int action,
                         this_item == &set_startdir_item ||
                         this_item == &set_menufolder_item ||
                         this_item == &set_audiobookdir_item ||
+                        this_item == &set_radiodir_item ||
                         this_item == &set_catalogdir_item ||
 #ifdef HAVE_TAGCACHE
                         this_item == &set_databasedir_item ||
