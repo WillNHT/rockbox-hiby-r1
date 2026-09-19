@@ -25,8 +25,13 @@
  * you tune into is already halfway through whatever it is playing. Not
  * the FM tuner - this device has none. */
 
-/* The station list. Returns a GO_TO_* value. */
+/* Tune in, from the main menu. Returns a GO_TO_* value. Not a list: the
+ * dial goes back where it was and the WPS is what comes up. */
 int  pradio_screen(void);
+
+/* Settings > Playback > Radio, which is also where the station list is. */
+struct menu_item_ex;
+extern const struct menu_item_ex pradio_settings_menu;
 
 /* Whether a track belongs to the radio folder. */
 bool pradio_is_station_track(const char *path);

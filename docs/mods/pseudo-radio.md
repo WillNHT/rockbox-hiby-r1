@@ -7,16 +7,20 @@ and a way of dropping into one part-way through, which turns out to be most
 of what makes a radio feel like a radio: what you hear is already underway,
 and you did not pick it.
 
-Tuning in picks a recording at random and starts it at a random point. There
-is no station database and no scan - the folder tree is the dial.
+Tuning in drops into a recording part-way through, wherever the station has
+got to by the clock. There is no station database and no scan - the folder
+tree is the dial.
 
 ## Tuning in
 
 The **radio** entry in the main menu does not open a list. It puts you back
 on the station you were on last, or picks one when there is no last - a
-radio hands you sound, not a menu. The station list is what you get by
-coming back to the entry from a station that is already playing, and that is
-also what stops it from tuning again on the way out.
+radio hands you sound, not a menu. Walking into it while that station is
+already playing does nothing at all, which is what stops the entry from
+throwing away the thing you came back to look at.
+
+Picking a station by name is **Settings > Playback > Radio > Stations**,
+which is where the rest of the deliberate choices already are.
 
 ## Stations
 
@@ -36,7 +40,7 @@ sit directly inside a station:
 
 A radio folder with no subfolders is one station, so the simplest setup is a
 folder with files in it and nothing else to configure. **Any Station** at the
-top of the list picks a station for you first, then tunes it.
+top of the station list picks a station for you first, then tunes it.
 
 A station is everything under its folder, any number of levels deep, so a
 station can be organised into its own subfolders without breaking scanning.
@@ -46,14 +50,20 @@ station can be organised into its own subfolders without breaking scanning.
 Prev/next moves the dial instead of stepping through the station's files -
 a radio does not let you skip to the next track of the thing playing, it
 switches you to something else. A station with more than one file also
-plays them in a shuffled order rather than always the same one.
+plays them in an order of its own rather than alphabetically.
 
 Pausing does not stop the station. Come back after more than half a minute
 and playback drops in as far along as the time you were away, wrapping round
 the recording - so a pause over lunch returns to a different part of the
 programme, not to the syllable you left on. Shorter pauses resume where they
-were, because a phone call is not an afternoon. This is measured from the
-running clock, so a pause across a power cycle is not counted.
+were, because a phone call is not an afternoon.
+
+Nothing the radio plays is bookmarked. A station was tuned into part-way
+through on purpose, so the second you left it at is an accident of when you
+left; writing it down would put an arbitrary offset into the recent
+bookmarks and into the resume information, where the next album or book to
+play would pick it up and start in the middle of a track nobody asked it
+to.
 
 ### Station cover
 
@@ -100,13 +110,21 @@ costs nothing to tune - there is no up-front scan of the folder.
 
 ### Where it drops in
 
-Uniformly over the whole recording except the last minute. A radio has no
-reason to prefer the beginning, and the beginning is the one part you could
-have had by pressing play.
+A station is a transmitter, not a file: it is playing whether or not anybody
+is listening, and where it has got to is a function of the clock and of
+nothing else. Leave one - for a pause, for another station, for a week with
+the device switched off - and coming back finds it exactly as far on as the
+time that went by. Nothing is written down, so there is nothing to fall out
+of step.
 
-The generator is seeded from the tick on every tune. Rockbox seeds `rand()`
-with a constant, so without that every boot would tune to the same track at
-the same second - which is the one thing a radio must not do.
+Anywhere in the recording except its last minute: a radio has no reason to
+prefer the beginning, and the beginning is the one part you could have had
+by pressing play. The station's own name is the phase, so no two stations
+are ever playing the same second of the same thing, and the order a
+station's files go out in is that same number rather than the tick - a
+schedule, stable but not alphabetical, which is what a station has and a
+folder does not. A station stays on one recording for two hours before its
+schedule moves to the next.
 
 ### Tuning Static
 
@@ -152,9 +170,10 @@ See [Station cover](#station-cover) above.
 **Radio WPS** in the settings picks a skin used only while a station is
 playing. `SnappyRadio` ships with the theme family: Snappy Animated with
 the parts that do not apply to a radio taken out - no elapsed, no total, no
-"3 of 52" - and the station where the album would be. Its big line is the
-station name, its small line is whatever file is on, and its footer says
-`on air` or `paused`.
+"3 of 52", and no file name, because the file is how the station is made
+rather than a second thing you tuned to. The station has the block to
+itself, and the footer says `on air` or `paused` with a red dot beside it
+that blinks while the carrier is up.
 
 The station name comes from `%rs`, a skin tag this fork adds. It is the
 station folder's name, and it is empty when what is playing is not a

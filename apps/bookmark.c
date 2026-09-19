@@ -30,6 +30,7 @@
 #include "settings.h"
 #include "tree.h"
 #include "bookmark.h"
+#include "pradio.h"
 #include "system.h"
 #include "icons.h"
 #include "menu.h"
@@ -1317,6 +1318,15 @@ bool bookmark_is_bookmarkable_state(void)
     {
         return false;
     }
+
+    /* A station is not a position. It was tuned into part-way through on
+     * purpose, so the second it was left at is an accident of when it was
+     * left - writing it down puts an arbitrary offset into the recent
+     * bookmarks and into the resume info, where the next thing to play
+     * picks it up and starts an album or a book in the middle of a track
+     * nobody asked it to. */
+    if (pradio_playing())
+        return false;
 
     return true;
 }

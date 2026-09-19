@@ -43,6 +43,7 @@
 #include "lang.h"
 
 #include "playlist_viewer.h"
+#include "gui/coverview.h"
 #include "playlist_catalog.h"
 #include "icon.h"
 #include "list.h"
@@ -921,11 +922,37 @@ static int playlist_callback_voice(int selected_item, void *data)
     return 0;
 }
 
+#ifdef HAVE_COVER_VIEWS
+/* The tracks of a playlist are files like any others, so they get the same
+ * covers the browser gives them. Looking at a playlist and looking at the
+ * folder it was made from were the same list of names with a picture in
+ * one of them and not the other. */
+static bool pv_draw_cover(struct screen *d, int item, void *data,
+                          int x, int y, int size)
+{
+    struct playlist_entry *track = pv_get_track(data, item);
+
+    return track && track->name &&
+           coverview_draw_path_cover(d, track->name, x, y, size);
+}
+
+static const struct coverview_source pv_covers =
+{
+    .draw_cover = pv_draw_cover,
+};
+#endif
+
 static void update_gui(struct gui_synclist * playlist_lists, bool init)
 {
     if (init)
+    {
         gui_synclist_init(playlist_lists, playlist_callback_name,
                           &viewer, false, 1, NULL);
+#ifdef HAVE_COVER_VIEWS
+        coverview_attach(playlist_lists, &pv_covers,
+                         global_settings.library_view);
+#endif
+    }
     gui_synclist_set_nb_items(playlist_lists, viewer.num_tracks);
     gui_synclist_set_voice_callback(playlist_lists,
                                     global_settings.talk_file?
@@ -1228,6 +1255,11 @@ enum playlist_viewer_result playlist_viewer_ex(const char* filename,
     }
 
 exit:
+#ifdef HAVE_COVER_VIEWS
+    /* The list is a local; its cover state is not, and it is keyed by the
+     * address of one. */
+    coverview_detach(&playlist_lists);
+#endif
     pop_current_activity_without_refresh();
     close_playlist_viewer();
     return ret;

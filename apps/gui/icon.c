@@ -107,8 +107,12 @@ void screen_put_iconxy(struct screen * display,
     if (icon == Icon_Tuner)
     {
         int m = height / 8;
-        int bx = xpos + m / 2, by = ypos + m;
-        int bw = width - m, bh = height - 2 * m;
+        /* Narrower than the cell and centred in it. At full width the case
+         * plus its aerial overhung every other icon in the list by a couple
+         * of pixels, which reads as one row being indented differently
+         * rather than as a wider picture. */
+        int bw = (width - m) * 4 / 5, bh = height - 2 * m;
+        int bx = xpos + (width - bw) / 2, by = ypos + m;
         int i;
 
         if (is_rtl)
@@ -167,77 +171,47 @@ void screen_put_iconxy(struct screen * display,
         if (bw < 8 || bh < 6)
             return;
 
-        /* An open book, seen from above: a cover showing round the edges,
-         * two pages with lines of text, the fold between them, and a
-         * ribbon. A closed book front-on is a rectangle with a stripe,
-         * which at list size reads as a box - an open one does not read
-         * as anything else. Drawn rather than themed - see the note in
-         * icon.h - and coloured like the strip icons beside it where the
-         * panel has colour. */
-        int cov  = MAX(1, bh / 10);         /* cover showing under pages */
-        int ph   = bh - 2 * cov;            /* page height               */
-        int mid  = bx + bw / 2;             /* the fold                  */
-        int dip  = MAX(1, bh / 12);         /* pages sag into the fold   */
-#ifdef HAVE_LCD_COLOR
-        unsigned fg = display->get_foreground();
-        const unsigned cover  = LCD_RGBPACK(0x3E, 0x78, 0xC4);
-        const unsigned page   = LCD_RGBPACK(0xF4, 0xF2, 0xEE);
-        const unsigned fold   = LCD_RGBPACK(0x9C, 0x9A, 0x96);
-        const unsigned words  = LCD_RGBPACK(0x8A, 0x88, 0x84);
-        const unsigned ribbon = LCD_RGBPACK(0xE0, 0x3C, 0x31);
-#define BOOK_INK(c) display->set_foreground(c)
-#else
-#define BOOK_INK(c) do { } while (0)
-#endif
+        /* An open book seen from above, as an outline: two pages meeting
+         * at a fold, a line of text on each, and a ribbon down the right
+         * one. A closed book front-on is a rectangle with a stripe, which
+         * at list size reads as a box - an open one does not read as
+         * anything else.
+         *
+         * One colour, like the radio above it. It used to be drawn in five
+         * - a blue cover, off-white pages, a red ribbon - which is a
+         * painting among an icon set that is a set of marks, and in a
+         * monochrome theme it was the one row that was not part of the
+         * theme. The list's own foreground suits a colour icon set and a
+         * monochrome one alike; see the note in icon.h. */
+        int ph  = bh - MAX(1, bh / 8);      /* page height               */
+        int mid = bx + bw / 2;              /* the fold                  */
+        int dip = MAX(1, bh / 8);           /* pages sag into the fold   */
+        int top = by + dip;
 
-        /* cover, a little wider and lower than the pages */
-        BOOK_INK(cover);
-        display->fillrect(bx, by + dip + cov, bw, bh - dip - cov);
+        display->drawrect(bx, top, mid - bx + 1, ph - dip);
+        display->drawrect(mid, top, bx + bw - mid, ph - dip);
 
-        /* pages: full height at the outer edge, lower at the fold */
-        BOOK_INK(page);
-        display->fillrect(bx + cov, by, mid - bx - cov, ph);
-        display->fillrect(mid + 1, by, bx + bw - cov - mid - 1, ph);
-#ifdef HAVE_LCD_COLOR
-        BOOK_INK(cover);
-#else
-        display->set_drawmode(DRMODE_COMPLEMENT);
-#endif
-        for (i = 0; i < dip; i++)
-        {
-            int span = (bw / 2 - cov) * (dip - i) / (dip + 2);
-            display->hline(mid - span, mid + span, by + i);
-        }
-#ifndef HAVE_LCD_COLOR
-        display->set_drawmode(DRMODE_SOLID);
-#endif
-
-        /* the fold */
-        BOOK_INK(fold);
-        display->vline(mid, by + dip, by + ph - 1);
+        /* the spines rise away from the fold */
+        display->vline(bx, by, top);
+        display->vline(bx + bw - 1, by, top);
+        display->hline(bx, bx + bw - 1, by);
+        display->vline(mid, by, top);
 
         /* the words */
-        BOOK_INK(words);
-        for (i = 1; i <= 3; i++)
+        for (i = 2; i <= 3; i++)
         {
-            int ly = by + dip + ((ph - dip) * i) / 4;
-            if (ly >= by + ph - 1)
+            int ly = top + ((ph - dip) * i) / 5;
+            if (ly >= top + ph - dip - 1)
                 continue;
-            display->hline(bx + cov + 2, mid - 3, ly);
-            display->hline(mid + 3, bx + bw - cov - 3, ly);
+            display->hline(bx + 3, mid - 3, ly);
+            display->hline(mid + 3, bx + bw - 4, ly);
         }
 
         /* the ribbon, hanging out of the bottom of the right page */
-        BOOK_INK(ribbon);
         {
-            int rw = MAX(2, bw / 10);
             int rx = mid + (bx + bw - mid) / 2;
-            display->fillrect(rx, by + dip, rw, bh - dip);
+            display->vline(rx, top + 2, by + bh - 1);
         }
-#undef BOOK_INK
-#ifdef HAVE_LCD_COLOR
-        display->set_foreground(fg);
-#endif
         return;
     }
 
