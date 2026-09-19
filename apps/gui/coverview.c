@@ -360,7 +360,10 @@ static bool draw_list(struct screen *d, struct gui_synclist *list,
     case COVERVIEW_SHELVES:
     default:
     {
-        int row_h = MAX(2 * fh + 3 * PAD, vp->width * 3 / 10);
+        /* 35% of the panel rather than 30%: at a 44 px face the name
+         * was taller than the picture beside it, which is the wrong way
+         * round for a view whose whole point is the picture. */
+        int row_h = MAX(2 * fh + 3 * PAD, vp->width * 7 / 20);
         draw_rows(d, st, vp, row_h, row_h - 2 * PAD, true);
         break;
     }

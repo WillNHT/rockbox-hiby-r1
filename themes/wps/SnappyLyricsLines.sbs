@@ -114,7 +114,7 @@
 %dr(18,6,10,4)
 #
 %Vl(main,72,-60,-60,-,3)
-%al%s%?it<%it|%fn>
+%al%s%?rs<%rs|%?it<%it|%fn>>
 #
 %Vl(main,-60,-60,-30,-,-)
 %?if(%mp,=,3)<%x(p,paused.bmp,12,8)>

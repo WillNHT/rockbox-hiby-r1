@@ -59,6 +59,8 @@
 #include "settings.h"
 #include "splash.h"
 #include "string-extra.h"
+#include "crc32.h"
+#include "timefuncs.h"
 #include "pradio.h"
 
 #define PRADIO_MAX_STATIONS 48
@@ -72,6 +74,11 @@
 /* How long a pause has to be before coming back lands somewhere else. Below
  * this it is a phone call, not the afternoon. */
 #define PRADIO_DRIFT_MIN_MS (30 * 1000)
+/* How long a station stays on one recording before its schedule moves to
+ * the next. Longer than most of the things a station is made of, so leaving
+ * one for a few minutes and coming back finds the same recording still on
+ * rather than a new one. */
+#define PRADIO_ROTATE_SECS  (2 * 60 * 60)
 
 /* --- the sounds -------------------------------------------------------- */
 
@@ -267,20 +274,70 @@ static void station_dir(int station, char *buf, size_t size)
         path_append(buf, global_settings.radio_folder, stations[station], size);
 }
 
+/* --- the station clock ------------------------------------------------- */
+
+/* A station is a transmitter, not a file: it is playing whether or not
+ * anybody is listening. Where it has got to is a function of the clock and
+ * of nothing else, so leaving one - for a pause, for another station, for a
+ * week with the device switched off - and coming back finds it exactly as
+ * far on as the time that went by. Nothing is stored, so there is nothing
+ * to fall out of step.
+ *
+ * The station's own name is the phase, so no two stations are ever playing
+ * the same second of the same thing, and the order its files go out in is
+ * that same number rather than the tick - a schedule, stable but not
+ * alphabetical, which is what a station has and a folder does not.
+ *
+ * ponytail: one recording at a time rather than a continuous tape across
+ * the station's whole library - a real tape would have to read metadata for
+ * every file on the station before it could say where "now" is. */
+static uint32_t pradio_now(void)
+{
+#if CONFIG_RTC
+    return (uint32_t)mktime(get_time());
+#else
+    return current_tick / HZ;
+#endif
+}
+
+static unsigned int station_seed(int station)
+{
+    const char *name = (station >= 0 && station < nstations)
+                     ? stations[station] : "";
+    return crc_32(name, strlen(name), 0xffffffff);
+}
+
+/* Where in a recording of this length the station has got to. Never its
+ * last minute - the point is to land in the middle of something, not on its
+ * last breath - and a second of clock is a second of programme, which is
+ * the whole of what makes leaving and coming back work. */
+static unsigned long clock_offset(uint32_t now, unsigned int seed,
+                                  unsigned long length)
+{
+    if (length <= PRADIO_TAIL_MS)
+        return 0;
+
+    unsigned long span = (length - PRADIO_TAIL_MS) / 1000;
+    if (span == 0)
+        return 0;
+    return (unsigned long)((now + seed) % span) * 1000UL;
+}
+
 /* --- tuning in -------------------------------------------------------- */
 
 static struct mp3entry tune_id3;
 
-/* Where in a recording of this length to drop in. Uniform over all of it
- * but the last minute: a radio has no reason to prefer the beginning, and
- * the beginning is the one part the listener could have had by pressing
- * play. */
-static unsigned long random_offset(unsigned long length)
+/* Rockbox seeds rand() with a constant, so without this every boot makes
+ * the same "any station" choice. Once per run is enough - the station clock
+ * does not use rand() at all. */
+static void seed_rand(void)
 {
-    if (length <= PRADIO_TAIL_MS)
-        return 0;
-    return (unsigned long)(rand() % (int)((length - PRADIO_TAIL_MS) / 1000))
-           * 1000UL;
+    static bool done;
+    if (!done)
+    {
+        srand(current_tick);
+        done = true;
+    }
 }
 
 static bool long_enough(unsigned long length)
@@ -297,40 +354,44 @@ static int build_playlist(const char *dir)
     if (playlist_create(dir, NULL) < 0)
         return 0;
 
-    if (playlist_insert_directory(NULL, dir, PLAYLIST_INSERT_LAST,
-                                  false, true) < 0)
+    /* Silently: "Inserted 2 tracks (OFF to abort)" over the top of a
+     * tune-in is the machinery of a file player showing through the one
+     * screen whose whole job is not to look like one. */
+    if (playlist_insert_directory_ex(NULL, dir, PLAYLIST_INSERT_LAST,
+                                     false, true, false) < 0)
         return 0;
 
     return playlist_amount_ex(NULL);
 }
 
-/* Pick a track, preferring one over the length floor. Returns its index and
- * writes its length; the length is 0 when no metadata could be read. */
-static int pick_track(int n, unsigned long *length)
+/* Which of the station's recordings is on air now. The clock picks it, so
+ * the same station found twice in one afternoon is where it should be
+ * rather than somewhere new. Walks forward from there for one over the
+ * length floor, because a station of mostly short files must still play
+ * something. */
+static int pick_track(int n, unsigned int seed, uint32_t now,
+                      unsigned long *length)
 {
     static struct playlist_track_info info;
 
-    /* Rockbox seeds rand() with a constant, so without this every boot
-     * tunes to the same track at the same second - which is the one thing
-     * a radio must not do. Same treatment the shuffle gets. */
-    srand(current_tick);
-
-    int pick = rand() % n;
+    int pick = (int)((now / PRADIO_ROTATE_SECS + seed) % (unsigned)n);
 
     *length = 0;
     for (int i = 0; i < PRADIO_TRIES && i < n; i++)
     {
-        int idx = (i == 0) ? pick : rand() % n;
+        int idx = (pick + i) % n;
 
         if (playlist_get_track_info(NULL, idx, &info) < 0)
             continue;
         if (!get_metadata(&tune_id3, -1, info.filename))
             continue;
 
-        pick = idx;
         *length = tune_id3.length;
-        if (long_enough(tune_id3.length))
+        if (long_enough(tune_id3.length) || i == PRADIO_TRIES - 1)
+        {
+            pick = idx;
             break;
+        }
     }
     return pick;
 }
@@ -369,13 +430,19 @@ static bool tune(int station)
         return false;
     }
 
-    /* Otherwise a station with several files always opens the same way and
-     * plays them in the same order - a jukebox with extra steps. */
+    /* Shuffled on the station's own number rather than on the tick:
+     * otherwise a station with several files always opens the same way and
+     * plays them in the same order - a jukebox with extra steps - but a
+     * fresh order on every tune-in would mean the schedule the clock
+     * indexes into was a different one each time. */
+    unsigned int seed = station_seed(station);
+    uint32_t now = pradio_now();
+
     if (n > 1)
-        playlist_shuffle(current_tick, -1);
+        playlist_shuffle(seed, -1);
 
     unsigned long length = 0;
-    int track = pick_track(n, &length);
+    int track = pick_track(n, seed, now, &length);
 
     /* The static plays over the gap between the last screen and the first
      * sample, which is the gap it exists to cover. Tuning in while
@@ -395,7 +462,7 @@ static bool tune(int station)
                (station >= 0 && station < nstations) ? stations[station] : "",
                sizeof global_settings.radio_last);
 
-    playlist_start(track, random_offset(length), 0);
+    playlist_start(track, clock_offset(now, seed, length), 0);
     return true;
 }
 
@@ -432,6 +499,7 @@ bool pradio_skip(void)
         return false;
 
     scan_stations();
+    seed_rand();
 
     retune_sound = true;
 
@@ -637,6 +705,9 @@ MENUITEM_FUNCTION(pradio_wps_item, 0, ID2P(LANG_RADIO_WPS),
 MENUITEM_FUNCTION(pradio_saver_item, 0, ID2P(LANG_RADIO_SAVER),
                   choose_saver, NULL, Icon_Wps);
 #endif
+static int pradio_stations(void);
+MENUITEM_FUNCTION(pradio_stations_item, 0, ID2P(LANG_RADIO_STATIONS),
+                  pradio_stations, NULL, Icon_Tuner);
 MENUITEM_SETTING(pradio_min_length, &global_settings.radio_min_length, NULL);
 MENUITEM_SETTING(pradio_static, &global_settings.radio_static, NULL);
 MENUITEM_SETTING(pradio_static_strength,
@@ -644,6 +715,7 @@ MENUITEM_SETTING(pradio_static_strength,
 MENUITEM_SETTING(pradio_ambience_item, &global_settings.radio_ambience, NULL);
 
 MAKE_MENU(pradio_settings_menu, ID2P(LANG_RADIO_SETTINGS), NULL, Icon_Tuner,
+          &pradio_stations_item,
           &pradio_folder_item,
           &pradio_min_length,
           &pradio_static,
@@ -658,11 +730,10 @@ MAKE_MENU(pradio_settings_menu, ID2P(LANG_RADIO_SETTINGS), NULL, Icon_Tuner,
 /* --- the screen ------------------------------------------------------- */
 
 /* Row 0 tunes across every station at once, which is what someone who has
- * not decided what to listen to actually wants; the last row is the
- * settings. Everything between is a station. */
+ * not decided what to listen to actually wants. Everything after it is a
+ * station. */
 #define ROW_ANY       0
 #define ROW_FIRST     1
-#define ROW_SETTINGS  (ROW_FIRST + nstations)
 
 static const char *row_name(int item, void *data, char *buf, size_t size)
 {
@@ -670,53 +741,32 @@ static const char *row_name(int item, void *data, char *buf, size_t size)
 
     if (item == ROW_ANY)
         return (const char *)str(LANG_RADIO_ANY);
-    if (item == ROW_SETTINGS)
-        return (const char *)str(LANG_RADIO_SETTINGS);
     return stations[item - ROW_FIRST];
 }
 
-int pradio_screen(void)
+/* Picking a station by name. Off the main path on purpose - a radio hands
+ * you sound, not a menu - and reached from the radio settings, which is
+ * where the rest of the deliberate choices already are. */
+static int pradio_stations(void)
 {
     int selection = ROW_ANY;
-
-    /* A radio hands you sound, not a menu: coming in from the main menu the
-     * dial goes straight back to whatever it was on last, or to a station
-     * picked for you when there is no last. The list is what you get by
-     * coming back here from a station that is already playing, which is
-     * also what stops this from tuning again on the way out. */
-    if (!pradio_playing())
-    {
-        scan_stations();
-
-        int station = last_station();
-        if (station < 0 && nstations > 0)
-            station = rand() % nstations;
-
-        if (tune(station))
-            return GO_TO_WPS;
-    }
 
     while (1)
     {
         scan_stations();
+        seed_rand();
 
         struct simplelist_info info;
-        simplelist_info_init(&info, str(LANG_PSEUDO_RADIO),
-                             ROW_SETTINGS + 1, NULL);
+        simplelist_info_init(&info, str(LANG_RADIO_STATIONS),
+                             ROW_FIRST + nstations, NULL);
         info.get_name = row_name;
         info.title_icon = Icon_Tuner;
         info.selection = selection;
         simplelist_show_list(&info);
 
         if (info.selection < 0)
-            return GO_TO_PREVIOUS;
+            return 0;
         selection = info.selection;
-
-        if (selection == ROW_SETTINGS)
-        {
-            do_menu(&pradio_settings_menu, NULL, NULL, false);
-            continue;
-        }
 
         /* "Any station" is a station picked for you, not a mode: the
          * choosing happens once, here, and the rest of the tune-in is the
@@ -726,6 +776,36 @@ int pradio_screen(void)
             : selection - ROW_FIRST;
 
         if (tune(station))
+            return 0;
+    }
+}
+
+int pradio_screen(void)
+{
+    scan_stations();
+    seed_rand();
+
+    /* A radio hands you sound, not a menu. The entry on the main menu is
+     * the dial going back to where it was left - or, with nothing to go
+     * back to, to a station picked for you. Nothing to choose, nothing to
+     * confirm: the sound is the answer.
+     *
+     * Walking in on the station that is already playing is the one case
+     * that does nothing at all. Re-tuning it would be the entry throwing
+     * away the thing the user came back to look at. */
+    int station = last_station();
+    if (station < 0 && nstations > 0)
+        station = rand() % nstations;
+
+    if (pradio_playing())
+    {
+        struct mp3entry *id3 = audio_current_track();
+        if (id3 && station_of(id3->path) == station)
             return GO_TO_WPS;
     }
+
+    if (tune(station))
+        return GO_TO_WPS;
+
+    return GO_TO_PREVIOUS;
 }

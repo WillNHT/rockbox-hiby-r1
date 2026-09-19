@@ -39,6 +39,7 @@
 #ifdef HAVE_PLAY_FREQ
 #include "talk.h"
 #include "lyrics.h"
+#include "pradio.h"
 #endif
 
 #if defined(HAVE_CROSSFADE)
@@ -219,6 +220,7 @@ MAKE_MENU(playback_settings,ID2P(LANG_PLAYBACK),0,
 #endif
 
           &replaygain_settings_menu, &beep,
+          &pradio_settings_menu,
 
 #ifdef HAVE_SPDIF_POWER
           &spdif_enable,

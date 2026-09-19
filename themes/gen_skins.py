@@ -27,45 +27,36 @@ MARGIN = 30
 # ----------------------------------------------------------------- pieces
 
 # The header row. The battery column on the right runs from its bar at
-# y=26 to the bottom of its percentage at 82, and the corner box on the
-# left is sized from the same two numbers rather than from its own. It
-# used to be a 31 px line inverted inside a 62 px viewport starting at 30,
-# so its box stopped at 64 while its neighbours ran to 82.
+# y=26 to the bottom of its percentage at 82, and the clock on the left is
+# the same widget on the other side of that row: same line, same height,
+# same inverted face, an icon and then the number.
+#
+# It used to be a 44 px slab that the sleep timer and the volume number
+# took turns borrowing, which meant the one thing the corner is for was the
+# one thing it was often not showing. The bar under the header says what
+# the volume is doing, all the time and without a number nobody reads, so
+# the clock keeps the corner.
 ROW_Y, ROW_B = 26, 82
-BOX_X, BOX_W = 30, 124          # "88:88" in the 44 px face is 115 px
-# The 44 px face is 48 px tall with its digits in the lower part of the
-# line, so the line sits a little below the top of the box to put the
-# digits in its middle.
-CLOCK_Y, CLOCK_H = ROW_Y + 7, 48
-SLEEP_Y, SLEEP_H = ROW_Y + 1, 54   # two 27 px lines
+CLOCK_Y, CLOCK_H = 48, 34       # the battery percentage's own row
+CLOCK_X, CLOCK_W = 30, 144      # "88:88" in the 31 px face is 81 px
 
 HEADER = """#
 # Header
 # ======
-# The corner box. Whatever is in it - clock, volume, sleep timer - draws
-# an inverted line inside this, in the same colour, so the box is the same
-# size whichever it is and lines up with the battery column.
-%%V(%d,%d,%d,%d,-)
-%%dr(0,0,-,-,%s,%s)
+# Clock
+# Set like the battery percentage on the other side of the row: a mono
+# icon, then the number, in an inverted box of the same height on the same
+# line. The icon goes through a conditional, exactly as the battery's own
+# does: a bare bitmap is drawn before the line starts and the inverted fill
+# then begins after it, leaving the icon stranded outside its own box. clock_wps.bmp is a face rather than a themable icon: a new themable
+# icon re-slices every icon set installed on the device.
 #
-# Sleep timer
-%%Vl(sleep,%d,%d,%d,%d,2)
-%%Vs(invert)%%ac%%bs
-%%aczzz...
-#
-# Volume (percent of the -70..-10 dB scale)
-%%Vl(voldb,%d,%d,%d,%d,4)
-%%Vs(invert)%%ac%%pv
-#
-# The clock has the box the rest of the time. The volume number is worth
-# the corner only while it is changing - the bar says the rest, all the
-# time, and a number that never moves is a number nobody reads.
-%%Vl(clock,%d,%d,%d,%d,4)
-%%Vs(invert)%%ac%%cH:%%cM
-#""" % (BOX_X, ROW_Y, BOX_W, ROW_B - ROW_Y, INK, INK,
-       BOX_X, SLEEP_Y, BOX_W, SLEEP_H,
-       BOX_X, CLOCK_Y, BOX_W, CLOCK_H,
-       BOX_X, CLOCK_Y, BOX_W, CLOCK_H) + """
+# Unlabelled, so always drawn. The corner used to be shared with the sleep
+# timer and the volume number, which meant the one thing it is for was the
+# one thing it was often not showing.
+%%V(%d,%d,%d,%d,3)
+%%Vs(invert)%%ac%%?cH<%%xd(K)|%%xd(K)> %%cH:%%cM
+#""" % (CLOCK_X, CLOCK_Y, CLOCK_W, CLOCK_H) + """
 # Shuffle
 %V(178,28,94,22,2)
 SHF%xd(O,%ps)
@@ -88,16 +79,31 @@ SHF%xd(O,%ps)
 %pv(0,0,-,-,vb,backdrop,vb_backdrop)
 %?if(%pv, >, 0)<%pv(0,0,-,-,vb_too_loud,backdrop,vb_backdrop)>
 #
+"""
+
+# Locked.
+#
+# Appended last by every skin here rather than declared up with the rest of
+# the header, because what the header declares the album art and the chrome
+# after it paint straight over - which is why locking the keys took the
+# volume bar away and put nothing in its place. The lock is in the text of
+# a plain viewport rather than in an enable line, so an empty conditional
+# draws no line and it costs nothing while the keys are free.
+#
+# 52 px rather than 44: the 44 px face is 48 px tall, and a line that does
+# not fit its viewport is not drawn either.
+LOCKBAR = """#
 # Locked
-%Vl(locked,30,106,-30,44,4)
-%Vt(0)
-%acLOCKED%Vs(invert)"""
+# ======
+%V(30,102,-30,52,4)
+%Vs(invert)%ac%?mh<LOCKED|>"""
 
 PRELOAD = """%Fl(2,24-GeistMono-SemiBold.fnt)
 %Fl(3,31-GeistMono-SemiBold.fnt)
 %Fl(4,44-GeistMono-SemiBold.fnt)
 %Fl(5,58-GeistMono-SemiBold.fnt)
 %xl(B,batt_wps.bmp,2,0,2)
+%xl(K,clock_wps.bmp)
 %xl(O,off_on.bmp,48,0,2)
 %xl(vb,vb.bmp)
 %xl(bb,bb.bmp)
@@ -318,9 +324,7 @@ def snappy_v2(vinyl=False):
     else:
         o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
     o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>")
-    o.append("%?mh<%Vd(locked)|%Vd(volbar)>")
-    o.append("%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|"
-             "%?mv(1.5)<%Vd(voldb)|%Vd(clock)>>")
+    o.append("%?mh<|%Vd(volbar)>")
     o += dial_border(30, 110, 420, 36)
     o.append(HEADER)
     if vinyl:
@@ -374,6 +378,7 @@ def snappy_v2(vinyl=False):
 %V(30,768,-30,30,2)
 %Vt(0)
 %al%pc/%pt%ar%pp/%pe""")
+    o.append(LOCKBAR)
     return "\n".join(o) + "\n"
 
 
@@ -546,9 +551,14 @@ def animated(gauge=False, lyrics=None, radio=False):
     # transparent viewport in the skin language to put it in. %Vt(0) is
     # that viewport, so the special case is gone and the bar is one thing
     # in one place whether or not the track has artwork.
-    o.append("%?mh<%Vd(locked)|%Vd(volbar)>")
-    o.append("%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|"
-             "%?mv(1.5)<%Vd(voldb)|%Vd(clock)>>")
+    o.append("%?mh<|%Vd(volbar)>")
+    if radio:
+        # The dot is a mono bitmap, not a drawn rectangle: a viewport whose
+        # lines carry neither text nor a bitmap has no lines to render, and
+        # the tags in it are never reached. Preloaded here rather than in
+        # PRELOAD because this is the only skin that has the file.
+        o.insert(2, "%xl(L,dot_wps.bmp)")
+        o.append("%?mp<|%Vd(live)||%Vd(live)|%Vd(live)>")
 
     if gauge:
         o.append("%?if(%sd,=,1)<%Vd(gauge)>%?if(%sd,=,1)<%Vd(gaugepv)>"
@@ -690,31 +700,38 @@ def animated(gauge=False, lyrics=None, radio=False):
         the_band, enables = gate(the_band, "bd", "%%?yf<||%s>")
         o[band_slot] = "\n".join(enables)
     if radio:
-        # A station is not an album and a recording is not a track. The two
-        # lines swap jobs: the small one carries whatever file happens to be
-        # on, the big one carries the station, because the station is the
-        # thing you tuned to and the file is an implementation detail of it.
+        # A station is not an album and a recording is not a track, and it
+        # is not two lines either. "02 Flash FM" above the station name was
+        # the file showing through - the file is how the station is made,
+        # not a second thing the listener tuned to - so the station has the
+        # whole block to itself.
         content = [the_band, """#
 # Station
 # -------
-%V(30,690,-30,28,2)
-%Vt(0)
-%s%al%?it<%it|%fn>
-#
-%V(30,718,-30,46,4)
+%V(30,700,-30,58,5)
 %Vt(0)
 %al%s%?rs<%rs|%?ia<%ia|radio>>"""]
 
         # No elapsed, no total, no "3 of 52". A radio has no duration you
         # are entitled to know and no queue you are allowed to see; showing
         # them is what made this look like a file player with the file names
-        # changed. What is left is the one thing a radio does tell you.
+        # changed. What is left is the one thing a radio does tell you - and
+        # the light beside it that says it is saying it now.
         content.append("""#
 # Footer
 # ======
 %V(30,768,-30,30,2)
 %Vt(0)
-%ac%?mp<off air|on air|paused|on air|on air>""")
+%ac%?mp<off air|on air|paused|on air|on air>
+#
+# The liveness light. Its own viewport so the caption stays centred on the
+# screen rather than on the pair of them, and two sublines so it blinks - a
+# red dot that sits still is a dot, one that blinks is a transmitter. Off
+# air and paused it is not enabled at all, which is the one state where a
+# light saying "live" would be lying.
+%Vl(live,176,777,14,14,-)
+%Vt(0)
+%t(0.7)%Vf(CC2B2B)%xd(L);%t(0.7)%Vf(0C0D0E)%xd(L)""")
     else:
         content = [the_band, """#
 # Track
@@ -797,6 +814,7 @@ def animated(gauge=False, lyrics=None, radio=False):
         o.append("#")
         o += vp
 
+    o.append(LOCKBAR)
     return "\n".join(o) + "\n"
 
 
@@ -825,9 +843,7 @@ def lyrics_full():
 #
 %wd""", PRELOAD, "%Vd(bg)",
          "%?yf<|%Vd(plainnote)|%Vd(nolyrics)>",
-         "%?mh<%Vd(locked)|%Vd(volbar)>",
-         "%?bs<%?mv(1.5)<%Vd(voldb)|%Vd(sleep)>|"
-         "%?mv(1.5)<%Vd(voldb)|%Vd(clock)>>"]
+         "%?mh<|%Vd(volbar)>"]
     o += dial_border(30, 110, 420, 36)
     o.append(HEADER)
     o.append("""#
@@ -876,6 +892,7 @@ def lyrics_full():
                             LYR_Y, LYR_H, LYRIC_DIM,
                             LYR_Y + LYR_H // 2 - 20, LYRIC_DIM,
                             LYR_Y + LYR_H, LYRIC_DIM))
+    o.append(LOCKBAR)
     return "\n".join(o) + "\n"
 
 

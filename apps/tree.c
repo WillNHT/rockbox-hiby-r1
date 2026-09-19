@@ -437,6 +437,75 @@ static bool tree_draw_cover(struct screen *d, int item, void *data,
            coverview_draw_path_cover(d, path, x, y, size);
 }
 
+/* How many tracks a playlist holds, for the line under its name - which
+ * is what somebody deciding between two playlists actually wants there,
+ * where the word "Playlist" only repeats the icon beside it.
+ *
+ * Counted out of the file: asking the playlist engine would mean opening
+ * each one as the current playlist. Cached because this runs for every
+ * visible row of every redraw and an m3u can be tens of kilobytes.
+ * ponytail: a handful of rows, thrown away when the directory is; a
+ * bigger cache only matters on a folder with more playlists than fit on
+ * the screen twice over. */
+#define PL_COUNT_CACHE 12
+static struct { int item; int count; } pl_counts[PL_COUNT_CACHE];
+static int pl_counts_next;
+
+static void pl_counts_clear(void)
+{
+    for (int i = 0; i < PL_COUNT_CACHE; i++)
+        pl_counts[i].item = -1;
+    pl_counts_next = 0;
+}
+
+static int pl_count_read(const char *path)
+{
+    char buf[512];
+    ssize_t r;
+    int n = 0;
+    bool sol = true;
+    int fd = open(path, O_RDONLY);
+
+    if (fd < 0)
+        return -1;
+    while ((r = read(fd, buf, sizeof buf)) > 0)
+    {
+        for (ssize_t i = 0; i < r; i++)
+        {
+            if (buf[i] == '\n' || buf[i] == '\r')
+            {
+                sol = true;
+                continue;
+            }
+            if (!sol)
+                continue;
+            sol = false;
+            if (buf[i] != '#')
+                n++;
+        }
+    }
+    close(fd);
+    return n;
+}
+
+static int pl_count(int item, const char *name)
+{
+    char path[MAX_PATH];
+
+    for (int i = 0; i < PL_COUNT_CACHE; i++)
+        if (pl_counts[i].item == item)
+            return pl_counts[i].count;
+
+    if (path_append(path, tc.currdir, name, sizeof path) >= sizeof path)
+        return -1;
+
+    int n = pl_count_read(path);
+    pl_counts[pl_counts_next].item = item;
+    pl_counts[pl_counts_next].count = n;
+    pl_counts_next = (pl_counts_next + 1) % PL_COUNT_CACHE;
+    return n;
+}
+
 static const char *tree_cover_subtitle(int item, void *data,
                                        char *buf, size_t size)
 {
@@ -451,7 +520,14 @@ static const char *tree_cover_subtitle(int item, void *data,
     if (e->attr & ATTR_DIRECTORY)
         return str(LANG_DIRECTORY);
     if ((e->attr & FILE_ATTR_MASK) == FILE_ATTR_M3U)
-        return str(LANG_PLAYLIST);
+    {
+        int n = pl_count(item, e->name);
+        if (n < 0)
+            return str(LANG_PLAYLIST);
+        snprintf(buf, size, str(n == 1 ? LANG_PLAYLIST_TRACK_COUNT_ONE
+                                     : LANG_PLAYLIST_TRACK_COUNT), n);
+        return buf;
+    }
     (void)buf; (void)size;
     return NULL;
 }
@@ -467,6 +543,7 @@ static void tree_attach_coverview(struct gui_synclist *list, bool id3db)
     bool covers = false;
 
     tree_cover_id3db = id3db;
+    pl_counts_clear();      /* a new listing; the old counts were another one's */
 #ifdef HAVE_TAGCACHE
     if (id3db)
         covers = tagtree_lists_covers(&tc);

@@ -2600,10 +2600,24 @@ int playlist_insert_directory(struct playlist_info* playlist,
                               const char *dirname, int position, bool queue,
                               bool recurse)
 {
+    return playlist_insert_directory_ex(playlist, dirname, position, queue,
+                                        recurse, true);
+}
+
+/*
+ * As above, with the "Inserted N tracks" splash made optional. A playlist
+ * the user did not ask to build - the radio filling a station in behind a
+ * tune-in - has nothing to report, and reporting it anyway left a count of
+ * files on screen over the top of the thing it was trying to look like.
+ */
+int playlist_insert_directory_ex(struct playlist_info* playlist,
+                                 const char *dirname, int position, bool queue,
+                                 bool recurse, bool progress)
+{
     int result = -1;
     struct playlist_insert_context context;
     result = playlist_insert_context_create(playlist, &context,
-                                            position, queue, true);
+                                            position, queue, progress);
     if (result >= 0)
     {
         cpu_boost(true);

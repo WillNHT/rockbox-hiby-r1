@@ -19978,6 +19978,48 @@
   </voice>
 </phrase>
 <phrase>
+  id: LANG_PLAYLIST_TRACK_COUNT_ONE
+  desc: browser: the line under a playlist holding one track
+  user: core
+  <source>
+    *: "%d track"
+  </source>
+  <dest>
+    *: "%d track"
+  </dest>
+  <voice>
+    *: ""
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_PLAYLIST_TRACK_COUNT
+  desc: browser: the line under a playlist's name
+  user: core
+  <source>
+    *: "%d tracks"
+  </source>
+  <dest>
+    *: "%d tracks"
+  </dest>
+  <voice>
+    *: ""
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_STATIONS
+  desc: radio: the list of stations
+  user: core
+  <source>
+    *: "Stations"
+  </source>
+  <dest>
+    *: "Stations"
+  </dest>
+  <voice>
+    *: "Stations"
+  </voice>
+</phrase>
+<phrase>
   id: LANG_RADIO_ANY
   desc: radio: tune in across every station
   user: core
