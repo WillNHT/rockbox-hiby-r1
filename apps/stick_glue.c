@@ -1814,14 +1814,16 @@ int stick_handle_touch(const struct touchevent *ev, int context,
     {
         stick_build_config(&live_cfg, context);
         cached_context = context;
-        /* A coast belongs to the list it was thrown on. Carrying it into a
-         * different screen would scroll something the user never touched. */
-        if (stick_phase(&live_state) == STICK_PHASE_COAST)
-            stick_reset(&live_state, &live_cfg);
-        /* Keep any live gesture pointed at the config it started with by
-         * only re-seeding when nothing is in flight. */
-        if (stick_phase(&live_state) == STICK_PHASE_IDLE)
-            stick_reset(&live_state, &live_cfg);
+        /* The screen changed under the thumb, so whatever is in flight
+         * belonged to the screen that has gone. A gesture that opened the
+         * context menu and then carried on scrolling landed the selection
+         * a row or two into the new list before the user had seen it.
+         *
+         * Reset unconditionally: IDLE swallows contact and release alike
+         * and only a fresh press arms again, which is exactly "lift off
+         * and start over". A coast is dropped for the older reason - it
+         * would scroll a list nobody threw. */
+        stick_reset(&live_state, &live_cfg);
     }
 
     switch (ev->type)
