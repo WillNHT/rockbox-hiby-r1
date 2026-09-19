@@ -127,7 +127,7 @@ static const char* get_bookmark_info(int list_index,
                                      char *buffer,
                                      size_t buffer_len);
 static int   select_bookmark(const char* bookmark_file_name, bool show_dont_resume, char** selected_bookmark);
-static bool  write_bookmark(bool create_bookmark_file);
+static bool  write_bookmark(bool create_bookmark_file, bool silent);
 static int   get_bookmark_count(const char* bookmark_file_name);
 
 #define TEMP_BUF_SIZE (MAX_PATH + 1)
@@ -146,7 +146,7 @@ static char global_filename[MAX_PATH];
 /* ----------------------------------------------------------------------- */
 bool bookmark_create_menu(void)
 {
-    return write_bookmark(true);
+    return write_bookmark(true, false);
 }
 
 /* ----------------------------------------------------------------------- */
@@ -258,20 +258,28 @@ bool bookmark_autobookmark(bool prompt_ok)
     audio_pause();    /* first pause playback */
     update = (global_settings.autoupdatebookmark && bookmark_exists());
 
+    /* An unprompted autobookmark is the shutdown path: holding POWER to
+     * switch the device off wrote the bookmark and then sat on a "Bookmark
+     * Created" splash on the way out, which reads as the shutdown gesture
+     * having done a second, unasked-for thing. Keep the bookmark - it is
+     * what resume is made of - and drop the receipt nobody is there to
+     * read. */
+    bool silent = !prompt_ok;
+
     if (update)
-        return write_bookmark(true);
+        return write_bookmark(true, silent);
 
     int autocreatebookmark = get_autocreatebookmark();
     switch (autocreatebookmark)
     {
         case BOOKMARK_YES:
-            return write_bookmark(true);
+            return write_bookmark(true, silent);
 
         case BOOKMARK_NO:
             return false;
 
         case BOOKMARK_RECENT_ONLY_YES:
-            return write_bookmark(false);
+            return write_bookmark(false, silent);
     }
     const char *lines[]={ID2P(LANG_AUTO_BOOKMARK_QUERY)};
     const struct text_message message={lines, 1};
@@ -279,9 +287,9 @@ bool bookmark_autobookmark(bool prompt_ok)
     if(prompt_ok && gui_syncyesno_run(&message, NULL, NULL)==YESNO_YES)
     {
         if (autocreatebookmark == BOOKMARK_RECENT_ONLY_ASK)
-            return write_bookmark(false);
+            return write_bookmark(false, false);
         else
-            return write_bookmark(true);
+            return write_bookmark(true, false);
     }
     return false;
 }
@@ -297,7 +305,7 @@ bool bookmark_autobookmark(bool prompt_ok)
 /* possible that a bookmark is successfully added to the most recent        */
 /* bookmark list but fails to be added to the bookmark file or vice versa. */
 /* ------------------------------------------------------------------------*/
-static bool write_bookmark(bool create_bookmark_file)
+static bool write_bookmark(bool create_bookmark_file, bool silent)
 {
     const char *bookmark = create_bookmark();
     bool ret=true;
@@ -330,8 +338,9 @@ static bool write_bookmark(bool create_bookmark_file)
         }
     }
 
-    splash(HZ, ret ? ID2P(LANG_BOOKMARK_CREATE_SUCCESS)
-           : ID2P(LANG_BOOKMARK_CREATE_FAILURE));
+    if (!silent)
+        splash(HZ, ret ? ID2P(LANG_BOOKMARK_CREATE_SUCCESS)
+               : ID2P(LANG_BOOKMARK_CREATE_FAILURE));
 
     return ret;
 }
