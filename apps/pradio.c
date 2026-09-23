@@ -375,7 +375,14 @@ static int pick_track(int n, unsigned int seed, uint32_t now,
     static struct playlist_track_info info;
 
     int pick = (int)((now / PRADIO_ROTATE_SECS + seed) % (unsigned)n);
+    int found = -1;
 
+    /* The length handed back must be the length of the track handed back.
+     * Settling for the scheduled track after none cleared the floor used
+     * to return it with the length of the last one looked at, so the clock
+     * seeked a short file by a long one's offset - off its end and into
+     * the start of the next, which is every tune-in landing on a track's
+     * first second. */
     *length = 0;
     for (int i = 0; i < PRADIO_TRIES && i < n; i++)
     {
@@ -386,14 +393,15 @@ static int pick_track(int n, unsigned int seed, uint32_t now,
         if (!get_metadata(&tune_id3, -1, info.filename))
             continue;
 
-        *length = tune_id3.length;
-        if (long_enough(tune_id3.length) || i == PRADIO_TRIES - 1)
+        if (found < 0 || long_enough(tune_id3.length))
         {
-            pick = idx;
-            break;
+            found = idx;
+            *length = tune_id3.length;
         }
+        if (long_enough(tune_id3.length))
+            break;
     }
-    return pick;
+    return found < 0 ? pick : found;
 }
 
 /* The station tuned last, by name, so the dial comes back where it was
