@@ -17,6 +17,7 @@ stick.c
 stick_config.c
 stick_glue.c
 rpkeys.c
+screenshot.c
 #endif
 #ifdef HAVE_COMPOSITOR
 canvas.c
