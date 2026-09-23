@@ -863,7 +863,7 @@ SHF%xd(O,%ps)
 # The meter fills 62 px of an 66 px band. It used to be 24, because the
 # engine drew a peak meter one line of the viewport's font tall and
 # nothing else; %pm takes a height now.
-%Vl(pm_short,30,616,240,66,2)
+%Vl(pm_short,30,616,-30,66,2)
 %Vt(0)
 %pm(62)
 #
@@ -878,14 +878,6 @@ SHF%xd(O,%ps)
 %Vl(ff,30,634,240,46,4)
 %Vt(0)
 %al%>%> FF
-#
-%V(280,628,-30,30,2)
-%Vt(0)
-%ar%fc %fb
-#
-%V(280,658,-30,30,2)
-%Vt(0)
-%ar%?if(%St(party mode),!=,off)<party|%?if(%St(single mode),!=,off)<%St(single mode)|%fk kHz>>
 #
 # Station
 # -------

@@ -182,7 +182,7 @@ def dial_border(x, y, w, h, ms=60, stops=12):
     return out
 
 
-def band(y, meter_h=78, h=82):
+def band(y, meter_h=78, h=82, codec=True):
     """The peak meter, the codec column, and the transport states that
     share their rectangle.
 
@@ -192,14 +192,18 @@ def band(y, meter_h=78, h=82):
     No playlist position either. It is in the footer, where it belongs;
     having it alternate with the sample rate as well meant the same
     "1 of 2279" appeared twice on the panel, in two places, out of phase.
+
+    codec=False drops the codec column and gives the meter the whole width:
+    a station's bit rate is how the file was ripped, not something the
+    radio has to say, and it flickered on every recording change.
     """
-    return """#
+    out = """#
 # The band
 # ========
 # The meter fills %d px of an %d px band. It used to be 24, because the
 # engine drew a peak meter one line of the viewport's font tall and
 # nothing else; %%pm takes a height now.
-%%Vl(pm_short,30,%d,240,%d,2)
+%%Vl(pm_short,30,%d,%s,%d,2)
 %%Vt(0)
 %%pm(%d)
 #
@@ -222,8 +226,11 @@ def band(y, meter_h=78, h=82):
 %%V(280,%d,-30,30,2)
 %%Vt(0)
 %%ar%%?if(%%St(party mode),!=,off)<party|%%?if(%%St(single mode),!=,off)<%%St(single mode)|%%fk kHz>>""" % (
-        meter_h, h, y, h, meter_h, y, h, meter_h,
+        meter_h, h, y, "240" if codec else "-30", h, meter_h, y, h, meter_h,
         y + 18, y + 18, y + 12, y + 42)
+    if not codec:
+        out = out[:out.index("#\n%V(280,")].rstrip("\n")
+    return out
 
 
 def hide_while_armed(lines):
@@ -695,7 +702,7 @@ def animated(gauge=False, lyrics=None, radio=False):
                               AX + 10, AY + AH // 2 - 20, AS - 20))
     if sheen:
         o += moving
-    the_band = band(BAND_Y, 62, 66)
+    the_band = band(BAND_Y, 62, 66, codec=not radio)
     if lyrics == "lines":
         the_band, enables = gate(the_band, "bd", "%%?yf<||%s>")
         o[band_slot] = "\n".join(enables)

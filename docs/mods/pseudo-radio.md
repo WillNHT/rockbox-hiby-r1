@@ -191,7 +191,15 @@ the parts that do not apply to a radio taken out - no elapsed, no total, no
 "3 of 52", and no file name, because the file is how the station is made
 rather than a second thing you tuned to. The station has the block to
 itself, and the footer says `on air` or `paused` with a red dot beside it
-that blinks while the carrier is up.
+that blinks while the carrier is up. No codec or bit rate either - how a
+file was ripped is not something a radio has to say - so the level meter
+has the whole width of the band.
+
+A station running on from one recording into the next is not a track change
+anybody asked for, so it is not animated: the screen stays put and the sound
+carries on. The track change transition only plays when the picture changes
+- another station, or a branch of this one with a
+[cover of its own](#station-cover).
 
 The station name comes from `%rs`, a skin tag this fork adds. It is the
 station folder's name, and it is empty when what is playing is not a

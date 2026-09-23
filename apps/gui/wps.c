@@ -73,6 +73,9 @@
 #include "pradio.h"
 #include "transition.h"
 #include "string-extra.h"
+#ifdef HAVE_ALBUMART
+#include "albumart.h"
+#endif
 
 #ifdef USB_ENABLE_AUDIO
 #include "usbstack/usb_audio.h"
@@ -1329,13 +1332,38 @@ struct wps_state *get_wps_state(void)
  * touched from the UI thread; the callback below only swaps id3 pointers. */
 static char transition_path[MAX_PATH];
 static int transition_index = -1;
+/* A radio track's station folder and cover, or empty. */
+static char transition_station[MAX_PATH];
+static char transition_cover[MAX_PATH];
 
 static void transition_note_track(struct wps_state *state, bool animate)
 {
     const char *path = state->id3 ? state->id3->path : "";
     int index = playlist_get_display_index();
+    bool same_look = false;
 
-    if (animate && transition_path[0] && path[0] &&
+    /* A station running on into its next recording is not a track change
+     * anybody asked for, and a transition there is the file player showing
+     * through. Only a new picture - a branch of the station with a cover of
+     * its own - or another station is worth animating. */
+    if (strcmp(path, transition_path))
+    {
+        char station[MAX_PATH], cover[MAX_PATH];
+
+        station[0] = cover[0] = '\0';
+        if (pradio_station_dir(path, station, sizeof(station)))
+        {
+#ifdef HAVE_ALBUMART
+            search_albumart_files(state->id3, "", cover, sizeof(cover));
+#endif
+        }
+        same_look = station[0] && !strcmp(station, transition_station) &&
+                    !strcmp(cover, transition_cover);
+        strmemccpy(transition_station, station, sizeof(transition_station));
+        strmemccpy(transition_cover, cover, sizeof(transition_cover));
+    }
+
+    if (animate && transition_path[0] && path[0] && !same_look &&
         strcmp(path, transition_path))
     {
         /* Previous track, or wrapped round to the end: back. A repeat of
