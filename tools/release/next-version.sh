@@ -25,7 +25,13 @@
 # release for it is worse than a patch bump. While the major version is 0,
 # a breaking change bumps the minor version instead, as SemVer allows.
 #
-# bump=none only when there is nothing new since the previous tag.
+# A commit that only touches documentation or the build machinery - see
+# tools/release/functional.sh - counts for nothing: a CLAUDE.md edit or a
+# pipeline fix merged on its own does not cut a release. A merge is judged
+# by everything it brought in, so a PR mixing docs and code still does.
+#
+# bump=none only when there is nothing new since the previous tag, or
+# nothing new that reaches the player.
 #
 # With no vX.Y.Z tag at all the answer is v0.1.0 (bump=initial) without
 # reading anything: the history below the first release is all of
@@ -34,6 +40,7 @@
 set -eu
 
 rev=${1:-HEAD}
+here=$(dirname "$0")
 
 previous=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' \
            "$rev" 2>/dev/null || true)
@@ -49,6 +56,11 @@ range="$previous..$rev"
 level=0   # 0 none, 1 patch, 2 minor, 3 major
 
 for sha in $(git rev-list "$range"); do
+    # Judged against the first parent: for a merge, that is the whole PR.
+    if [ -z "$(sh "$here/functional.sh" "$sha^1" "$sha")" ]; then
+        continue
+    fi
+
     parents=$(git rev-list --parents -n 1 "$sha" | wc -w)
     subject=$(git log -1 --format=%s "$sha")
     body=$(git log -1 --format=%b "$sha")

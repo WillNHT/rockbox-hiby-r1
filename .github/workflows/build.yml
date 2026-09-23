@@ -38,7 +38,46 @@ jobs:
         fi
         echo "Input floor intact."
 
+  # Documentation and pipeline changes cannot change the firmware, so they
+  # do not wait on a device build. tools/release/functional.sh decides what
+  # counts; a change touching anything else builds as before.
+  changes:
+    runs-on: ubuntu-latest
+    name: Detect functional changes
+    outputs:
+      functional: ${{ steps.detect.outputs.functional }}
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+    - name: Detect
+      id: detect
+      env:
+        BASE_REF: ${{ github.base_ref }}
+        BEFORE: ${{ github.event.before }}
+      run: |
+        if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+          range="origin/$BASE_REF...HEAD"
+        elif [ "$GITHUB_EVENT_NAME" = push ] && [ -n "$BEFORE" ] &&
+             git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+          range="$BEFORE..HEAD"
+        else
+          # A new branch, a manual run: nothing to compare against.
+          echo "functional=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        files=$(sh tools/release/functional.sh "$range")
+        if [ -n "$files" ]; then
+          echo "functional=true" >> "$GITHUB_OUTPUT"
+          echo "Functional changes:"; echo "$files"
+        else
+          echo "functional=false" >> "$GITHUB_OUTPUT"
+          echo "Only documentation and build machinery changed; skipping the device build."
+        fi
+
   build:
+    needs: changes
+    if: needs.changes.outputs.functional == 'true'
     strategy:
       fail-fast: false
       matrix:
