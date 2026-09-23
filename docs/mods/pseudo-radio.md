@@ -83,6 +83,18 @@ It is used for every file in the station, however many subfolders deep the
 file itself sits, and it wins over the ordinary album-art search. Without one
 the normal album-art rules apply.
 
+A branch of a station can have a cover of its own. The closest `cover.jpg`
+wins: the one in the file's own folder, else the one in the folder above,
+and so on up to the station folder - never one in a folder below the file.
+
+```
+/radio/Late Night/cover.jpg              <- set-01.mp3, and anything without its own
+/radio/Late Night/set-01.mp3
+/radio/Late Night/Guests/cover.jpg       <- Guests/a.mp3 and Guests/2019/b.mp3
+/radio/Late Night/Guests/a.mp3
+/radio/Late Night/Guests/2019/b.mp3
+```
+
 ## Settings
 
 **Main Menu - Radio - Radio Settings**
