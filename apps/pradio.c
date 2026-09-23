@@ -465,8 +465,6 @@ static bool tune(int station)
         /* Retuning by hand and arriving from somewhere else are different
          * gestures and sound different; retune_sound says which this is. */
         pradio_sound(retune_sound ? SOUND_RETUNE : SOUND_TUNE);
-        sleep(HZ * pradio_sounds[retune_sound ? SOUND_RETUNE : SOUND_TUNE]
-                   .duration / 1000);
     }
 
     strmemccpy(global_settings.radio_last,

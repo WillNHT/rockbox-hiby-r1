@@ -42,6 +42,16 @@ A burst of white noise on a user-initiated prev/next, the same static the
 station change never arriving clean. It ducks at Alert Depth, the same as
 the track-skip beep it replaces the silence around.
 
+The skip happens at once and the static plays across it, covering the
+moment the next track takes to load. It used to play first and skip after,
+which held the old track and the screen for the whole burst and then left
+the silence it was meant to cover.
+
+With **Crossfade** set to *Always*, a skip also fades the next track in
+over the crossfade's fade-in time - that is the start of a track sounding
+cut after a skip. *Automatic Track Change Only* keeps crossfading between
+songs and lets a skip start at full volume.
+
 | Setting | Default | What it does |
 | --- | --- | --- |
 | Track Change Static | On | Master switch. |

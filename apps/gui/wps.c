@@ -390,6 +390,19 @@ static bool ffwd_rew(int button, bool seek_from_end)
  * (or one skip length, for a file with its own skip length - audiobooks).
  * Returns true on USB connection, like ffwd_rew(). */
 static int get_skip_length(struct mp3entry *id3);
+/* The static over a user-initiated skip. It plays across the skip rather
+ * than in front of it: waiting it out first held the screen and the old
+ * track for its whole length, then left a silence while the next one
+ * loaded - the gap it exists to cover arriving after it had finished. */
+static void track_static(void)
+{
+    if (!global_settings.track_static)
+        return;
+    beep_duck(global_settings.track_static_ms,
+              global_settings.sound_duck_alert);
+    beep_play_noise(global_settings.track_static_ms, TRACK_STATIC_AMP);
+}
+
 static void play_hop(int direction);
 static bool hold_skip(int button)
 {
@@ -1102,14 +1115,7 @@ long gui_wps_show(void)
                 if (pradio_skip(-1))
                     break;
 
-                if (global_settings.track_static)
-                {
-                    beep_duck(global_settings.track_static_ms,
-                             global_settings.sound_duck_alert);
-                    beep_play_noise(global_settings.track_static_ms,
-                                    TRACK_STATIC_AMP);
-                    sleep(HZ * global_settings.track_static_ms / 1000);
-                }
+                track_static();
 
                 /* if we're in A/B repeat mode and the current position
                    is past the A marker, jump back to the A marker... */
@@ -1132,14 +1138,7 @@ long gui_wps_show(void)
                 if (pradio_skip(1))
                     break;
 
-                if (global_settings.track_static)
-                {
-                    beep_duck(global_settings.track_static_ms,
-                             global_settings.sound_duck_alert);
-                    beep_play_noise(global_settings.track_static_ms,
-                                    TRACK_STATIC_AMP);
-                    sleep(HZ * global_settings.track_static_ms / 1000);
-                }
+                track_static();
 
                 /* if we're in A/B repeat mode and the current position is
                    before the A marker, jump to the A marker... */

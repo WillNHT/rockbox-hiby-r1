@@ -46,8 +46,14 @@
 #define NPIX (LCD_WIDTH * LCD_HEIGHT)
 
 /* A transition armed but never run - the caller never waited - must not
- * hold the screen back for longer than this. */
-#define STALE_TICKS (HZ / 2)
+ * hold the screen back for longer than this.
+ *
+ * It is also how long a slow screen gets to finish drawing, because the
+ * give-up runs from a present halfway down it. At half a second a WPS
+ * whose new cover had to be scaled and blurred first could run out of time
+ * with only the picture drawn: the animation went to a frame with no text,
+ * no meter and no bars, and the chrome popped in once it had finished. */
+#define STALE_TICKS (HZ * 3 / 2)
 
 /* Cascade: bands, and how much of the run the last band starts after. */
 #define CASCADE_BANDS  12
