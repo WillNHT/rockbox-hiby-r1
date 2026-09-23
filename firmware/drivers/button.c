@@ -455,8 +455,11 @@ static void button_tick(void)
                     else
 #endif
 #ifdef BUTTON_WAKE_SWALLOWS
-                    /* A key that lands on a dimmed or dark screen only
-                     * wakes it, whatever the first-keypress setting says.
+                    /* A key that lands on a dark screen only wakes it,
+                     * whatever the first-keypress setting says. A dimmed
+                     * screen is readable, so a press there is meant for it
+                     * and goes through - swallowing it made every first
+                     * press after the dim timeout a wasted one.
                      *
                      * At most one press in a row is ever eaten this way:
                      * wake_swallow stays set until a press is actually
@@ -467,7 +470,7 @@ static void button_tick(void)
                      * every press for good, which is a device the user can
                      * only get back by holding the power key. Losing one
                      * press is a far cheaper failure. */
-                    if ((btn & BUTTON_WAKE_SWALLOWS) && !is_backlight_lit()
+                    if ((btn & BUTTON_WAKE_SWALLOWS) && !is_backlight_on(false)
                         && !wake_swallow)
                     {
                         skip_release = true;
