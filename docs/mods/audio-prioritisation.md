@@ -73,3 +73,26 @@ track change static duration: 1000
 | The menu | A depth |
 | --- | --- |
 | ![Audio Prioritisation menu](screenshots/audio-prioritisation-menu.png) | ![Click Depth](screenshots/audio-prioritisation-depth.png) |
+
+## Startup volume
+
+**Settings - Playback**
+
+Resuming just after power-up - the WPS as the start screen - brings back
+whatever was playing last at whatever volume it was left at, which is how
+the loudest song of yesterday arrives in the ears at once. It now comes back
+gently: no louder than **Startup Volume Limit**, and faded in from silence
+over three seconds.
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| Fade In At Startup | On | The music comes up from silence over 3 s. |
+| Startup Volume Limit | 40 % | The most volume a power-up resume comes back at. Lower volumes are left alone; 100 % turns the limit off. |
+
+The fade is the same lever as the ducking above, held down longer, so a
+device sound during it - the radio tuning in - does not cut it short.
+
+```
+startup fade in: on
+startup volume limit: 40
+```

@@ -2773,6 +2773,13 @@ const struct settings_list settings[] = {
    INT_SETTING(F_TIME_SETTING, track_static_ms, LANG_TRACK_STATIC_MS, 1000,
                "track change static duration", UNIT_MS, 100, 3000, 100,
                NULL, NULL, NULL),
+   /* Resuming at power-up: whatever was playing last comes back capped and
+    * fading in, not at the full volume of the loudest song of yesterday. */
+   OFFON_SETTING(0, startup_fade, LANG_STARTUP_FADE, true,
+                 "startup fade in", NULL),
+   INT_SETTING(0, startup_volume_limit, LANG_STARTUP_VOLUME_LIMIT, 40,
+               "startup volume limit", UNIT_PERCENT, 5, 100, 5,
+               NULL, NULL, NULL),
    OFFON_SETTING(0, emoji_enabled, LANG_EMOJI, true, "emoji", NULL),
 #ifdef HAVE_VIDEO
    /* Off until asked for: decoding video is the most expensive thing this

@@ -38,6 +38,7 @@
 #include "power.h"
 #include "talk.h"
 #include "audio.h"
+#include "sound.h"
 #include "audiobooks/audiobooks.h"
 #include "pradio.h"
 #include "shortcuts.h"
@@ -353,6 +354,30 @@ static int recscrn(void* param)
     return GO_TO_ROOT;
 }
 #endif
+/* Resuming just after power-up brings back whatever was playing last, at
+ * whatever volume it was left at - the loudest song of yesterday, at once,
+ * in the ears. It comes back no louder than the startup limit, and faded
+ * in rather than at full level. "Just after power-up" is the first half
+ * minute, which is when a resume onto the WPS happens. */
+#define STARTUP_WINDOW (30 * HZ)
+#define STARTUP_FADE_MS 3000
+static void startup_volume(void)
+{
+    if (current_tick > STARTUP_WINDOW)
+        return;
+
+    int minv = sound_min(SOUND_VOLUME);
+    int maxv = sound_max(SOUND_VOLUME);
+    int cap = minv + (maxv - minv) * global_settings.startup_volume_limit / 100;
+    if (global_status.volume > cap)
+    {
+        global_status.volume = cap;
+        setvol();
+    }
+    if (global_settings.startup_fade)
+        beep_fade_in(STARTUP_FADE_MS);
+}
+
 static int wpsscrn(void* param)
 {
     int ret_val = GO_TO_PREVIOUS;
@@ -367,6 +392,9 @@ static int wpsscrn(void* param)
         dsp_set_timestretch(global_status.resume_speed);
     }
 #endif
+
+    if (!audstatus)
+        startup_volume();
 
     if (audstatus)
     {

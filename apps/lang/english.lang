@@ -20272,3 +20272,31 @@
     *: "Dim Brightness When Locked"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_STARTUP_FADE
+  desc: playback settings: resuming at power-up fades the music in
+  user: core
+  <source>
+    *: "Fade In At Startup"
+  </source>
+  <dest>
+    *: "Fade In At Startup"
+  </dest>
+  <voice>
+    *: "Fade In At Startup"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STARTUP_VOLUME_LIMIT
+  desc: playback settings: the most volume a resume at power-up comes back at
+  user: core
+  <source>
+    *: "Startup Volume Limit"
+  </source>
+  <dest>
+    *: "Startup Volume Limit"
+  </dest>
+  <voice>
+    *: "Startup Volume Limit"
+  </voice>
+</phrase>

@@ -1049,6 +1049,8 @@ struct user_settings
      * transistor-radio feel of changing station by hand. */
     bool track_static;
     int  track_static_ms;
+    bool startup_fade;          /* resume at power-up fades in */
+    int  startup_volume_limit;  /* ...at no more than this % */
     bool emoji_enabled;      /* colour emoji from /.rockbox/emoji */
     /* Audio prioritisation: a device sound with music under it is barely
      * audible, so the music steps aside while it plays. One depth per

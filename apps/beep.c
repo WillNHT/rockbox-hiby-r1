@@ -42,12 +42,44 @@
 static struct timeout duck_tmo;
 static int duck_depth;          /* 0 when the music is at full volume */
 
+/* Fading the music in after a restart is the same lever held down longer:
+ * a duck that lifts a step at a time. Kept apart from duck_depth so a cue
+ * during the fade - the radio tuning in, say - does not end it. */
+#define FADE_STEP_TICKS (HZ / 20)
+static struct timeout fade_tmo;
+static int fade_depth;          /* 0 when not fading in */
+static int fade_step;
+
+static void duck_apply(void)
+{
+    pcmbuf_duck(MAX(duck_depth, fade_depth));
+}
+
 static int duck_release(struct timeout *tmo)
 {
     (void)tmo;
     duck_depth = 0;
-    pcmbuf_duck(0);
+    duck_apply();
     return 0;                   /* <= 0 unregisters */
+}
+
+static int fade_tick(struct timeout *tmo)
+{
+    (void)tmo;
+    fade_depth = MAX(fade_depth - fade_step, 0);
+    duck_apply();
+    return fade_depth > 0 ? FADE_STEP_TICKS : 0;
+}
+
+/* Bring the music up from silence over 'duration' ms. */
+void beep_fade_in(unsigned int duration)
+{
+    int steps = MAX(1, (int)(HZ * duration / 1000 / FADE_STEP_TICKS));
+
+    fade_step = MAX(1, 100 / steps);
+    fade_depth = 100;
+    duck_apply();
+    timeout_register(&fade_tmo, fade_tick, FADE_STEP_TICKS, 0);
 }
 
 /* Step the music aside by 'percent' for the length of a sound. Several
@@ -60,7 +92,7 @@ void beep_duck(unsigned int duration, int percent)
     if (percent > duck_depth)
     {
         duck_depth = percent;
-        pcmbuf_duck(percent);
+        duck_apply();
     }
 
     timeout_register(&duck_tmo, duck_release,
