@@ -55,10 +55,14 @@ every station is a few presses away. A station with more than one file also
 plays them in an order of its own rather than alphabetically.
 
 Pausing does not stop the station. Come back after more than half a minute
-and playback drops in as far along as the time you were away, wrapping round
-the recording - so a pause over lunch returns to a different part of the
+and the station is tuned in again by its clock, as far along as the time you
+were away - so a pause over lunch returns to a different part of the
 programme, not to the syllable you left on. Shorter pauses resume where they
 were, because a phone call is not an afternoon.
+
+Switching the player off does not stop it either. With a station last on,
+resuming at power-up (the WPS as the start screen, or Resume Playback) tunes
+the station in by the clock rather than resuming the second it was left on.
 
 Nothing the radio plays is bookmarked. A station was tuned into part-way
 through on purpose, so the second you left it at is an accident of when you

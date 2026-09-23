@@ -421,6 +421,9 @@ static int last_station(void)
 /* Set for the length of one tune() that came from the user moving the dial
  * rather than from arriving at the radio. */
 static bool retune_sound;
+/* Set for a tune() that only puts the station back where its clock says it
+ * is: nothing on the dial moved, so nothing is heard doing it. */
+static bool tune_quiet;
 
 static bool tune(int station)
 {
@@ -457,7 +460,7 @@ static bool tune(int station)
      * something else is still playing is the ordinary case, so it ducks
      * the music the way the other device sounds do - a cue, because
      * missing it is missing the only thing that says the dial moved. */
-    if (global_settings.radio_static)
+    if (global_settings.radio_static && !tune_quiet)
     {
         /* Retuning by hand and arriving from somewhere else are different
          * gestures and sound different; retune_sound says which this is. */
@@ -590,11 +593,22 @@ bool pradio_station_name(const char *path, char *buf, size_t size)
 
 static long pause_tick;
 
+/* Put the station a track belongs to back where its clock says it is. The
+ * clock may have moved it on to another recording altogether, so this is a
+ * tune-in, not a seek within the file that happens to be loaded. */
+static bool resync(const char *path)
+{
+    scan_stations();
+    tune_quiet = true;
+    bool ok = tune(station_of(path));
+    tune_quiet = false;
+    return ok;
+}
+
 /* A station does not wait for you. Come back after a while and it has moved
  * on by as much as you were away, which is the whole difference between
- * tuning in and pressing play.
- * ponytail: current_tick, so a pause across a power cycle is not counted -
- * needs the RTC if "resume tomorrow" has to drift too. */
+ * tuning in and pressing play. A pause across a power cycle is the resume
+ * below, not this. */
 void pradio_pause(bool paused)
 {
     if (paused)
@@ -620,11 +634,22 @@ void pradio_pause(bool paused)
         return;
 
     struct mp3entry *id3 = audio_current_track();
-    if (!id3 || id3->length == 0)
-        return;
+    if (id3)
+        resync(id3->path);
+}
 
-    audio_pre_ff_rewind();
-    audio_ff_rewind((id3->elapsed + away) % id3->length);
+/* Resuming playback - at power-up, onto the WPS - with a station last on.
+ * The station kept going while the device was off, so it is tuned in again
+ * rather than resumed at the second it was left on. */
+bool pradio_resume(int index)
+{
+    static struct playlist_track_info info;
+
+    if (playlist_get_track_info(NULL, index, &info) < 0 ||
+        !pradio_is_station_track(info.filename))
+        return false;
+
+    return resync(info.filename);
 }
 
 /* --- settings --------------------------------------------------------- */

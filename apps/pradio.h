@@ -46,6 +46,10 @@ bool pradio_skip(int dir);
  * resuming after a long pause drops in further along instead of where it
  * stopped. No-op unless the radio is what's playing. */
 void pradio_pause(bool paused);
+/* Resuming the playlist at index after a restart: when that is a station,
+ * tune it in by the clock instead and return true. False leaves the resume
+ * to the caller. Call after playlist_resume(). */
+bool pradio_resume(int index);
 /* The station folder a radio track belongs to, trailing slash included, at
  * whatever depth the file is. False when the path isn't a station track. */
 bool pradio_station_dir(const char *path, char *buf, size_t size);

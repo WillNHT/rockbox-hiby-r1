@@ -385,10 +385,13 @@ static int wpsscrn(void* param)
                (unsigned long)global_status.resume_offset);
         if (playlist_amount() > 0 || playlist_resume() != -1)
         {
-            playlist_resume_track(global_status.resume_index,
-                global_status.resume_crc32,
-                global_status.resume_elapsed,
-                global_status.resume_offset);
+            /* A station kept going while we were off: tune it in again
+             * rather than resume the second it was left on. */
+            if (!pradio_resume(global_status.resume_index))
+                playlist_resume_track(global_status.resume_index,
+                    global_status.resume_crc32,
+                    global_status.resume_elapsed,
+                    global_status.resume_offset);
             ret_val = gui_wps_show();
         }
     }
