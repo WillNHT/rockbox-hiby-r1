@@ -215,6 +215,62 @@ static void frame(int p)        /* p: eased progress, 0..1024 */
         }
         break;
     }
+    case LCD_TRANSITION_WIPE:
+    {
+        /* A soft edge sweeping across, left to right going forward: the
+         * new screen is drawn on behind it, nothing moves. */
+        const int soft = W / 10;
+        int edge = (W + soft) * p / 1024 - soft;    /* new up to here */
+        int x;
+        for (y = 0; y < H; y++)
+        {
+            fb_data *r = d + y * W;
+            const fb_data *f = from_px + y * W, *t = to_px + y * W;
+            for (x = 0; x < W; x++)
+            {
+                int k = t_dir > 0 ? x : W - 1 - x;
+                int w = k < edge ? 32 : k >= edge + soft ? 0
+                                      : 32 - (k - edge) * 32 / soft;
+                r[x] = blend(t[x], f[x], (unsigned)w);
+            }
+        }
+        break;
+    }
+    case LCD_TRANSITION_DISSOLVE:
+    {
+        /* Each pixel fades on its own, starting at a time an ordered
+         * dither gives it, so the new screen grains in rather than
+         * washing over. */
+        static const uint8_t bayer[4][4] =
+            { { 0, 8, 2, 10 }, { 12, 4, 14, 6 },
+              { 3, 11, 1, 9 }, { 15, 7, 13, 5 } };
+        int x;
+        for (y = 0; y < H; y++)
+        {
+            fb_data *r = d + y * W;
+            const fb_data *f = from_px + y * W, *t = to_px + y * W;
+            for (x = 0; x < W; x++)
+            {
+                int w = (p - bayer[y & 3][x & 3] * 48) * 32 / 256;
+                r[x] = blend(t[x], f[x], (unsigned)(w < 0 ? 0 : MIN(w, 32)));
+            }
+        }
+        break;
+    }
+    case LCD_TRANSITION_BLINDS:
+    {
+        /* Slats: every band opens top down going forward, bottom up going
+         * back, all at once, with its leading row half blended. */
+        const int slat = H / 16;
+        int open = slat * p / 1024;
+        for (y = 0; y < H; y++)
+        {
+            int k = t_dir > 0 ? y % slat : slat - 1 - y % slat;
+            unsigned w = k < open ? 32 : k == open ? 16 : 0;
+            blend_row(d + y * W, to_px + y * W, from_px + y * W, W, w);
+        }
+        break;
+    }
     case LCD_TRANSITION_CASCADE:
     default:
     {

@@ -33,14 +33,17 @@ static inline void gui_transition_menu(int dir)
                        global_settings.menu_transition_ms);
 }
 
-static inline void gui_transition_wps(int dir)
+/* kind: a per-mode setting (book_transition, radio_transition) - 0 follows
+ * the track change transition, anything else is that effect + 1. */
+static inline void gui_transition_wps(int dir, int kind)
 {
-    lcd_transition_arm(global_settings.wps_transition, dir,
-                       global_settings.wps_transition_ms);
+    lcd_transition_arm(kind > 0 ? kind - 1 : global_settings.wps_transition,
+                       dir, global_settings.wps_transition_ms);
 }
 #else
 static inline void gui_transition_menu(int dir) { (void)dir; }
-static inline void gui_transition_wps(int dir) { (void)dir; }
+static inline void gui_transition_wps(int dir, int kind)
+{ (void)dir; (void)kind; }
 #endif
 
 #endif /* _GUI_TRANSITION_H_ */

@@ -20188,3 +20188,73 @@
     *: "Band Noise"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_TRANSITION_WIPE
+  desc: transition effect: a soft edge sweeps across the screen
+  user: core
+  <source>
+    *: "Wipe"
+  </source>
+  <dest>
+    *: "Wipe"
+  </dest>
+  <voice>
+    *: "Wipe"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TRANSITION_DISSOLVE
+  desc: transition effect: the new screen grains in pixel by pixel
+  user: core
+  <source>
+    *: "Dissolve"
+  </source>
+  <dest>
+    *: "Dissolve"
+  </dest>
+  <voice>
+    *: "Dissolve"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TRANSITION_BLINDS
+  desc: transition effect: slats open across the screen
+  user: core
+  <source>
+    *: "Blinds"
+  </source>
+  <dest>
+    *: "Blinds"
+  </dest>
+  <voice>
+    *: "Blinds"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BOOK_TRANSITION
+  desc: transitions: track change transition while an audiobook plays
+  user: core
+  <source>
+    *: "Audiobook Transition"
+  </source>
+  <dest>
+    *: "Audiobook Transition"
+  </dest>
+  <voice>
+    *: "Audiobook Transition"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_TRANSITION
+  desc: transitions: track change transition while a radio station plays
+  user: core
+  <source>
+    *: "Radio Transition"
+  </source>
+  <dest>
+    *: "Radio Transition"
+  </dest>
+  <voice>
+    *: "Radio Transition"
+  </voice>
+</phrase>

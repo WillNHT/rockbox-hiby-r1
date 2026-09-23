@@ -1086,6 +1086,8 @@ struct user_settings
     int menu_transition_ms;
     int wps_transition;      /* enum lcd_transition, on track change */
     int wps_transition_ms;
+    int book_transition;     /* 0 = as wps_transition, else effect + 1 */
+    int radio_transition;    /* the same, while a station plays */
 #endif
 #ifdef HAVE_QUICKSCREEN
     bool shortcuts_replaces_qs;

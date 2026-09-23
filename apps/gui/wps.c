@@ -1367,7 +1367,9 @@ static void transition_note_track(struct wps_state *state, bool animate)
     {
         /* Previous track, or wrapped round to the end: back. A repeat of
          * the only track, or a new playlist, reads as forward. */
-        gui_transition_wps(index < transition_index ? -1 : 1);
+        gui_transition_wps(index < transition_index ? -1 : 1,
+            audiobooks_is_book(path) ? global_settings.book_transition :
+            transition_station[0] ? global_settings.radio_transition : 0);
     }
     strmemccpy(transition_path, path, sizeof(transition_path));
     transition_index = index;
