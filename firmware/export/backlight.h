@@ -41,6 +41,9 @@ bool is_backlight_lit(void);
 /* level is in tenths of a percent (0..1000). */
 void backlight_set_dim_brightness(int level);
 int  backlight_get_dim_brightness(void);
+/* The same while input is locked, and whether it is. */
+void backlight_set_dim_brightness_locked(int level);
+void backlight_set_locked(bool locked);
 /* Seconds from dimming to off; 0 = stay dimmed. */
 void backlight_set_off_timeout(int seconds);
 #endif

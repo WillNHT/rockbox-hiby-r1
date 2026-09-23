@@ -875,6 +875,9 @@ static inline void action_code_lookup(action_last_t *last, action_cur_t *cur)
 static inline void do_key_lock(bool lock)
 {
     action_last.keys_locked = lock;
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+    backlight_set_locked(is_keys_locked());
+#endif
     action_last.button = BUTTON_NONE;
     button_clear_queue();
 #if defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN)

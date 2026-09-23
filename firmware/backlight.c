@@ -502,6 +502,8 @@ static void backlight_setup_fade_down(void)
  * timeout counts from the moment the panel dims, so 2 min + 3 min is dark
  * at 5 min. */
 static int backlight_dim_level;          /* 0..1000 */
+static int backlight_dim_level_locked;   /* the same, while input is locked */
+static bool backlight_locked;            /* input is locked               */
 static bool backlight_dimmed;            /* state: dimmed                 */
 static bool backlight_hw_at_dim;         /* panel holds the idle level    */
 static int backlight_off_after;          /* ticks, 0 = never              */
@@ -526,9 +528,17 @@ void backlight_set_off_timeout(int seconds)
         backlight_dim_timer = backlight_off_after;
 }
 
+/* A locked player is usually one that has been put away, so it can sit
+ * much darker than one waiting on the desk. */
+static int dim_level_now(void)
+{
+    return backlight_locked ? backlight_dim_level_locked : backlight_dim_level;
+}
+
 void backlight_set_dim_brightness(int level)
 {
     backlight_dim_level = level;
+    level = dim_level_now();
 
     /* If the panel is sitting at the old idle level right now, move it, so
      * the setting screen shows what it is choosing. Turning dimming off
@@ -553,6 +563,19 @@ int backlight_get_dim_brightness(void)
 {
     return backlight_dim_level;
 }
+
+void backlight_set_dim_brightness_locked(int level)
+{
+    backlight_dim_level_locked = level;
+    backlight_set_dim_brightness(backlight_dim_level);
+}
+
+void backlight_set_locked(bool locked)
+{
+    backlight_locked = locked;
+    backlight_set_dim_brightness(backlight_dim_level);
+}
+
 #endif
 
 static void do_backlight_blank(void);
@@ -571,12 +594,12 @@ static inline void do_backlight_off(void)
      * brightness: the LCD controller must stay awake (no lcd_enable(false),
      * no LCD sleep countdown) or there is nothing to see at any
      * brightness. */
-    if (backlight_dim_level > 0)
+    if (dim_level_now() > 0)
     {
         backlight_dimmed = true;
         backlight_dim_timer = backlight_off_after;
         backlight_hw_on();
-        hw_dim_level(backlight_dim_level);
+        hw_dim_level(dim_level_now());
         return;
     }
     backlight_dimmed = false;

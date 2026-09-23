@@ -604,6 +604,9 @@ static bool handle_power(int held, bool repeat, bool release)
             lock_cue_done = true;
             power_consumed = true;
             locked = !locked;
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+            backlight_set_locked(locked);
+#endif
 #if defined(BUTTON_TOUCH_WAKES) && !defined(SIMULATOR)
             button_set_touch_wake(!locked);
 #endif

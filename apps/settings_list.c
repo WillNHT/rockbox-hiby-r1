@@ -1605,6 +1605,13 @@ const struct settings_list settings[] = {
                 0, 1000, 5,
                 formatter_dim_level, getlang_dim_level,
                 backlight_set_dim_brightness),
+    /* Put away, the player can sit much darker: a separate level while
+     * input is locked, lower by default. */
+    INT_SETTING(F_NO_WRAP, dim_level_locked, LANG_DIM_BRIGHTNESS_LOCKED,
+                20, "dim level locked", UNIT_PERCENT,
+                0, 1000, 5,
+                formatter_dim_level, getlang_dim_level,
+                backlight_set_dim_brightness_locked),
     INT_SETTING(F_DEPRECATED, dim_brightness, LANG_DIM_BRIGHTNESS,
                 -1, "dim brightness", UNIT_INT,
                 -1, MAX_BRIGHTNESS_SETTING, 1,

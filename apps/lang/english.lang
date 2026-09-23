@@ -20258,3 +20258,17 @@
     *: "Radio Transition"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_DIM_BRIGHTNESS_LOCKED
+  desc: in display settings, what the panel dims to while input is locked
+  user: core
+  <source>
+    *: "Dim Brightness When Locked"
+  </source>
+  <dest>
+    *: "Dim Brightness When Locked"
+  </dest>
+  <voice>
+    *: "Dim Brightness When Locked"
+  </voice>
+</phrase>

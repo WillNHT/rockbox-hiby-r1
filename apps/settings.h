@@ -852,6 +852,8 @@ struct user_settings
      * of a percent of the panel's range. Zero is "go dark", the way every
      * other target behaves. */
     int dim_level;
+    /* The same while input is locked. */
+    int dim_level_locked;
     /* The old whole-percent setting, read from an old config.cfg and
      * converted once by settings_apply(); -1 when there is nothing to
      * convert. Never written. */
