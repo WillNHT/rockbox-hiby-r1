@@ -37,10 +37,11 @@ extern const struct menu_item_ex pradio_settings_menu;
 bool pradio_is_station_track(const char *path);
 /* Whether a radio track is what is playing right now. */
 bool pradio_playing(void);
-/* User-initiated prev/next while tuned in: retunes to another station
- * instead of skipping a track. Returns false (does nothing) when the radio
- * isn't what's playing, so the caller falls back to its normal skip. */
-bool pradio_skip(void);
+/* User-initiated prev/next while tuned in: retunes to the station before
+ * (dir < 0) or after (dir > 0) this one instead of skipping a track.
+ * Returns false (does nothing) when the radio isn't what's playing, so the
+ * caller falls back to its normal skip. */
+bool pradio_skip(int dir);
 /* Pause/unpause bookkeeping: a station keeps playing while you are away, so
  * resuming after a long pause drops in further along instead of where it
  * stopped. No-op unless the radio is what's playing. */

@@ -49,7 +49,9 @@ station can be organised into its own subfolders without breaking scanning.
 
 Prev/next moves the dial instead of stepping through the station's files -
 a radio does not let you skip to the next track of the thing playing, it
-switches you to something else. A station with more than one file also
+switches you to something else. Next is the station after this one in the
+station list and previous the one before, wrapping round at either end, so
+every station is a few presses away. A station with more than one file also
 plays them in an order of its own rather than alphabetically.
 
 Pausing does not stop the station. Come back after more than half a minute

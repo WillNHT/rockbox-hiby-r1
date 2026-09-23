@@ -500,14 +500,19 @@ static int station_of(const char *path)
 }
 
 /* User-initiated prev/next while tuned in: a radio dial moves to another
- * station, it does not step to the next track of the one already playing. */
-bool pradio_skip(void)
+ * station, it does not step to the next track of the one already playing.
+ *
+ * The dial turns one station along, in the order the station list shows
+ * them, and wraps. It used to jump to a random one, and rand() is reseeded
+ * by every tune-in's shuffle with that station's own fixed number - so
+ * from any one station the "random" next was nearly always the same one,
+ * and some stations could hardly be reached at all. */
+bool pradio_skip(int dir)
 {
     if (!pradio_playing())
         return false;
 
     scan_stations();
-    seed_rand();
 
     retune_sound = true;
 
@@ -521,11 +526,9 @@ bool pradio_skip(void)
         struct mp3entry *id3 = audio_current_track();
         int current = id3 ? station_of(id3->path) : -1;
 
-        int station = rand() % nstations;
-        if (current >= 0 && station == current)
-            station = (station + 1) % nstations;
-
-        ok = tune(station);
+        if (current < 0)
+            current = dir > 0 ? -1 : 0;
+        ok = tune((current + (dir > 0 ? 1 : -1) + nstations) % nstations);
     }
 
     retune_sound = false;

@@ -1096,7 +1096,7 @@ long gui_wps_show(void)
 
                 /* tuned in to the radio: a different station, not the
                    previous track of this one */
-                if (pradio_skip())
+                if (pradio_skip(-1))
                     break;
 
                 if (global_settings.track_static)
@@ -1126,7 +1126,7 @@ long gui_wps_show(void)
 
                 /* tuned in to the radio: a different station, not the
                    next track of this one */
-                if (pradio_skip())
+                if (pradio_skip(1))
                     break;
 
                 if (global_settings.track_static)
