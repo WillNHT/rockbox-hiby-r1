@@ -15,6 +15,8 @@ SnappyLyricsLines.wps and SnappyLyricsCaption.wps, and the video demo
 SnappyCanvas.wps.
 """
 import io
+import math
+import random
 
 ACCENT = "D9E021"
 INK    = "F4F2EE"
@@ -428,6 +430,27 @@ SHEEN_H = sum(h for h, _ in SHEEN_PROFILE)
 SHEEN_Y0 = AY + 2
 SHEEN_STOPS = (AH - 4 - SHEEN_H) // SHEEN_STEP + 1
 SHEEN_REST = 30
+# Too clean, as a single pass at one speed every few seconds: it read as a
+# scanner. The cycle is four passes instead, each at its own pace and with
+# its own rest after it, easing in at the top and out at the bottom and
+# stumbling a little on the way (#58). A fixed seed, so the skin a build
+# ships is the skin the next build ships.
+SHEEN_PASSES = [(1.0, SHEEN_REST), (2.2, 55), (0.8, 20), (3.0, 70)]
+SHEEN_SWAY = 18
+
+
+def sheen_schedule():
+    """The stop the sheen is at on each frame of the cycle, None at rest."""
+    rnd = random.Random(58)
+    frames = []
+    for speed, rest in SHEEN_PASSES:
+        pos = 0.0
+        while pos < SHEEN_STOPS:
+            frames.append(int(pos))
+            ease = 0.5 + math.sin(math.pi * pos / SHEEN_STOPS)
+            pos += max(0.25, speed * ease + rnd.uniform(-0.35, 0.35))
+        frames += [None] * (rest + rnd.randint(-8, 8))
+    return frames
 
 
 def gate(lines, prefix, cond):
@@ -582,14 +605,16 @@ def animated(gauge=False, lyrics=None, radio=False):
     # There used to be two more: a yellow segment chasing round the cover's
     # edge and a breathing rule under the title. Both are gone (#23) - the
     # cover is the picture, and a light running round it only competed.
-    frames = SHEEN_STOPS + SHEEN_REST
+    schedule = sheen_schedule()
+    frames = len(schedule)
     # The caption sits on the cover, and the sheen restores the cover as it
     # passes: %yb only redraws when its lines move, so the two would take
     # turns erasing each other. The caption variant has no sheen.
     sheen = lyrics not in ("caption", "canvas")
-    for i in range(SHEEN_STOPS if sheen else 0):
-        o.append("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%02d)>"
-                 % (frames, SHEEN_MS, i + 1, i))
+    for f, stop in enumerate(schedule if sheen else []):
+        if stop is not None:
+            o.append("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%02d)>"
+                     % (frames, SHEEN_MS, f + 1, stop))
 
     if not gauge:
         # Its enables come first in what it returns, then its viewports -
@@ -620,8 +645,14 @@ def animated(gauge=False, lyrics=None, radio=False):
     moving.append("#")
     for i in range(SHEEN_STOPS):
         sy = SHEEN_Y0 + i * SHEEN_STEP
+        # The sway: the band drifts sideways as it goes down, one edge
+        # pulling in and then the other, so it moves across the cover as
+        # well as down it. Kept inside the cover by narrowing, not moving
+        # past its edge.
+        sway = round(SHEEN_SWAY * math.sin(2 * math.pi * i / SHEEN_STOPS))
         moving.append("%%Vl(sh%02d,%d,%d,%d,%d,-)"
-                      % (i, AX + 2, sy, ART_W, SHEEN_H))
+                      % (i, AX + 2 + max(sway, 0), sy, ART_W - abs(sway),
+                         SHEEN_H))
         moving.append("%Vt(0)")
         y = 0
         for h, a in SHEEN_PROFILE:

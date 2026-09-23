@@ -361,10 +361,12 @@ static void bd_draw_cover(struct canvas_surface *surf,
     }
 
     /* A soft shadow first, so the cover's edge stands off its own blurred
-     * copy instead of melting into it where the two are the same colour. */
+     * copy instead of melting into it where the two are the same colour.
+     * Wide and light rather than tight and dark: at 14 px and nearly
+     * opaque it read as a black frame around any bright cover (#58). */
     {
         struct canvas_rect sr = { x, y, w, h };
-        canvas_shadow(surf, &sr, 0, 14, 0, 6, (canvas_px)bd_ground, 230);
+        canvas_shadow(surf, &sr, 0, 32, 0, 10, (canvas_px)bd_ground, 150);
     }
 
     for (row = 0; row < h; row++)
