@@ -14,7 +14,7 @@ Alternatively, you can [download](./configs/audiobook-mod-config.cfg) it manuall
 * Lock turns off the screen instantly, media buttons remain active.
 * Rewind across tracks is enabled (skipping to the end of the previous track).
 * CUE support is enabled.
-* Sleep Timer is set to 45 minutes, with the timer resetting upon pressing any button.
+* No sleep timer at startup. The original set a 45 minute one on every boot, restarted by every button - a timer nobody had asked for, counting down on the clock. Start one from the quickscreen's Playback page or the audiobook player instead.
 
 **To see chapters in M4B:**
 Open the context menu for the M4B file -> *Open with...* -> *mp4chapters_to_cue*. A .cue file with the book's chapters will be generated next to the file.
