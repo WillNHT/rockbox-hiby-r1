@@ -697,6 +697,16 @@ static void _lists_uiviewport_update_callback(unsigned short id,
         gui_synclist_draw(current_lists);
 }
 
+#ifdef HAVE_TOUCHSCREEN
+static struct timeout click_tmo;
+static int click_redraw(struct timeout *tmo)
+{
+    (void)tmo;
+    button_queue_post(BUTTON_REDRAW, 0);
+    return 0;
+}
+#endif
+
 bool gui_synclist_do_button(struct gui_synclist * lists, int *actionptr)
 {
     int action = *actionptr;
@@ -765,15 +775,32 @@ bool gui_synclist_do_button(struct gui_synclist * lists, int *actionptr)
 #ifdef HAVE_TOUCHSCREEN
         {
             /* A drag moves the selection without a key, so nothing clicked
-             * for it; click here whenever the highlight lands on a new row,
-             * as the stick's scroll steps did. */
+             * for it; click once per row the highlight passes, as the
+             * stick's scroll steps did. One click per redraw - a second
+             * would cut the first off - and the rest owed to redraws asked
+             * for a moment later. A few at most are carried, or a fast
+             * throw would keep clicking after the list stopped. */
             static struct gui_synclist *click_list;
-            static int click_sel;
-            if (click_list == lists && click_sel != lists->selected_item &&
-                keyclick_enabled(KEYCLICK_SRC_STICK_SCROLL))
-                system_sound_play(SOUND_KEYCLICK);
+            static int click_sel, click_owed;
+            if (click_list == lists)
+            {
+                int rows = lists->selected_item - click_sel;
+                click_owed += rows < 0 ? -rows : rows;
+                if (click_owed > 3)
+                    click_owed = 3;
+            }
+            else
+                click_owed = 0;
             click_list = lists;
             click_sel = lists->selected_item;
+            if (click_owed > 0 && keyclick_enabled(KEYCLICK_SRC_STICK_SCROLL))
+            {
+                system_sound_play(SOUND_KEYCLICK);
+                if (--click_owed > 0)
+                    timeout_register(&click_tmo, click_redraw, HZ/40, 0);
+            }
+            else
+                click_owed = 0;
         }
 #endif
             gui_synclist_draw(lists);
