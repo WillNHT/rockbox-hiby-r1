@@ -211,6 +211,8 @@ enum skin_token_type {
      * when what is playing is not a station track. A skin conditions on it
      * to know it is a radio at all. */
     SKIN_TOKEN_RADIO_STATION,
+    /* "dynamic" or "static" while a station is on air, empty otherwise. */
+    SKIN_TOKEN_RADIO_KIND,
 
     /* Playlist */
     SKIN_TOKEN_PLAYLIST_ENTRIES,

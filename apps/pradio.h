@@ -37,14 +37,19 @@ extern const struct menu_item_ex pradio_settings_menu;
 bool pradio_is_station_track(const char *path);
 /* Whether a radio track is what is playing right now. */
 bool pradio_playing(void);
-/* User-initiated prev/next while tuned in: retunes to another station
- * instead of skipping a track. Returns false (does nothing) when the radio
- * isn't what's playing, so the caller falls back to its normal skip. */
-bool pradio_skip(void);
+/* User-initiated prev/next while tuned in: retunes to the station before
+ * (dir < 0) or after (dir > 0) this one instead of skipping a track.
+ * Returns false (does nothing) when the radio isn't what's playing, so the
+ * caller falls back to its normal skip. */
+bool pradio_skip(int dir);
 /* Pause/unpause bookkeeping: a station keeps playing while you are away, so
  * resuming after a long pause drops in further along instead of where it
  * stopped. No-op unless the radio is what's playing. */
 void pradio_pause(bool paused);
+/* Resuming the playlist at index after a restart: when that is a station,
+ * tune it in by the clock instead and return true. False leaves the resume
+ * to the caller. Call after playlist_resume(). */
+bool pradio_resume(int index);
 /* The station folder a radio track belongs to, trailing slash included, at
  * whatever depth the file is. False when the path isn't a station track. */
 bool pradio_station_dir(const char *path, char *buf, size_t size);
@@ -53,6 +58,9 @@ bool pradio_station_dir(const char *path, char *buf, size_t size);
 bool pradio_station_name(const char *path, char *buf, size_t size);
 /* The set going off. Call while the station is still playing. */
 void pradio_leaving(void);
+/* Whether the station on air is a dynamic one - its music from the
+ * library, by the station.cfg in its folder. What %rd says. */
+bool pradio_dynamic(void);
 /* Called from the WPS loop: every hour or two, something drifts past on
  * the band. Cheap and a no-op unless a station is playing. */
 void pradio_ambience_tick(void);

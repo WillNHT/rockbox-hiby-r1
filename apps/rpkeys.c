@@ -60,6 +60,7 @@
 #include "timeout.h"
 #include "powermgmt.h"
 #include "rpkeys.h"
+#include "screenshot.h"
 #include "settings.h"
 #include "skin_engine/skin_engine.h"
 #include "sound.h"
@@ -111,6 +112,7 @@ static int  lock_chirp_step;    /* how far the arming run has got         */
 static long power_down_tick;    /* 0 when POWER is not held               */
 static bool power_consumed;     /* this press already did something       */
 static long vol_next_tick;
+static bool shot_taken;         /* this POWER press took a screenshot  */
 static bool countdown_drawn;
 
 bool rpkeys_locked(void)
@@ -526,6 +528,7 @@ static bool handle_power(int held, bool repeat, bool release)
         lock_cue_done = false;
         lock_chirp_step = 0;
         power_consumed = false;
+        shot_taken = false;
 
         if (was_tap)
         {
@@ -553,6 +556,24 @@ static bool handle_power(int held, bool repeat, bool release)
         }
         return true;
     }
+
+    /* POWER with the Next key: a screenshot. The press is spent on it -
+     * not a tap, not a lock, no countdown - and it fires once however
+     * long the two are held. */
+    if ((held & BUTTON_RIGHT) && !shot_taken)
+    {
+        if (!power_down_tick)
+            power_down_tick = now;
+        shot_taken = true;
+        power_consumed = true;
+        lock_cue_done = true;
+        countdown_clear();
+        screenshot_take();
+        cue();
+        return true;
+    }
+    if (shot_taken)
+        return true;
 
     if (!power_down_tick)
     {
@@ -604,6 +625,9 @@ static bool handle_power(int held, bool repeat, bool release)
             lock_cue_done = true;
             power_consumed = true;
             locked = !locked;
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+            backlight_set_locked(locked);
+#endif
 #if defined(BUTTON_TOUCH_WAKES) && !defined(SIMULATOR)
             button_set_touch_wake(!locked);
 #endif

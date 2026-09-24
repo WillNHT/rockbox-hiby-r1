@@ -90,6 +90,8 @@ void skin_unload_all(void);
 
 bool skin_do_full_update(enum skinnable_screens skin, enum screen_type screen);
 void skin_request_full_update(enum skinnable_screens skin);
+/* Whether a full update is waiting, without taking it. */
+bool skin_full_update_pending(enum skinnable_screens skin);
 /* While a book plays the WPS can be a different one (Audiobook WPS).
  * Switching unloads the WPS so the next use loads the right file; force
  * does so even when the file did not change (the setting did). */

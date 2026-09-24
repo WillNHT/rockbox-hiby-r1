@@ -1605,6 +1605,13 @@ const struct settings_list settings[] = {
                 0, 1000, 5,
                 formatter_dim_level, getlang_dim_level,
                 backlight_set_dim_brightness),
+    /* Put away, the player can sit much darker: a separate level while
+     * input is locked, lower by default. */
+    INT_SETTING(F_NO_WRAP, dim_level_locked, LANG_DIM_BRIGHTNESS_LOCKED,
+                20, "dim level locked", UNIT_PERCENT,
+                0, 1000, 5,
+                formatter_dim_level, getlang_dim_level,
+                backlight_set_dim_brightness_locked),
     INT_SETTING(F_DEPRECATED, dim_brightness, LANG_DIM_BRIGHTNESS,
                 -1, "dim brightness", UNIT_INT,
                 -1, MAX_BRIGHTNESS_SETTING, 1,
@@ -2766,6 +2773,13 @@ const struct settings_list settings[] = {
    INT_SETTING(F_TIME_SETTING, track_static_ms, LANG_TRACK_STATIC_MS, 1000,
                "track change static duration", UNIT_MS, 100, 3000, 100,
                NULL, NULL, NULL),
+   /* Resuming at power-up: whatever was playing last comes back capped and
+    * fading in, not at the full volume of the loudest song of yesterday. */
+   OFFON_SETTING(0, startup_fade, LANG_STARTUP_FADE, true,
+                 "startup fade in", NULL),
+   INT_SETTING(0, startup_volume_limit, LANG_STARTUP_VOLUME_LIMIT, 40,
+               "startup volume limit", UNIT_PERCENT, 5, 100, 5,
+               NULL, NULL, NULL),
    OFFON_SETTING(0, emoji_enabled, LANG_EMOJI, true, "emoji", NULL),
 #ifdef HAVE_VIDEO
    /* Off until asked for: decoding video is the most expensive thing this
@@ -2849,22 +2863,50 @@ const struct settings_list settings[] = {
     * user can still change them afterwards. */
    CHOICE_SETTING(0, menu_transition, LANG_MENU_TRANSITION,
                   LCD_TRANSITION_SLIDE, "menu transition",
-                  "off,fade,slide,push,cascade", NULL, LCD_TRANSITION_COUNT,
+                  "off,fade,slide,push,cascade,wipe,dissolve,blinds", NULL,
+                  LCD_TRANSITION_COUNT,
                   ID2P(LANG_OFF), ID2P(LANG_TRANSITION_FADE),
                   ID2P(LANG_TRANSITION_SLIDE), ID2P(LANG_TRANSITION_PUSH),
-                  ID2P(LANG_TRANSITION_CASCADE)),
+                  ID2P(LANG_TRANSITION_CASCADE), ID2P(LANG_TRANSITION_WIPE),
+                  ID2P(LANG_TRANSITION_DISSOLVE),
+                  ID2P(LANG_TRANSITION_BLINDS)),
    INT_SETTING(F_TIME_SETTING, menu_transition_ms, LANG_MENU_TRANSITION_TIME,
                200, "menu transition time", UNIT_MS, 50, 1000, 50,
                NULL, NULL, NULL),
    CHOICE_SETTING(0, wps_transition, LANG_WPS_TRANSITION,
                   LCD_TRANSITION_FADE, "wps transition",
-                  "off,fade,slide,push,cascade", NULL, LCD_TRANSITION_COUNT,
+                  "off,fade,slide,push,cascade,wipe,dissolve,blinds", NULL,
+                  LCD_TRANSITION_COUNT,
                   ID2P(LANG_OFF), ID2P(LANG_TRANSITION_FADE),
                   ID2P(LANG_TRANSITION_SLIDE), ID2P(LANG_TRANSITION_PUSH),
-                  ID2P(LANG_TRANSITION_CASCADE)),
+                  ID2P(LANG_TRANSITION_CASCADE), ID2P(LANG_TRANSITION_WIPE),
+                  ID2P(LANG_TRANSITION_DISSOLVE),
+                  ID2P(LANG_TRANSITION_BLINDS)),
    INT_SETTING(F_TIME_SETTING, wps_transition_ms, LANG_WPS_TRANSITION_TIME,
                250, "wps transition time", UNIT_MS, 50, 1000, 50,
                NULL, NULL, NULL),
+   /* A book and a station can have their own track change, the way they
+    * can have their own WPS. "music" is the first value, so 0 follows the
+    * track change transition above and the rest are the effects shifted
+    * up by one. */
+   CHOICE_SETTING(0, book_transition, LANG_BOOK_TRANSITION, 0,
+                  "audiobook transition",
+                  "music,off,fade,slide,push,cascade,wipe,dissolve,blinds",
+                  NULL, LCD_TRANSITION_COUNT + 1, ID2P(LANG_AB_SAME_AS_MUSIC),
+                  ID2P(LANG_OFF), ID2P(LANG_TRANSITION_FADE),
+                  ID2P(LANG_TRANSITION_SLIDE), ID2P(LANG_TRANSITION_PUSH),
+                  ID2P(LANG_TRANSITION_CASCADE), ID2P(LANG_TRANSITION_WIPE),
+                  ID2P(LANG_TRANSITION_DISSOLVE),
+                  ID2P(LANG_TRANSITION_BLINDS)),
+   CHOICE_SETTING(0, radio_transition, LANG_RADIO_TRANSITION, 0,
+                  "radio transition",
+                  "music,off,fade,slide,push,cascade,wipe,dissolve,blinds",
+                  NULL, LCD_TRANSITION_COUNT + 1, ID2P(LANG_AB_SAME_AS_MUSIC),
+                  ID2P(LANG_OFF), ID2P(LANG_TRANSITION_FADE),
+                  ID2P(LANG_TRANSITION_SLIDE), ID2P(LANG_TRANSITION_PUSH),
+                  ID2P(LANG_TRANSITION_CASCADE), ID2P(LANG_TRANSITION_WIPE),
+                  ID2P(LANG_TRANSITION_DISSOLVE),
+                  ID2P(LANG_TRANSITION_BLINDS)),
 #endif
    CUSTOM_SETTING(0, root_menu_renamed,
                   LANG_ROCKBOX_TITLE, /* lang string here is never actually used */

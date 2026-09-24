@@ -32,7 +32,7 @@
 %Fl(4,44-GeistMono-SemiBold.fnt)
 %Fl(5,58-GeistMono-SemiBold.fnt)
 %xl(B,batt_wps.bmp,2,0,2)
-%xl(K,clock_wps.bmp)
+%xl(K,clock_wps.bmp,6,0)
 %xl(O,off_on.bmp,48,0,2)
 %xl(vb,vb.bmp)
 %xl(bb,bb.bmp)
@@ -44,71 +44,196 @@
 %?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>
 %?C<%Vd(mirror)>
 %?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>
-%?mh<|%Vd(volbar)>
+%Vd(volbar)
 %?mp<|%Vd(live)||%Vd(live)|%Vd(live)>
-%?if(%an(93,50),=,1)<%Vd(sh00)>
-%?if(%an(93,50),=,2)<%Vd(sh01)>
-%?if(%an(93,50),=,3)<%Vd(sh02)>
-%?if(%an(93,50),=,4)<%Vd(sh03)>
-%?if(%an(93,50),=,5)<%Vd(sh04)>
-%?if(%an(93,50),=,6)<%Vd(sh05)>
-%?if(%an(93,50),=,7)<%Vd(sh06)>
-%?if(%an(93,50),=,8)<%Vd(sh07)>
-%?if(%an(93,50),=,9)<%Vd(sh08)>
-%?if(%an(93,50),=,10)<%Vd(sh09)>
-%?if(%an(93,50),=,11)<%Vd(sh10)>
-%?if(%an(93,50),=,12)<%Vd(sh11)>
-%?if(%an(93,50),=,13)<%Vd(sh12)>
-%?if(%an(93,50),=,14)<%Vd(sh13)>
-%?if(%an(93,50),=,15)<%Vd(sh14)>
-%?if(%an(93,50),=,16)<%Vd(sh15)>
-%?if(%an(93,50),=,17)<%Vd(sh16)>
-%?if(%an(93,50),=,18)<%Vd(sh17)>
-%?if(%an(93,50),=,19)<%Vd(sh18)>
-%?if(%an(93,50),=,20)<%Vd(sh19)>
-%?if(%an(93,50),=,21)<%Vd(sh20)>
-%?if(%an(93,50),=,22)<%Vd(sh21)>
-%?if(%an(93,50),=,23)<%Vd(sh22)>
-%?if(%an(93,50),=,24)<%Vd(sh23)>
-%?if(%an(93,50),=,25)<%Vd(sh24)>
-%?if(%an(93,50),=,26)<%Vd(sh25)>
-%?if(%an(93,50),=,27)<%Vd(sh26)>
-%?if(%an(93,50),=,28)<%Vd(sh27)>
-%?if(%an(93,50),=,29)<%Vd(sh28)>
-%?if(%an(93,50),=,30)<%Vd(sh29)>
-%?if(%an(93,50),=,31)<%Vd(sh30)>
-%?if(%an(93,50),=,32)<%Vd(sh31)>
-%?if(%an(93,50),=,33)<%Vd(sh32)>
-%?if(%an(93,50),=,34)<%Vd(sh33)>
-%?if(%an(93,50),=,35)<%Vd(sh34)>
-%?if(%an(93,50),=,36)<%Vd(sh35)>
-%?if(%an(93,50),=,37)<%Vd(sh36)>
-%?if(%an(93,50),=,38)<%Vd(sh37)>
-%?if(%an(93,50),=,39)<%Vd(sh38)>
-%?if(%an(93,50),=,40)<%Vd(sh39)>
-%?if(%an(93,50),=,41)<%Vd(sh40)>
-%?if(%an(93,50),=,42)<%Vd(sh41)>
-%?if(%an(93,50),=,43)<%Vd(sh42)>
-%?if(%an(93,50),=,44)<%Vd(sh43)>
-%?if(%an(93,50),=,45)<%Vd(sh44)>
-%?if(%an(93,50),=,46)<%Vd(sh45)>
-%?if(%an(93,50),=,47)<%Vd(sh46)>
-%?if(%an(93,50),=,48)<%Vd(sh47)>
-%?if(%an(93,50),=,49)<%Vd(sh48)>
-%?if(%an(93,50),=,50)<%Vd(sh49)>
-%?if(%an(93,50),=,51)<%Vd(sh50)>
-%?if(%an(93,50),=,52)<%Vd(sh51)>
-%?if(%an(93,50),=,53)<%Vd(sh52)>
-%?if(%an(93,50),=,54)<%Vd(sh53)>
-%?if(%an(93,50),=,55)<%Vd(sh54)>
-%?if(%an(93,50),=,56)<%Vd(sh55)>
-%?if(%an(93,50),=,57)<%Vd(sh56)>
-%?if(%an(93,50),=,58)<%Vd(sh57)>
-%?if(%an(93,50),=,59)<%Vd(sh58)>
-%?if(%an(93,50),=,60)<%Vd(sh59)>
-%?if(%an(93,50),=,61)<%Vd(sh60)>
-%?if(%an(93,50),=,62)<%Vd(sh61)>
-%?if(%an(93,50),=,63)<%Vd(sh62)>
+%?if(%an(360,50),=,1)<%Vd(sh00)>
+%?if(%an(360,50),=,2)<%Vd(sh00)>
+%?if(%an(360,50),=,3)<%Vd(sh00)>
+%?if(%an(360,50),=,4)<%Vd(sh01)>
+%?if(%an(360,50),=,5)<%Vd(sh02)>
+%?if(%an(360,50),=,6)<%Vd(sh02)>
+%?if(%an(360,50),=,7)<%Vd(sh03)>
+%?if(%an(360,50),=,8)<%Vd(sh03)>
+%?if(%an(360,50),=,9)<%Vd(sh04)>
+%?if(%an(360,50),=,10)<%Vd(sh05)>
+%?if(%an(360,50),=,11)<%Vd(sh06)>
+%?if(%an(360,50),=,12)<%Vd(sh07)>
+%?if(%an(360,50),=,13)<%Vd(sh08)>
+%?if(%an(360,50),=,14)<%Vd(sh09)>
+%?if(%an(360,50),=,15)<%Vd(sh10)>
+%?if(%an(360,50),=,16)<%Vd(sh11)>
+%?if(%an(360,50),=,17)<%Vd(sh12)>
+%?if(%an(360,50),=,18)<%Vd(sh12)>
+%?if(%an(360,50),=,19)<%Vd(sh14)>
+%?if(%an(360,50),=,20)<%Vd(sh15)>
+%?if(%an(360,50),=,21)<%Vd(sh16)>
+%?if(%an(360,50),=,22)<%Vd(sh17)>
+%?if(%an(360,50),=,23)<%Vd(sh18)>
+%?if(%an(360,50),=,24)<%Vd(sh19)>
+%?if(%an(360,50),=,25)<%Vd(sh20)>
+%?if(%an(360,50),=,26)<%Vd(sh22)>
+%?if(%an(360,50),=,27)<%Vd(sh23)>
+%?if(%an(360,50),=,28)<%Vd(sh24)>
+%?if(%an(360,50),=,29)<%Vd(sh26)>
+%?if(%an(360,50),=,30)<%Vd(sh28)>
+%?if(%an(360,50),=,31)<%Vd(sh29)>
+%?if(%an(360,50),=,32)<%Vd(sh31)>
+%?if(%an(360,50),=,33)<%Vd(sh32)>
+%?if(%an(360,50),=,34)<%Vd(sh33)>
+%?if(%an(360,50),=,35)<%Vd(sh35)>
+%?if(%an(360,50),=,36)<%Vd(sh36)>
+%?if(%an(360,50),=,37)<%Vd(sh38)>
+%?if(%an(360,50),=,38)<%Vd(sh39)>
+%?if(%an(360,50),=,39)<%Vd(sh41)>
+%?if(%an(360,50),=,40)<%Vd(sh42)>
+%?if(%an(360,50),=,41)<%Vd(sh43)>
+%?if(%an(360,50),=,42)<%Vd(sh45)>
+%?if(%an(360,50),=,43)<%Vd(sh46)>
+%?if(%an(360,50),=,44)<%Vd(sh48)>
+%?if(%an(360,50),=,45)<%Vd(sh49)>
+%?if(%an(360,50),=,46)<%Vd(sh50)>
+%?if(%an(360,50),=,47)<%Vd(sh51)>
+%?if(%an(360,50),=,48)<%Vd(sh51)>
+%?if(%an(360,50),=,49)<%Vd(sh53)>
+%?if(%an(360,50),=,50)<%Vd(sh54)>
+%?if(%an(360,50),=,51)<%Vd(sh55)>
+%?if(%an(360,50),=,52)<%Vd(sh56)>
+%?if(%an(360,50),=,53)<%Vd(sh56)>
+%?if(%an(360,50),=,54)<%Vd(sh57)>
+%?if(%an(360,50),=,55)<%Vd(sh58)>
+%?if(%an(360,50),=,56)<%Vd(sh59)>
+%?if(%an(360,50),=,57)<%Vd(sh59)>
+%?if(%an(360,50),=,58)<%Vd(sh60)>
+%?if(%an(360,50),=,59)<%Vd(sh61)>
+%?if(%an(360,50),=,60)<%Vd(sh61)>
+%?if(%an(360,50),=,61)<%Vd(sh62)>
+%?if(%an(360,50),=,88)<%Vd(sh00)>
+%?if(%an(360,50),=,89)<%Vd(sh00)>
+%?if(%an(360,50),=,90)<%Vd(sh01)>
+%?if(%an(360,50),=,91)<%Vd(sh02)>
+%?if(%an(360,50),=,92)<%Vd(sh04)>
+%?if(%an(360,50),=,93)<%Vd(sh05)>
+%?if(%an(360,50),=,94)<%Vd(sh07)>
+%?if(%an(360,50),=,95)<%Vd(sh08)>
+%?if(%an(360,50),=,96)<%Vd(sh10)>
+%?if(%an(360,50),=,97)<%Vd(sh12)>
+%?if(%an(360,50),=,98)<%Vd(sh15)>
+%?if(%an(360,50),=,99)<%Vd(sh18)>
+%?if(%an(360,50),=,100)<%Vd(sh21)>
+%?if(%an(360,50),=,101)<%Vd(sh24)>
+%?if(%an(360,50),=,102)<%Vd(sh27)>
+%?if(%an(360,50),=,103)<%Vd(sh30)>
+%?if(%an(360,50),=,104)<%Vd(sh34)>
+%?if(%an(360,50),=,105)<%Vd(sh37)>
+%?if(%an(360,50),=,106)<%Vd(sh40)>
+%?if(%an(360,50),=,107)<%Vd(sh43)>
+%?if(%an(360,50),=,108)<%Vd(sh46)>
+%?if(%an(360,50),=,109)<%Vd(sh49)>
+%?if(%an(360,50),=,110)<%Vd(sh51)>
+%?if(%an(360,50),=,111)<%Vd(sh54)>
+%?if(%an(360,50),=,112)<%Vd(sh55)>
+%?if(%an(360,50),=,113)<%Vd(sh58)>
+%?if(%an(360,50),=,114)<%Vd(sh59)>
+%?if(%an(360,50),=,115)<%Vd(sh61)>
+%?if(%an(360,50),=,116)<%Vd(sh62)>
+%?if(%an(360,50),=,170)<%Vd(sh00)>
+%?if(%an(360,50),=,171)<%Vd(sh00)>
+%?if(%an(360,50),=,172)<%Vd(sh00)>
+%?if(%an(360,50),=,173)<%Vd(sh01)>
+%?if(%an(360,50),=,174)<%Vd(sh01)>
+%?if(%an(360,50),=,175)<%Vd(sh02)>
+%?if(%an(360,50),=,176)<%Vd(sh02)>
+%?if(%an(360,50),=,177)<%Vd(sh03)>
+%?if(%an(360,50),=,178)<%Vd(sh04)>
+%?if(%an(360,50),=,179)<%Vd(sh04)>
+%?if(%an(360,50),=,180)<%Vd(sh05)>
+%?if(%an(360,50),=,181)<%Vd(sh05)>
+%?if(%an(360,50),=,182)<%Vd(sh06)>
+%?if(%an(360,50),=,183)<%Vd(sh06)>
+%?if(%an(360,50),=,184)<%Vd(sh07)>
+%?if(%an(360,50),=,185)<%Vd(sh08)>
+%?if(%an(360,50),=,186)<%Vd(sh09)>
+%?if(%an(360,50),=,187)<%Vd(sh10)>
+%?if(%an(360,50),=,188)<%Vd(sh10)>
+%?if(%an(360,50),=,189)<%Vd(sh11)>
+%?if(%an(360,50),=,190)<%Vd(sh12)>
+%?if(%an(360,50),=,191)<%Vd(sh13)>
+%?if(%an(360,50),=,192)<%Vd(sh14)>
+%?if(%an(360,50),=,193)<%Vd(sh15)>
+%?if(%an(360,50),=,194)<%Vd(sh16)>
+%?if(%an(360,50),=,195)<%Vd(sh17)>
+%?if(%an(360,50),=,196)<%Vd(sh17)>
+%?if(%an(360,50),=,197)<%Vd(sh19)>
+%?if(%an(360,50),=,198)<%Vd(sh20)>
+%?if(%an(360,50),=,199)<%Vd(sh20)>
+%?if(%an(360,50),=,200)<%Vd(sh22)>
+%?if(%an(360,50),=,201)<%Vd(sh23)>
+%?if(%an(360,50),=,202)<%Vd(sh24)>
+%?if(%an(360,50),=,203)<%Vd(sh25)>
+%?if(%an(360,50),=,204)<%Vd(sh26)>
+%?if(%an(360,50),=,205)<%Vd(sh27)>
+%?if(%an(360,50),=,206)<%Vd(sh28)>
+%?if(%an(360,50),=,207)<%Vd(sh29)>
+%?if(%an(360,50),=,208)<%Vd(sh31)>
+%?if(%an(360,50),=,209)<%Vd(sh32)>
+%?if(%an(360,50),=,210)<%Vd(sh33)>
+%?if(%an(360,50),=,211)<%Vd(sh34)>
+%?if(%an(360,50),=,212)<%Vd(sh35)>
+%?if(%an(360,50),=,213)<%Vd(sh36)>
+%?if(%an(360,50),=,214)<%Vd(sh37)>
+%?if(%an(360,50),=,215)<%Vd(sh38)>
+%?if(%an(360,50),=,216)<%Vd(sh40)>
+%?if(%an(360,50),=,217)<%Vd(sh41)>
+%?if(%an(360,50),=,218)<%Vd(sh42)>
+%?if(%an(360,50),=,219)<%Vd(sh43)>
+%?if(%an(360,50),=,220)<%Vd(sh44)>
+%?if(%an(360,50),=,221)<%Vd(sh45)>
+%?if(%an(360,50),=,222)<%Vd(sh46)>
+%?if(%an(360,50),=,223)<%Vd(sh47)>
+%?if(%an(360,50),=,224)<%Vd(sh48)>
+%?if(%an(360,50),=,225)<%Vd(sh49)>
+%?if(%an(360,50),=,226)<%Vd(sh49)>
+%?if(%an(360,50),=,227)<%Vd(sh51)>
+%?if(%an(360,50),=,228)<%Vd(sh51)>
+%?if(%an(360,50),=,229)<%Vd(sh52)>
+%?if(%an(360,50),=,230)<%Vd(sh53)>
+%?if(%an(360,50),=,231)<%Vd(sh53)>
+%?if(%an(360,50),=,232)<%Vd(sh54)>
+%?if(%an(360,50),=,233)<%Vd(sh55)>
+%?if(%an(360,50),=,234)<%Vd(sh55)>
+%?if(%an(360,50),=,235)<%Vd(sh56)>
+%?if(%an(360,50),=,236)<%Vd(sh57)>
+%?if(%an(360,50),=,237)<%Vd(sh57)>
+%?if(%an(360,50),=,238)<%Vd(sh58)>
+%?if(%an(360,50),=,239)<%Vd(sh59)>
+%?if(%an(360,50),=,240)<%Vd(sh59)>
+%?if(%an(360,50),=,241)<%Vd(sh60)>
+%?if(%an(360,50),=,242)<%Vd(sh61)>
+%?if(%an(360,50),=,243)<%Vd(sh61)>
+%?if(%an(360,50),=,244)<%Vd(sh62)>
+%?if(%an(360,50),=,245)<%Vd(sh62)>
+%?if(%an(360,50),=,246)<%Vd(sh62)>
+%?if(%an(360,50),=,266)<%Vd(sh00)>
+%?if(%an(360,50),=,267)<%Vd(sh01)>
+%?if(%an(360,50),=,268)<%Vd(sh03)>
+%?if(%an(360,50),=,269)<%Vd(sh05)>
+%?if(%an(360,50),=,270)<%Vd(sh07)>
+%?if(%an(360,50),=,271)<%Vd(sh10)>
+%?if(%an(360,50),=,272)<%Vd(sh13)>
+%?if(%an(360,50),=,273)<%Vd(sh16)>
+%?if(%an(360,50),=,274)<%Vd(sh20)>
+%?if(%an(360,50),=,275)<%Vd(sh24)>
+%?if(%an(360,50),=,276)<%Vd(sh29)>
+%?if(%an(360,50),=,277)<%Vd(sh33)>
+%?if(%an(360,50),=,278)<%Vd(sh38)>
+%?if(%an(360,50),=,279)<%Vd(sh42)>
+%?if(%an(360,50),=,280)<%Vd(sh46)>
+%?if(%an(360,50),=,281)<%Vd(sh50)>
+%?if(%an(360,50),=,282)<%Vd(sh53)>
+%?if(%an(360,50),=,283)<%Vd(sh56)>
+%?if(%an(360,50),=,284)<%Vd(sh59)>
+%?if(%an(360,50),=,285)<%Vd(sh61)>
+%?if(%an(360,50),=,286)<%Vd(sh62)>
 #
 # The volume dial, armed
 # =====================
@@ -127,46 +252,46 @@
 %?if(%sd,=,1)<%?if(%an(12,60),=,11)<%Vd(vd10)>>
 %?if(%sd,=,1)<%?if(%an(12,60),=,12)<%Vd(vd11)>>
 #
-%Vl(vdrim,27,107,426,42,-)
+%Vl(vdrim,27,23,144,24,-)
 %dr(0,0,-,2,D9E021,D9E021)
-%dr(0,40,-,2,D9E021,D9E021)
+%dr(0,22,-,2,D9E021,D9E021)
 %dr(0,0,2,-,D9E021,D9E021)
-%dr(424,0,2,-,D9E021,D9E021)
+%dr(142,0,2,-,D9E021,D9E021)
 #
-%Vl(vd00,30,107,84,3,-)
+%Vl(vd00,30,23,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd01,114,107,84,3,-)
+%Vl(vd01,57,23,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd02,198,107,84,3,-)
+%Vl(vd02,84,23,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd03,282,107,84,3,-)
+%Vl(vd03,111,23,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd04,366,107,84,3,-)
+%Vl(vd04,138,23,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd05,450,110,3,36,-)
+%Vl(vd05,168,26,3,18,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd06,366,146,84,3,-)
+%Vl(vd06,138,44,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd07,282,146,84,3,-)
+%Vl(vd07,111,44,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd08,198,146,84,3,-)
+%Vl(vd08,84,44,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd09,114,146,84,3,-)
+%Vl(vd09,57,44,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd10,30,146,84,3,-)
+%Vl(vd10,30,44,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd11,27,110,3,36,-)
+%Vl(vd11,27,26,3,18,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 #
@@ -183,8 +308,17 @@
 # Unlabelled, so always drawn. The corner used to be shared with the sleep
 # timer and the volume number, which meant the one thing it is for was the
 # one thing it was often not showing.
+#
+# The whole widget is the inverted box, icon included, as on the battery
+# side (#85): the icon is placed by position, so the inverted line - a
+# stop that the time's own viewport then covers - fills the whole box
+# behind it, and it is drawn in the ground colour like the text. The time is the 24 px face - three quarters
+# of the battery's - in a viewport of its own, centred on the rest of the
+# box; its inverted line refills the part of the box its clear takes out.
 %V(30,48,144,34,3)
-%Vs(invert)%ac%?cH<%xd(K)|%xd(K)> %cH:%cM
+%Vs(invert)%ar%?cH<%xd(K)|%xd(K)>.
+%V(70,52,104,27,2)
+%Vs(invert)%ac%cH:%cM
 #
 # Shuffle
 %V(178,28,94,22,2)
@@ -203,10 +337,10 @@ SHF%xd(O,%ps)
 %Vs(invert)%ac%?bp<%xd(Bb)|%xd(Ba)> %bl%%
 #
 # Volume bar
-%Vl(volbar,30,110,-30,36,-)
-%Vt(0)
-%pv(0,0,-,-,vb,backdrop,vb_backdrop)
-%?if(%pv, >, 0)<%pv(0,0,-,-,vb_too_loud,backdrop,vb_backdrop)>
+# Above the clock, the battery bar's twin on the other side of the row: the
+# same size and the same bitmaps, so the two read as a pair (#85).
+%Vl(volbar,30,26,138,18,-)
+%pv(0,0,138,18,bb,backdrop,bb_backdrop)
 #
 
 #
@@ -299,7 +433,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh01,32,158,416,44,-)
+%Vl(sh01,34,158,414,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -308,7 +442,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh02,32,164,416,44,-)
+%Vl(sh02,36,164,412,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -317,7 +451,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh03,32,170,416,44,-)
+%Vl(sh03,37,170,411,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -326,7 +460,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh04,32,176,416,44,-)
+%Vl(sh04,39,176,409,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -335,7 +469,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh05,32,182,416,44,-)
+%Vl(sh05,41,182,407,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -344,7 +478,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh06,32,188,416,44,-)
+%Vl(sh06,42,188,406,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -353,7 +487,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh07,32,194,416,44,-)
+%Vl(sh07,44,194,404,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -362,7 +496,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh08,32,200,416,44,-)
+%Vl(sh08,45,200,403,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -371,7 +505,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh09,32,206,416,44,-)
+%Vl(sh09,46,206,402,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -380,7 +514,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh10,32,212,416,44,-)
+%Vl(sh10,47,212,401,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -389,7 +523,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh11,32,218,416,44,-)
+%Vl(sh11,48,218,400,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -398,7 +532,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh12,32,224,416,44,-)
+%Vl(sh12,49,224,399,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -407,7 +541,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh13,32,230,416,44,-)
+%Vl(sh13,49,230,399,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -416,7 +550,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh14,32,236,416,44,-)
+%Vl(sh14,50,236,398,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -425,7 +559,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh15,32,242,416,44,-)
+%Vl(sh15,50,242,398,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -434,7 +568,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh16,32,248,416,44,-)
+%Vl(sh16,50,248,398,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -443,7 +577,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh17,32,254,416,44,-)
+%Vl(sh17,50,254,398,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -452,7 +586,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh18,32,260,416,44,-)
+%Vl(sh18,50,260,398,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -461,7 +595,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh19,32,266,416,44,-)
+%Vl(sh19,49,266,399,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -470,7 +604,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh20,32,272,416,44,-)
+%Vl(sh20,48,272,400,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -479,7 +613,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh21,32,278,416,44,-)
+%Vl(sh21,48,278,400,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -488,7 +622,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh22,32,284,416,44,-)
+%Vl(sh22,47,284,401,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -497,7 +631,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh23,32,290,416,44,-)
+%Vl(sh23,45,290,403,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -506,7 +640,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh24,32,296,416,44,-)
+%Vl(sh24,44,296,404,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -515,7 +649,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh25,32,302,416,44,-)
+%Vl(sh25,43,302,405,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -524,7 +658,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh26,32,308,416,44,-)
+%Vl(sh26,41,308,407,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -533,7 +667,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh27,32,314,416,44,-)
+%Vl(sh27,40,314,408,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -542,7 +676,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh28,32,320,416,44,-)
+%Vl(sh28,38,320,410,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -551,7 +685,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh29,32,326,416,44,-)
+%Vl(sh29,36,326,412,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -560,7 +694,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh30,32,332,416,44,-)
+%Vl(sh30,35,332,413,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -569,7 +703,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh31,32,338,416,44,-)
+%Vl(sh31,33,338,415,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -578,7 +712,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh32,32,344,416,44,-)
+%Vl(sh32,32,344,415,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -587,7 +721,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh33,32,350,416,44,-)
+%Vl(sh33,32,350,413,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -596,7 +730,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh34,32,356,416,44,-)
+%Vl(sh34,32,356,412,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -605,7 +739,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh35,32,362,416,44,-)
+%Vl(sh35,32,362,410,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -614,7 +748,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh36,32,368,416,44,-)
+%Vl(sh36,32,368,408,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -623,7 +757,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh37,32,374,416,44,-)
+%Vl(sh37,32,374,407,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -632,7 +766,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh38,32,380,416,44,-)
+%Vl(sh38,32,380,405,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -641,7 +775,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh39,32,386,416,44,-)
+%Vl(sh39,32,386,404,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -650,7 +784,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh40,32,392,416,44,-)
+%Vl(sh40,32,392,403,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -659,7 +793,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh41,32,398,416,44,-)
+%Vl(sh41,32,398,401,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -668,7 +802,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh42,32,404,416,44,-)
+%Vl(sh42,32,404,400,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -677,7 +811,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh43,32,410,416,44,-)
+%Vl(sh43,32,410,400,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -686,7 +820,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh44,32,416,416,44,-)
+%Vl(sh44,32,416,399,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -695,7 +829,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh45,32,422,416,44,-)
+%Vl(sh45,32,422,398,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -704,7 +838,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh46,32,428,416,44,-)
+%Vl(sh46,32,428,398,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -713,7 +847,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh47,32,434,416,44,-)
+%Vl(sh47,32,434,398,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -722,7 +856,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh48,32,440,416,44,-)
+%Vl(sh48,32,440,398,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -731,7 +865,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh49,32,446,416,44,-)
+%Vl(sh49,32,446,398,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -740,7 +874,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh50,32,452,416,44,-)
+%Vl(sh50,32,452,399,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -749,7 +883,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh51,32,458,416,44,-)
+%Vl(sh51,32,458,399,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -758,7 +892,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh52,32,464,416,44,-)
+%Vl(sh52,32,464,400,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -767,7 +901,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh53,32,470,416,44,-)
+%Vl(sh53,32,470,401,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -776,7 +910,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh54,32,476,416,44,-)
+%Vl(sh54,32,476,402,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -785,7 +919,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh55,32,482,416,44,-)
+%Vl(sh55,32,482,403,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -794,7 +928,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh56,32,488,416,44,-)
+%Vl(sh56,32,488,404,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -803,7 +937,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh57,32,494,416,44,-)
+%Vl(sh57,32,494,406,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -812,7 +946,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh58,32,500,416,44,-)
+%Vl(sh58,32,500,407,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -821,7 +955,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh59,32,506,416,44,-)
+%Vl(sh59,32,506,409,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -830,7 +964,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh60,32,512,416,44,-)
+%Vl(sh60,32,512,411,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -839,7 +973,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh61,32,518,416,44,-)
+%Vl(sh61,32,518,412,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -848,7 +982,7 @@ SHF%xd(O,%ps)
 %dr(0,26,-,6,F4F2EE,F4F2EE,7)
 %dr(0,32,-,6,F4F2EE,F4F2EE,4)
 %dr(0,38,-,6,F4F2EE,F4F2EE,2)
-%Vl(sh62,32,524,416,44,-)
+%Vl(sh62,32,524,414,44,-)
 %Vt(0)
 %dr(0,0,-,6,F4F2EE,F4F2EE,2)
 %dr(0,6,-,6,F4F2EE,F4F2EE,4)
@@ -863,7 +997,7 @@ SHF%xd(O,%ps)
 # The meter fills 62 px of an 66 px band. It used to be 24, because the
 # engine drew a peak meter one line of the viewport's font tall and
 # nothing else; %pm takes a height now.
-%Vl(pm_short,30,616,240,66,2)
+%Vl(pm_short,30,616,-30,66,2)
 %Vt(0)
 %pm(62)
 #
@@ -879,14 +1013,6 @@ SHF%xd(O,%ps)
 %Vt(0)
 %al%>%> FF
 #
-%V(280,628,-30,30,2)
-%Vt(0)
-%ar%fc %fb
-#
-%V(280,658,-30,30,2)
-%Vt(0)
-%ar%?if(%St(party mode),!=,off)<party|%?if(%St(single mode),!=,off)<%St(single mode)|%fk kHz>>
-#
 # Station
 # -------
 %V(30,700,-30,58,5)
@@ -897,14 +1023,17 @@ SHF%xd(O,%ps)
 # ======
 %V(30,768,-30,30,2)
 %Vt(0)
-%ac%?mp<off air|on air|paused|on air|on air>
+%ac%?mp<off air|on air - %rd|paused - %rd|on air - %rd|on air - %rd>
+#
+# "- static" or "- dynamic" after it (%rd): a folder of recordings, or a
+# station made from the library by its station.cfg (#88).
 #
 # The liveness light. Its own viewport so the caption stays centred on the
 # screen rather than on the pair of them, and two sublines so it blinks - a
 # red dot that sits still is a dot, one that blinks is a transmitter. Off
 # air and paused it is not enabled at all, which is the one state where a
 # light saying "live" would be lying.
-%Vl(live,176,777,14,14,-)
+%Vl(live,116,777,14,14,-)
 %Vt(0)
 %t(0.7)%Vf(CC2B2B)%xd(L);%t(0.7)%Vf(0C0D0E)%xd(L)
 #
@@ -912,3 +1041,9 @@ SHF%xd(O,%ps)
 # ======
 %V(30,102,-30,52,4)
 %Vs(invert)%ac%?mh<LOCKED|>
+#
+# Playlist
+# ========
+%Vl(plname,30,112,-30,34,3)
+%Vt(0)
+%s%al%?pn<%pn|>

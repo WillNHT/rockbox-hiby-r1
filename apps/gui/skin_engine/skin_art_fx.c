@@ -51,6 +51,10 @@
 #include "core_alloc.h"
 #include "misc.h"
 #include "audio.h"
+#ifdef HAVE_COVER_VIEWS
+#include "playlist_cover.h"
+#include "gui/covers.h"
+#endif
 
 /* The art as the buffering layer holds it: RGB565, at whatever size %Cl
  * asked for.
@@ -361,10 +365,12 @@ static void bd_draw_cover(struct canvas_surface *surf,
     }
 
     /* A soft shadow first, so the cover's edge stands off its own blurred
-     * copy instead of melting into it where the two are the same colour. */
+     * copy instead of melting into it where the two are the same colour.
+     * Wide and light rather than tight and dark: at 14 px and nearly
+     * opaque it read as a black frame around any bright cover (#58). */
     {
         struct canvas_rect sr = { x, y, w, h };
-        canvas_shadow(surf, &sr, 0, 14, 0, 6, (canvas_px)bd_ground, 230);
+        canvas_shadow(surf, &sr, 0, 32, 0, 10, (canvas_px)bd_ground, 150);
     }
 
     for (row = 0; row < h; row++)
@@ -402,12 +408,27 @@ static bool bd_render(struct gui_wps *gwps, int handle)
     if (bd_radius > 0)
         scratch = canvas_scratch(w, h, &scratch_px);
 
+    /* The picture behind is the playlist's, when what is playing came from
+     * one with a cover: the sharp cover in front changes with every track,
+     * the mood behind it stays with the playlist. Decoded before the album
+     * art pointer is taken, for the reason below. */
+    const struct bitmap *bg = NULL;
+#ifdef HAVE_COVER_VIEWS
+    {
+        char pl[MAX_PATH];
+        if (playlist_cover_current(pl, sizeof(pl)))
+            bg = cover_get(pl, COVER_MAX_SIZE);
+    }
+#endif
+
     /* Every pointer below is taken after the last call that could have
      * touched buflib, and nothing between here and the end allocates. */
     bmp = art_bitmap(gwps);
     if (!bmp)
         return false;
     bd_buf = core_get_data(bd_hid);
+    if (!bg)
+        bg = bmp;
 
     canvas_surface_init(&surf, (canvas_px *)bd_buf, NULL,
                         LCD_WIDTH, LCD_HEIGHT, LCD_WIDTH);
@@ -419,7 +440,7 @@ static bool bd_render(struct gui_wps *gwps, int handle)
     canvas_fill(&surf, &r, (canvas_px)bd_ground);
 
     r.x = bd_x; r.y = bd_y; r.w = w; r.h = h;
-    scale_cover(&surf, bd_x, bd_y, w, h, bmp);
+    scale_cover(&surf, bd_x, bd_y, w, h, bg);
 
     if (scratch)
         canvas_blur(&surf, &r, bd_radius, scratch, scratch_px);
@@ -443,10 +464,10 @@ static bool bd_render(struct gui_wps *gwps, int handle)
             a = 255;
         a_bottom = a + (255 - a) * 3 / 4;
 
-        canvas_surface_init(&art, (canvas_px *)bmp->data, NULL,
-                            bmp->width, bmp->height,
-                            STRIDE_MAIN(bmp->width, bmp->height));
-        ar.x = 0; ar.y = 0; ar.w = bmp->width; ar.h = bmp->height;
+        canvas_surface_init(&art, (canvas_px *)bg->data, NULL,
+                            bg->width, bg->height,
+                            STRIDE_MAIN(bg->width, bg->height));
+        ar.x = 0; ar.y = 0; ar.w = bg->width; ar.h = bg->height;
         avg = canvas_average(&art, &ar);
         tint = canvas_blend_px(avg, (canvas_px)bd_ground, 120);
 

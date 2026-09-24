@@ -1362,13 +1362,18 @@ const char *get_token_value(struct gui_wps *gwps,
         case SKIN_TOKEN_LIST_NEEDS_SCROLLBAR:
             return skinlist_needs_scrollbar(gwps->display->screen_type) ? "s" : "";
         case SKIN_TOKEN_PLAYLIST_NAME:
-            return playlist_name(NULL, buf, buf_size);
+            return playlist_title(buf, buf_size);
 
         case SKIN_TOKEN_RADIO_STATION:
             if (state->id3 &&
                 pradio_station_name(state->id3->path, buf, buf_size))
                 return buf;
             return NULL;
+
+        case SKIN_TOKEN_RADIO_KIND:
+            if (!state->id3 || !pradio_is_station_track(state->id3->path))
+                return NULL;
+            return pradio_dynamic() ? "dynamic" : "static";
 
         case SKIN_TOKEN_PLAYLIST_POSITION:
             if (!get_cuesheetid3_token(token, state->id3, offset, buf, buf_size))

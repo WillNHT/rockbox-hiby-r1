@@ -162,19 +162,35 @@ bool search_albumart_files(const struct mp3entry *id3, const char *size_string,
     }
 
     /* A radio station's cover belongs to the station, not to whichever file
-     * deep inside it happens to be tuned in - and the station folder can be
-     * several levels above the file, further than the parent-directory pass
-     * below ever reaches. */
+     * deep inside it happens to be tuned in - and a branch of a station can
+     * have a cover of its own. The closest one wins: the file's own folder,
+     * then each folder above it up to the station folder, never one below.
+     * The station folder can be several levels above the file, further than
+     * the parent-directory pass below ever reaches. */
 #ifndef PLUGIN
-    if (pradio_station_dir(trackname, dir, sizeof(dir)))
+    if (pradio_station_dir(trackname, path, sizeof(path)))
     {
-        pathlen = snprintf(path, sizeof(path),
-                           "%scover%s." EXT, dir, size_string);
-        if (try_exts(path, pathlen))
+        size_t stlen = strlen(path);
+        char *slash;
+
+        /* A dynamic station's tracks are in the library, not under the
+         * station: the station folder's own cover is the only one that is
+         * the station's. */
+        strmemccpy(dir, strncasecmp(trackname, path, stlen) ? path : trackname,
+                   sizeof(dir));
+        while ((slash = strrchr(dir, '/')) &&
+               (size_t)(slash - dir) + 1 >= stlen)
         {
-            strmemccpy(buf, path, buflen);
-            logf("Station art found: %s", path);
-            return true;
+            slash[1] = '\0';
+            pathlen = snprintf(path, sizeof(path),
+                               "%scover%s." EXT, dir, size_string);
+            if (try_exts(path, pathlen))
+            {
+                strmemccpy(buf, path, buflen);
+                logf("Station art found: %s", path);
+                return true;
+            }
+            *slash = '\0';
         }
     }
 #endif

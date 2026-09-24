@@ -42,6 +42,16 @@ A burst of white noise on a user-initiated prev/next, the same static the
 station change never arriving clean. It ducks at Alert Depth, the same as
 the track-skip beep it replaces the silence around.
 
+The skip happens at once and the static plays across it, covering the
+moment the next track takes to load. It used to play first and skip after,
+which held the old track and the screen for the whole burst and then left
+the silence it was meant to cover.
+
+With **Crossfade** set to *Always*, a skip also fades the next track in
+over the crossfade's fade-in time - that is the start of a track sounding
+cut after a skip. *Automatic Track Change Only* keeps crossfading between
+songs and lets a skip start at full volume.
+
 | Setting | Default | What it does |
 | --- | --- | --- |
 | Track Change Static | On | Master switch. |
@@ -63,3 +73,26 @@ track change static duration: 1000
 | The menu | A depth |
 | --- | --- |
 | ![Audio Prioritisation menu](screenshots/audio-prioritisation-menu.png) | ![Click Depth](screenshots/audio-prioritisation-depth.png) |
+
+## Startup volume
+
+**Settings - Playback**
+
+Resuming just after power-up - the WPS as the start screen - brings back
+whatever was playing last at whatever volume it was left at, which is how
+the loudest song of yesterday arrives in the ears at once. It now comes back
+gently: no louder than **Startup Volume Limit**, and faded in from silence
+over three seconds.
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| Fade In At Startup | On | The music comes up from silence over 3 s. |
+| Startup Volume Limit | 40 % | The most volume a power-up resume comes back at. Lower volumes are left alone; 100 % turns the limit off. |
+
+The fade is the same lever as the ducking above, held down longer, so a
+device sound during it - the radio tuning in - does not cut it short.
+
+```
+startup fade in: on
+startup volume limit: 40
+```

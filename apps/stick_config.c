@@ -399,7 +399,23 @@ void stick_build_config(struct stick_config *cfg, int context)
      * cancel and exit on. */
     if ((context & 0xff) == CONTEXT_QUICKSCREEN ||
         (context & 0xff) == CONTEXT_PITCHSCREEN)
+    {
+        int i;
+
         cfg->centre = STICK_BIND_MENU;
+
+        /* Up and down are scroll bindings, and a scroll emits a press for
+         * every step the thumb travels - ten of them for one flick. In a
+         * list that is scrolling; here every press is a choice, so the
+         * first opened the Playback page and the rest walked on into it,
+         * ending up in the playlist or the station list a second later.
+         * Giving the sector a hold makes it fire once: on release for a
+         * flick, or once when held. */
+        for (i = 0; i < cfg->sectors; i++)
+            if (cfg->bind[i] == STICK_BIND_SCROLL_UP ||
+                cfg->bind[i] == STICK_BIND_SCROLL_DOWN)
+                cfg->hold[i] = cfg->bind[i];
+    }
 }
 
 #endif /* HAVE_TOUCHSCREEN */

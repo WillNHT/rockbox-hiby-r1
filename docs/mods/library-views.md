@@ -43,6 +43,8 @@ If there is no such image, the playlist uses the cover of its first track. Cover
 |---|---|
 | `%Cp(x, y, size)` | Draws the cover of the playlist that is playing, as a square |
 | `%?CP<yes\|no>` | True when the playing playlist has a cover (its own image or a first track) |
+| `%pn` | The playing playlist's name: a saved playlist's own, the folder's when a folder is playing, or the database view it was started from (an artist, an album, *All tracks*) |
+| `%Cb` | Its blurred background takes the playlist's cover when there is one, so the background stays put from track to track while the sharp cover changes |
 
 ```
 %V(30,100,-30,220,-)
@@ -55,4 +57,4 @@ If there is no such image, the playlist uses the cover of its first track. Cover
 
 A list opts in with `coverview_attach(list, &source, style)`. The `coverview_source` provides two callbacks: one draws an item's cover, the other returns its second line. The layouts don't know what the items are, so artists, or anything else with a picture, can be added with a new source.
 
-Covers are loaded from a path by `apps/gui/covers.c`. The path can be an image file, a playlist, or an audio file (embedded art first, then folder art).
+Covers are loaded from a path by `apps/gui/covers.c`. The path can be an image file, a playlist, or an audio file (embedded art first, then folder art). They are kept in two caches - twelve large pictures and thirty-two thumbnails, so a page of the thumbnail view fits - and a list decodes at most one uncached cover per redraw, drawing the rest as placeholders and asking for another redraw, so a scroll answers the key at once and the pictures fill in behind it.

@@ -73,6 +73,9 @@
 #include "pradio.h"
 #include "transition.h"
 #include "string-extra.h"
+#ifdef HAVE_ALBUMART
+#include "albumart.h"
+#endif
 
 #ifdef USB_ENABLE_AUDIO
 #include "usbstack/usb_audio.h"
@@ -387,6 +390,19 @@ static bool ffwd_rew(int button, bool seek_from_end)
  * (or one skip length, for a file with its own skip length - audiobooks).
  * Returns true on USB connection, like ffwd_rew(). */
 static int get_skip_length(struct mp3entry *id3);
+/* The static over a user-initiated skip. It plays across the skip rather
+ * than in front of it: waiting it out first held the screen and the old
+ * track for its whole length, then left a silence while the next one
+ * loaded - the gap it exists to cover arriving after it had finished. */
+static void track_static(void)
+{
+    if (!global_settings.track_static)
+        return;
+    beep_duck(global_settings.track_static_ms,
+              global_settings.sound_duck_alert);
+    beep_play_noise(global_settings.track_static_ms, TRACK_STATIC_AMP);
+}
+
 static void play_hop(int direction);
 static bool hold_skip(int button)
 {
@@ -1096,17 +1112,10 @@ long gui_wps_show(void)
 
                 /* tuned in to the radio: a different station, not the
                    previous track of this one */
-                if (pradio_skip())
+                if (pradio_skip(-1))
                     break;
 
-                if (global_settings.track_static)
-                {
-                    beep_duck(global_settings.track_static_ms,
-                             global_settings.sound_duck_alert);
-                    beep_play_noise(global_settings.track_static_ms,
-                                    TRACK_STATIC_AMP);
-                    sleep(HZ * global_settings.track_static_ms / 1000);
-                }
+                track_static();
 
                 /* if we're in A/B repeat mode and the current position
                    is past the A marker, jump back to the A marker... */
@@ -1126,17 +1135,10 @@ long gui_wps_show(void)
 
                 /* tuned in to the radio: a different station, not the
                    next track of this one */
-                if (pradio_skip())
+                if (pradio_skip(1))
                     break;
 
-                if (global_settings.track_static)
-                {
-                    beep_duck(global_settings.track_static_ms,
-                             global_settings.sound_duck_alert);
-                    beep_play_noise(global_settings.track_static_ms,
-                                    TRACK_STATIC_AMP);
-                    sleep(HZ * global_settings.track_static_ms / 1000);
-                }
+                track_static();
 
                 /* if we're in A/B repeat mode and the current position is
                    before the A marker, jump to the A marker... */
@@ -1329,18 +1331,45 @@ struct wps_state *get_wps_state(void)
  * touched from the UI thread; the callback below only swaps id3 pointers. */
 static char transition_path[MAX_PATH];
 static int transition_index = -1;
+/* A radio track's station folder and cover, or empty. */
+static char transition_station[MAX_PATH];
+static char transition_cover[MAX_PATH];
 
 static void transition_note_track(struct wps_state *state, bool animate)
 {
     const char *path = state->id3 ? state->id3->path : "";
     int index = playlist_get_display_index();
+    bool same_look = false;
 
-    if (animate && transition_path[0] && path[0] &&
+    /* A station running on into its next recording is not a track change
+     * anybody asked for, and a transition there is the file player showing
+     * through. Only a new picture - a branch of the station with a cover of
+     * its own - or another station is worth animating. */
+    if (strcmp(path, transition_path))
+    {
+        char station[MAX_PATH], cover[MAX_PATH];
+
+        station[0] = cover[0] = '\0';
+        if (pradio_station_dir(path, station, sizeof(station)))
+        {
+#ifdef HAVE_ALBUMART
+            search_albumart_files(state->id3, "", cover, sizeof(cover));
+#endif
+        }
+        same_look = station[0] && !strcmp(station, transition_station) &&
+                    !strcmp(cover, transition_cover);
+        strmemccpy(transition_station, station, sizeof(transition_station));
+        strmemccpy(transition_cover, cover, sizeof(transition_cover));
+    }
+
+    if (animate && transition_path[0] && path[0] && !same_look &&
         strcmp(path, transition_path))
     {
         /* Previous track, or wrapped round to the end: back. A repeat of
          * the only track, or a new playlist, reads as forward. */
-        gui_transition_wps(index < transition_index ? -1 : 1);
+        gui_transition_wps(index < transition_index ? -1 : 1,
+            audiobooks_is_book(path) ? global_settings.book_transition :
+            transition_station[0] ? global_settings.radio_transition : 0);
     }
     strmemccpy(transition_path, path, sizeof(transition_path));
     transition_index = index;

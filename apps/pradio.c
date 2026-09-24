@@ -38,6 +38,7 @@
  */
 #include "config.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -59,8 +60,11 @@
 #include "settings.h"
 #include "splash.h"
 #include "string-extra.h"
+#include "strnatcmp.h"
 #include "crc32.h"
 #include "timefuncs.h"
+#include "rbpaths.h"
+#include "tagcache.h"
 #include "pradio.h"
 
 #define PRADIO_MAX_STATIONS 48
@@ -79,6 +83,11 @@
  * one for a few minutes and coming back finds the same recording still on
  * rather than a new one. */
 #define PRADIO_ROTATE_SECS  (2 * 60 * 60)
+/* A dynamic station is made of songs, not sets: its schedule moves on at
+ * about the length of one. */
+#define PRADIO_ROTATE_SONG  (4 * 60)
+/* A dynamic station's playlist, next to its station.cfg. */
+#define PRADIO_SETLIST      "setlist.m3u8"
 
 /* --- the sounds -------------------------------------------------------- */
 
@@ -99,6 +108,13 @@ enum pradio_sound
     SOUND_LEAVE,        /* switching off                             */
     PRADIO_SOUNDS
 };
+
+/* Any of them can be a file instead: a WAV of this name in
+ * PRADIO_SOUND_DIR takes the place of the generated noise, and
+ * band1.wav..band5.wav of the five below. Strength still scales it. */
+#define PRADIO_SOUND_DIR ROCKBOX_DIR "/radio"
+static const char * const sound_files[PRADIO_SOUNDS] =
+    { "tune", "retune", "pause", "resume", "leave" };
 
 static const struct beep_fx pradio_sounds[PRADIO_SOUNDS] =
 {
@@ -169,9 +185,16 @@ void pradio_ambience_tick(void)
     if (TIME_BEFORE(current_tick, ambience_tick))
         return;
 
-    struct beep_fx fx = pradio_ambience[rand() % PRADIO_AMBIENCE_N];
+    int pick = rand() % PRADIO_AMBIENCE_N;
+    struct beep_fx fx = pradio_ambience[pick];
+    char path[MAX_PATH];
+    snprintf(path, sizeof(path), PRADIO_SOUND_DIR "/band%d.wav", pick + 1);
+    int ms = beep_play_wav(path, global_settings.radio_static_strength);
+    if (ms > 0)
+        beep_duck(ms, global_settings.sound_duck_cue / 2);
+
     fx.amplitude = fx.amplitude * global_settings.radio_static_strength / 100;
-    if (fx.amplitude > 0)
+    if (ms == 0 && fx.amplitude > 0)
     {
         /* Ducked shallower than a cue: this one is meant to sound like it
          * is coming through the programme, not instead of it. */
@@ -187,6 +210,15 @@ static void pradio_sound(enum pradio_sound which)
 {
     if (!global_settings.radio_static || which >= PRADIO_SOUNDS)
         return;
+
+    char path[MAX_PATH];
+    snprintf(path, sizeof(path), PRADIO_SOUND_DIR "/%s.wav", sound_files[which]);
+    int ms = beep_play_wav(path, global_settings.radio_static_strength);
+    if (ms > 0)
+    {
+        beep_duck(ms, global_settings.sound_duck_cue);
+        return;
+    }
 
     struct beep_fx fx = pradio_sounds[which];
     fx.amplitude = fx.amplitude * global_settings.radio_static_strength / 100;
@@ -213,7 +245,7 @@ static int  nstations;
 
 /* --- the folder ------------------------------------------------------- */
 
-bool pradio_is_station_track(const char *path)
+static bool under_radio(const char *path)
 {
     const char *root = global_settings.radio_folder;
     size_t len = strlen(root);
@@ -225,6 +257,40 @@ bool pradio_is_station_track(const char *path)
     if (strncasecmp(path, root, len))
         return false;
     return path[len] == '/' || path[len] == '\0';
+}
+
+/* The playing playlist when it is a dynamic station's setlist, else NULL.
+ * A setlist is a playlist file inside a station folder. */
+static const char *setlist_playing(void)
+{
+    const char *pl = playlist_get_current()->filename;
+    size_t n = strlen(pl), s = sizeof(PRADIO_SETLIST) - 1;
+
+    if (n > s && pl[n - s - 1] == '/' && !strcasecmp(pl + n - s, PRADIO_SETLIST)
+        && under_radio(pl))
+        return pl;
+    return NULL;
+}
+
+/* A dynamic station plays tracks from the library, which are nowhere near
+ * the radio folder: what makes one of them a station track is that the
+ * playlist it plays from is a station's setlist. So the setlist's path
+ * stands in for the track's wherever a station is worked out from a path.
+ * ponytail: any path counts while a setlist is on air - a thumbnail with
+ * no art of its own shows the station's cover meanwhile; checking the path
+ * is in the setlist would mean reading the setlist on every call. */
+static const char *station_path(const char *path)
+{
+    if (!path)
+        return NULL;
+    if (under_radio(path))
+        return path;
+    return audio_status() ? setlist_playing() : NULL;
+}
+
+bool pradio_is_station_track(const char *path)
+{
+    return station_path(path) != NULL;
 }
 
 bool pradio_playing(void)
@@ -272,6 +338,237 @@ static void station_dir(int station, char *buf, size_t size)
         strmemccpy(buf, global_settings.radio_folder, size);
     else
         path_append(buf, global_settings.radio_folder, stations[station], size);
+}
+
+/* --- dynamic stations -------------------------------------------------- */
+
+/* A static station is a folder of recordings. A dynamic one is a folder
+ * with a station.cfg in it, and its music is whatever in the library
+ * matches the file - a decade, a handful of artists, a genre:
+ *
+ *     year: 1976-1980
+ *     artist: Blink-182, Green Day, Nirvana
+ *     genre: Punk, Grunge
+ *
+ * Every line narrows it (an AND); the values on a line are alternatives
+ * (an OR); a year value is a year or a range. The file decides which kind
+ * a station is, so one is never both: a folder with a station.cfg plays
+ * its setlist and nothing else.
+ *
+ * The setlist is setlist.m3u8 next to the station.cfg, built from the
+ * database by a background thread so that nothing waits for it; the first
+ * tune-in of a station that has none yet builds it on the spot. A setlist
+ * is only rebuilt when asked (Rebuild Setlists in the radio settings, or a
+ * long press on a station in the station list), so a station stays the
+ * same station between database updates.
+ *
+ * ponytail: the station.cfg is the whole interface. Stations the player
+ * makes for itself - from the listening log of #28, say - would be a
+ * writer of station.cfg files and nothing new here. */
+#define PRADIO_STATION_CFG "station.cfg"
+#define DYN_MAX_YEARS 8
+
+struct dyn_params
+{
+    int nyears;
+    int year_lo[DYN_MAX_YEARS], year_hi[DYN_MAX_YEARS];
+    char artists[256];      /* comma separated, "" = any */
+    char genres[128];
+};
+
+static bool station_is_dynamic(const char *dir)
+{
+    char path[MAX_PATH];
+    path_append(path, dir, PRADIO_STATION_CFG, sizeof(path));
+    return file_exists(path);
+}
+
+static bool read_params(const char *dir, struct dyn_params *p)
+{
+    char path[MAX_PATH], line[256];
+    int fd;
+
+    memset(p, 0, sizeof(*p));
+    path_append(path, dir, PRADIO_STATION_CFG, sizeof(path));
+    fd = open_utf8(path, O_RDONLY);
+    if (fd < 0)
+        return false;
+
+    while (read_line(fd, line, sizeof(line)) > 0)
+    {
+        char *name, *value;
+        if (line[0] == '#' || !settings_parseline(line, &name, &value))
+            continue;
+        if (!strcasecmp(name, "year"))
+        {
+            char *tok, *save;
+            for (tok = strtok_r(value, ",", &save);
+                 tok && p->nyears < DYN_MAX_YEARS;
+                 tok = strtok_r(NULL, ",", &save))
+            {
+                char *dash = strchr(tok, '-');
+                p->year_lo[p->nyears] = atoi(tok);
+                p->year_hi[p->nyears] = dash ? atoi(dash + 1)
+                                             : p->year_lo[p->nyears];
+                p->nyears++;
+            }
+        }
+        else if (!strcasecmp(name, "artist"))
+            strmemccpy(p->artists, value, sizeof(p->artists));
+        else if (!strcasecmp(name, "genre"))
+            strmemccpy(p->genres, value, sizeof(p->genres));
+    }
+    close(fd);
+    return true;
+}
+
+/* Whether value is one of a comma separated list, ignoring case and the
+ * spaces around the commas. */
+static bool in_list(const char *list, const char *value)
+{
+    size_t vlen = strlen(value);
+
+    while (*list)
+    {
+        while (*list == ' ' || *list == ',')
+            list++;
+        const char *end = strchr(list, ',');
+        size_t len = end ? (size_t)(end - list) : strlen(list);
+        while (len > 0 && list[len - 1] == ' ')
+            len--;
+        if (len == vlen && len && !strncasecmp(list, value, len))
+            return true;
+        if (!end)
+            break;
+        list = end + 1;
+    }
+    return false;
+}
+
+/* One build at a time: the thread and a tune-in both come through here. */
+static struct mutex setlist_mutex;
+
+/* Write the station's setlist from the database. Returns the number of
+ * tracks, or -1 when the database is not there to ask. */
+static int build_setlist(const char *dir)
+{
+    static struct tagcache_search tcs;
+    static struct dyn_params p;
+    static char fname[MAX_PATH], val[128];
+    char path[MAX_PATH], tmp[MAX_PATH + 4];
+    int fd, count = 0;
+
+    mutex_lock(&setlist_mutex);
+    if (!read_params(dir, &p) || !tagcache_is_usable())
+    {
+        mutex_unlock(&setlist_mutex);
+        return -1;
+    }
+
+    path_append(path, dir, PRADIO_SETLIST, sizeof(path));
+    snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+    fd = creat(tmp, 0666);
+    if (fd < 0 || !tagcache_search(&tcs, tag_filename))
+    {
+        if (fd >= 0)
+            close(fd);
+        mutex_unlock(&setlist_mutex);
+        return -1;
+    }
+
+    while (tagcache_get_next(&tcs, fname, sizeof(fname)))
+    {
+        if (p.nyears)
+        {
+            long year = tagcache_get_numeric(&tcs, tag_year);
+            int i;
+            for (i = 0; i < p.nyears; i++)
+                if (year >= p.year_lo[i] && year <= p.year_hi[i])
+                    break;
+            if (i == p.nyears)
+                continue;
+        }
+        if (p.artists[0] &&
+            !(tagcache_retrieve(&tcs, tcs.idx_id, tag_artist, val, sizeof(val))
+              && in_list(p.artists, val)) &&
+            !(tagcache_retrieve(&tcs, tcs.idx_id, tag_albumartist, val,
+                                sizeof(val)) && in_list(p.artists, val)))
+            continue;
+        if (p.genres[0] &&
+            !(tagcache_retrieve(&tcs, tcs.idx_id, tag_genre, val, sizeof(val))
+              && in_list(p.genres, val)))
+            continue;
+
+        fdprintf(fd, "%s\n", fname);
+        count++;
+        yield();
+    }
+    tagcache_search_finish(&tcs);
+    close(fd);
+    rename(tmp, path);
+    mutex_unlock(&setlist_mutex);
+    return count;
+}
+
+/* The thread that keeps setlists from costing anybody a wait. */
+enum { SETLIST_MISSING, SETLIST_ALL };
+static struct event_queue setlist_queue SHAREDBSS_ATTR;
+static long setlist_stack[(DEFAULT_STACK_SIZE + 0x1000) / sizeof(long)];
+
+static void setlist_thread(void)
+{
+    struct queue_event ev;
+    static char dir[MAX_PATH], path[MAX_PATH];
+
+    while (1)
+    {
+        queue_wait(&setlist_queue, &ev);
+
+        /* Its own walk of the radio folder: the station list belongs to the
+         * UI thread. */
+        DIR *d = opendir(global_settings.radio_folder);
+        if (!d)
+            continue;
+        struct dirent *e;
+        while ((e = readdir(d)))
+        {
+            if (e->d_name[0] == '.' ||
+                !(dir_get_info(d, e).attribute & ATTR_DIRECTORY))
+                continue;
+            path_append(dir, global_settings.radio_folder, e->d_name,
+                        sizeof(dir));
+            if (!station_is_dynamic(dir))
+                continue;
+            path_append(path, dir, PRADIO_SETLIST, sizeof(path));
+            if (ev.id == SETLIST_ALL || !file_exists(path))
+                build_setlist(dir);
+        }
+        closedir(d);
+    }
+}
+
+/* Start the thread the first time, and hand it a job: SETLIST_MISSING,
+ * SETLIST_ALL, or -1 for none. */
+static void setlists_request(int what)
+{
+    static bool started;
+    if (!started)
+    {
+        mutex_init(&setlist_mutex);
+        queue_init(&setlist_queue, false);
+        create_thread(setlist_thread, setlist_stack, sizeof(setlist_stack),
+                      0, "radio setlists"
+                      IF_PRIO(, PRIORITY_BACKGROUND) IF_COP(, CPU));
+        started = true;
+    }
+    if (what >= 0)
+        queue_post(&setlist_queue, what, 0);
+}
+
+/* Whether the station on air is a dynamic one: what %rd says. */
+bool pradio_dynamic(void)
+{
+    return pradio_playing() && setlist_playing() != NULL;
 }
 
 /* --- the station clock ------------------------------------------------- */
@@ -369,13 +666,20 @@ static int build_playlist(const char *dir)
  * rather than somewhere new. Walks forward from there for one over the
  * length floor, because a station of mostly short files must still play
  * something. */
-static int pick_track(int n, unsigned int seed, uint32_t now,
+static int pick_track(int n, unsigned int seed, uint32_t now, uint32_t rotate,
                       unsigned long *length)
 {
     static struct playlist_track_info info;
 
-    int pick = (int)((now / PRADIO_ROTATE_SECS + seed) % (unsigned)n);
+    int pick = (int)((now / rotate + seed) % (unsigned)n);
+    int found = -1;
 
+    /* The length handed back must be the length of the track handed back.
+     * Settling for the scheduled track after none cleared the floor used
+     * to return it with the length of the last one looked at, so the clock
+     * seeked a short file by a long one's offset - off its end and into
+     * the start of the next, which is every tune-in landing on a track's
+     * first second. */
     *length = 0;
     for (int i = 0; i < PRADIO_TRIES && i < n; i++)
     {
@@ -386,14 +690,15 @@ static int pick_track(int n, unsigned int seed, uint32_t now,
         if (!get_metadata(&tune_id3, -1, info.filename))
             continue;
 
-        *length = tune_id3.length;
-        if (long_enough(tune_id3.length) || i == PRADIO_TRIES - 1)
+        if (found < 0 || long_enough(tune_id3.length))
         {
-            pick = idx;
-            break;
+            found = idx;
+            *length = tune_id3.length;
         }
+        if (long_enough(tune_id3.length))
+            break;
     }
-    return pick;
+    return found < 0 ? pick : found;
 }
 
 /* The station tuned last, by name, so the dial comes back where it was
@@ -413,6 +718,9 @@ static int last_station(void)
 /* Set for the length of one tune() that came from the user moving the dial
  * rather than from arriving at the radio. */
 static bool retune_sound;
+/* Set for a tune() that only puts the station back where its clock says it
+ * is: nothing on the dial moved, so nothing is heard doing it. */
+static bool tune_quiet;
 
 static bool tune(int station)
 {
@@ -423,7 +731,24 @@ static bool tune(int station)
     char dir[MAX_PATH];
     station_dir(station, dir, sizeof dir);
 
-    int n = build_playlist(dir);
+    bool dynamic = station_is_dynamic(dir);
+    int n;
+    if (dynamic)
+    {
+        /* No setlist yet: this is the one wait, built on the spot. */
+        char setlist[MAX_PATH];
+        path_append(setlist, dir, PRADIO_SETLIST, sizeof(setlist));
+        if (!file_exists(setlist))
+        {
+            splash(0, ID2P(LANG_RADIO_BUILDING));
+            setlists_request(-1);       /* the mutex */
+            build_setlist(dir);
+        }
+        n = playlist_create(dir, PRADIO_SETLIST) < 0 ? 0 :
+            playlist_amount_ex(NULL);
+    }
+    else
+        n = build_playlist(dir);
     if (n <= 0)
     {
         splashf(HZ, "%s", str(LANG_RADIO_EMPTY));
@@ -442,20 +767,20 @@ static bool tune(int station)
         playlist_shuffle(seed, -1);
 
     unsigned long length = 0;
-    int track = pick_track(n, seed, now, &length);
+    int track = pick_track(n, seed, now,
+                           dynamic ? PRADIO_ROTATE_SONG : PRADIO_ROTATE_SECS,
+                           &length);
 
     /* The static plays over the gap between the last screen and the first
      * sample, which is the gap it exists to cover. Tuning in while
      * something else is still playing is the ordinary case, so it ducks
      * the music the way the other device sounds do - a cue, because
      * missing it is missing the only thing that says the dial moved. */
-    if (global_settings.radio_static)
+    if (global_settings.radio_static && !tune_quiet)
     {
         /* Retuning by hand and arriving from somewhere else are different
          * gestures and sound different; retune_sound says which this is. */
         pradio_sound(retune_sound ? SOUND_RETUNE : SOUND_TUNE);
-        sleep(HZ * pradio_sounds[retune_sound ? SOUND_RETUNE : SOUND_TUNE]
-                   .duration / 1000);
     }
 
     strmemccpy(global_settings.radio_last,
@@ -472,6 +797,10 @@ static bool tune(int station)
  * itself is the only station. */
 static int station_of(const char *path)
 {
+    path = station_path(path);
+    if (!path)
+        return -1;
+
     const char *root = global_settings.radio_folder;
     size_t rootlen = strlen(root);
     while (rootlen > 1 && root[rootlen - 1] == '/')
@@ -492,14 +821,19 @@ static int station_of(const char *path)
 }
 
 /* User-initiated prev/next while tuned in: a radio dial moves to another
- * station, it does not step to the next track of the one already playing. */
-bool pradio_skip(void)
+ * station, it does not step to the next track of the one already playing.
+ *
+ * The dial turns one station along, in the order the station list shows
+ * them, and wraps. It used to jump to a random one, and rand() is reseeded
+ * by every tune-in's shuffle with that station's own fixed number - so
+ * from any one station the "random" next was nearly always the same one,
+ * and some stations could hardly be reached at all. */
+bool pradio_skip(int dir)
 {
     if (!pradio_playing())
         return false;
 
     scan_stations();
-    seed_rand();
 
     retune_sound = true;
 
@@ -513,11 +847,9 @@ bool pradio_skip(void)
         struct mp3entry *id3 = audio_current_track();
         int current = id3 ? station_of(id3->path) : -1;
 
-        int station = rand() % nstations;
-        if (current >= 0 && station == current)
-            station = (station + 1) % nstations;
-
-        ok = tune(station);
+        if (current < 0)
+            current = dir > 0 ? -1 : 0;
+        ok = tune((current + (dir > 0 ? 1 : -1) + nstations) % nstations);
     }
 
     retune_sound = false;
@@ -532,7 +864,8 @@ bool pradio_skip(void)
  * to go to disk for. */
 bool pradio_station_dir(const char *path, char *buf, size_t size)
 {
-    if (!pradio_is_station_track(path))
+    path = station_path(path);
+    if (!path)
         return false;
 
     const char *root = global_settings.radio_folder;
@@ -579,11 +912,22 @@ bool pradio_station_name(const char *path, char *buf, size_t size)
 
 static long pause_tick;
 
+/* Put the station a track belongs to back where its clock says it is. The
+ * clock may have moved it on to another recording altogether, so this is a
+ * tune-in, not a seek within the file that happens to be loaded. */
+static bool resync(const char *path)
+{
+    scan_stations();
+    tune_quiet = true;
+    bool ok = tune(station_of(path));
+    tune_quiet = false;
+    return ok;
+}
+
 /* A station does not wait for you. Come back after a while and it has moved
  * on by as much as you were away, which is the whole difference between
- * tuning in and pressing play.
- * ponytail: current_tick, so a pause across a power cycle is not counted -
- * needs the RTC if "resume tomorrow" has to drift too. */
+ * tuning in and pressing play. A pause across a power cycle is the resume
+ * below, not this. */
 void pradio_pause(bool paused)
 {
     if (paused)
@@ -609,11 +953,28 @@ void pradio_pause(bool paused)
         return;
 
     struct mp3entry *id3 = audio_current_track();
-    if (!id3 || id3->length == 0)
-        return;
+    if (id3)
+        resync(id3->path);
+}
 
-    audio_pre_ff_rewind();
-    audio_ff_rewind((id3->elapsed + away) % id3->length);
+/* Resuming playback - at power-up, onto the WPS - with a station last on.
+ * The station kept going while the device was off, so it is tuned in again
+ * rather than resumed at the second it was left on. */
+bool pradio_resume(int index)
+{
+    static struct playlist_track_info info;
+
+    if (playlist_get_track_info(NULL, index, &info) < 0)
+        return false;
+
+    /* A dynamic station's tracks are in the library: it is the setlist
+     * being resumed that says this is the radio. */
+    const char *setlist = setlist_playing();
+    if (setlist)
+        return resync(setlist);
+    if (!pradio_is_station_track(info.filename))
+        return false;
+    return resync(info.filename);
 }
 
 /* --- settings --------------------------------------------------------- */
@@ -697,6 +1058,13 @@ static int show_folder(void)
     return 0;
 }
 
+static int rebuild_setlists(void)
+{
+    setlists_request(SETLIST_ALL);
+    splash(HZ * 2, ID2P(LANG_RADIO_REBUILDING));
+    return 0;
+}
+
 MENUITEM_FUNCTION(pradio_folder_item, 0, ID2P(LANG_RADIO_FOLDER),
                   show_folder, NULL, Icon_Folder);
 MENUITEM_FUNCTION(pradio_wps_item, 0, ID2P(LANG_RADIO_WPS),
@@ -713,9 +1081,12 @@ MENUITEM_SETTING(pradio_static, &global_settings.radio_static, NULL);
 MENUITEM_SETTING(pradio_static_strength,
                  &global_settings.radio_static_strength, NULL);
 MENUITEM_SETTING(pradio_ambience_item, &global_settings.radio_ambience, NULL);
+MENUITEM_FUNCTION(pradio_rebuild_item, 0, ID2P(LANG_RADIO_REBUILD),
+                  rebuild_setlists, NULL, Icon_Playlist);
 
 MAKE_MENU(pradio_settings_menu, ID2P(LANG_RADIO_SETTINGS), NULL, Icon_Tuner,
           &pradio_stations_item,
+          &pradio_rebuild_item,
           &pradio_folder_item,
           &pradio_min_length,
           &pradio_static,
@@ -744,6 +1115,27 @@ static const char *row_name(int item, void *data, char *buf, size_t size)
     return stations[item - ROW_FIRST];
 }
 
+/* A long press on a dynamic station rebuilds its setlist, then and there:
+ * the way to have one station catch up with the database without waiting
+ * on all the others. */
+static int station_action(int action, struct gui_synclist *list)
+{
+    int item = gui_synclist_get_sel_pos(list) - ROW_FIRST;
+    char dir[MAX_PATH];
+
+    if (action != ACTION_STD_CONTEXT || item < 0 || item >= nstations)
+        return action;
+    station_dir(item, dir, sizeof(dir));
+    if (!station_is_dynamic(dir))
+        return action;
+
+    splash(0, ID2P(LANG_RADIO_BUILDING));
+    setlists_request(-1);                       /* the mutex */
+    int n = build_setlist(dir);
+    splashf(HZ, "%s: %d", stations[item], n < 0 ? 0 : n);
+    return ACTION_REDRAW;
+}
+
 /* Picking a station by name. Off the main path on purpose - a radio hands
  * you sound, not a menu - and reached from the radio settings, which is
  * where the rest of the deliberate choices already are. */
@@ -755,6 +1147,7 @@ static int pradio_stations(void)
     {
         scan_stations();
         seed_rand();
+        setlists_request(SETLIST_MISSING);
 
         struct simplelist_info info;
         simplelist_info_init(&info, str(LANG_RADIO_STATIONS),
@@ -762,6 +1155,7 @@ static int pradio_stations(void)
         info.get_name = row_name;
         info.title_icon = Icon_Tuner;
         info.selection = selection;
+        info.action_callback = station_action;
         simplelist_show_list(&info);
 
         if (info.selection < 0)
@@ -784,6 +1178,7 @@ int pradio_screen(void)
 {
     scan_stations();
     seed_rand();
+    setlists_request(SETLIST_MISSING);
 
     /* A radio hands you sound, not a menu. The entry on the main menu is
      * the dial going back to where it was left - or, with nothing to go

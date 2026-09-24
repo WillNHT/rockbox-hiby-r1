@@ -424,6 +424,14 @@ void skin_request_full_update(enum skinnable_screens skin)
         skins[skin][i].needs_full_update = true;
 }
 
+bool skin_full_update_pending(enum skinnable_screens skin)
+{
+    FOR_NB_SCREENS(i)
+        if (skins[skin][i].needs_full_update)
+            return true;
+    return false;
+}
+
 
 /* Request skin update for lock state change */
 void skin_request_update_locked(bool locked)

@@ -20188,3 +20188,157 @@
     *: "Band Noise"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_TRANSITION_WIPE
+  desc: transition effect: a soft edge sweeps across the screen
+  user: core
+  <source>
+    *: "Wipe"
+  </source>
+  <dest>
+    *: "Wipe"
+  </dest>
+  <voice>
+    *: "Wipe"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TRANSITION_DISSOLVE
+  desc: transition effect: the new screen grains in pixel by pixel
+  user: core
+  <source>
+    *: "Dissolve"
+  </source>
+  <dest>
+    *: "Dissolve"
+  </dest>
+  <voice>
+    *: "Dissolve"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TRANSITION_BLINDS
+  desc: transition effect: slats open across the screen
+  user: core
+  <source>
+    *: "Blinds"
+  </source>
+  <dest>
+    *: "Blinds"
+  </dest>
+  <voice>
+    *: "Blinds"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BOOK_TRANSITION
+  desc: transitions: track change transition while an audiobook plays
+  user: core
+  <source>
+    *: "Audiobook Transition"
+  </source>
+  <dest>
+    *: "Audiobook Transition"
+  </dest>
+  <voice>
+    *: "Audiobook Transition"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_TRANSITION
+  desc: transitions: track change transition while a radio station plays
+  user: core
+  <source>
+    *: "Radio Transition"
+  </source>
+  <dest>
+    *: "Radio Transition"
+  </dest>
+  <voice>
+    *: "Radio Transition"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DIM_BRIGHTNESS_LOCKED
+  desc: in display settings, what the panel dims to while input is locked
+  user: core
+  <source>
+    *: "Dim Brightness When Locked"
+  </source>
+  <dest>
+    *: "Dim Brightness When Locked"
+  </dest>
+  <voice>
+    *: "Dim Brightness When Locked"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STARTUP_FADE
+  desc: playback settings: resuming at power-up fades the music in
+  user: core
+  <source>
+    *: "Fade In At Startup"
+  </source>
+  <dest>
+    *: "Fade In At Startup"
+  </dest>
+  <voice>
+    *: "Fade In At Startup"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STARTUP_VOLUME_LIMIT
+  desc: playback settings: the most volume a resume at power-up comes back at
+  user: core
+  <source>
+    *: "Startup Volume Limit"
+  </source>
+  <dest>
+    *: "Startup Volume Limit"
+  </dest>
+  <voice>
+    *: "Startup Volume Limit"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_BUILDING
+  desc: radio: a dynamic station's setlist is being built from the database
+  user: core
+  <source>
+    *: "Building setlist..."
+  </source>
+  <dest>
+    *: "Building setlist..."
+  </dest>
+  <voice>
+    *: "Building setlist"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_REBUILD
+  desc: radio settings: rebuild every dynamic station's setlist
+  user: core
+  <source>
+    *: "Rebuild Setlists"
+  </source>
+  <dest>
+    *: "Rebuild Setlists"
+  </dest>
+  <voice>
+    *: "Rebuild Setlists"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_REBUILDING
+  desc: radio settings: splash after asking for the setlists to be rebuilt
+  user: core
+  <source>
+    *: "Rebuilding setlists in the background"
+  </source>
+  <dest>
+    *: "Rebuilding setlists in the background"
+  </dest>
+  <voice>
+    *: "Rebuilding setlists in the background"
+  </voice>
+</phrase>

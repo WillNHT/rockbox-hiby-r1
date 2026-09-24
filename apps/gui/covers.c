@@ -26,7 +26,7 @@
  *
  * Decoding happens on the UI thread the first time an item is drawn, and
  * the result is kept, keyed by path and size, in an LRU of COVER_SLOTS
- * pictures. A path with no picture is remembered too, so a list full of
+ * pictures and SMALL_SLOTS thumbnails. A path with no picture is remembered too, so a list full of
  * coverless items does not reopen every file on every redraw. */
 
 #include "config.h"
@@ -60,6 +60,15 @@
 
 #define COVER_SLOTS  12
 #define SLOT_BYTES   (COVER_MAX_SIZE * COVER_MAX_SIZE * sizeof(fb_data))
+/* Thumbnails get slots of their own. A page of the thumbnail view shows a
+ * dozen covers or more, and with only the twelve big slots every redraw
+ * evicted the covers it was about to draw and decoded them all again -
+ * which is what made scrolling a page of pictures crawl (#79). Small
+ * slots are a sixth of the size, so there can be many more of them. */
+#define SMALL_MAX    128
+#define SMALL_SLOTS  32
+#define SMALL_BYTES  (SMALL_MAX * SMALL_MAX * sizeof(fb_data))
+#define ALL_SLOTS    (COVER_SLOTS + SMALL_SLOTS)
 
 struct cover_slot
 {
@@ -70,7 +79,7 @@ struct cover_slot
     bool     missing;
 };
 
-static struct cover_slot slots[COVER_SLOTS];
+static struct cover_slot slots[ALL_SLOTS];
 static long cover_clock;
 static int pix_handle = -1;
 static int decode_handle = -1;
@@ -82,7 +91,7 @@ bool covers_init(void)
         return true;
 
     memset(slots, 0, sizeof(slots));
-    pix_handle = core_alloc(COVER_SLOTS * SLOT_BYTES);
+    pix_handle = core_alloc(COVER_SLOTS * SLOT_BYTES + SMALL_SLOTS * SMALL_BYTES);
     decode_size = SLOT_BYTES + JPEG_DECODE_OVERHEAD + 256 * 1024;
     decode_handle = core_alloc(decode_size);
     if (pix_handle <= 0 || decode_handle <= 0)
@@ -211,7 +220,33 @@ static bool decode_path(const char *path, int size, struct bitmap *bm)
     return decode_audio(path, size, bm);
 }
 
-static const struct bitmap *cover_get(const char *path, int size)
+static unsigned char *slot_pixels(int slot)
+{
+    unsigned char *pix = core_get_data(pix_handle);
+    if (slot < COVER_SLOTS)
+        return pix + slot * SLOT_BYTES;
+    return pix + COVER_SLOTS * SLOT_BYTES + (slot - COVER_SLOTS) * SMALL_BYTES;
+}
+
+/* Decoding is what a scroll waits on: a cover not in the cache is a file
+ * read and a JPEG decode on the UI thread. A list can cap how many it
+ * pays for per redraw; the rest are drawn as placeholders and fetched on
+ * the following redraws, so the list moves at once and fills in behind. */
+static int decode_budget = -1;          /* -1: no limit */
+static bool decode_deferred;
+
+void covers_set_budget(int decodes)
+{
+    decode_budget = decodes;
+    decode_deferred = false;
+}
+
+bool covers_deferred(void)
+{
+    return decode_deferred;
+}
+
+const struct bitmap *cover_get(const char *path, int size)
 {
     static struct bitmap out;
     struct bitmap bm;
@@ -225,8 +260,13 @@ static const struct bitmap *cover_get(const char *path, int size)
     if (size < 8)
         return NULL;
 
+    /* The slots a cover of this size may be kept in. */
+    int first = size <= SMALL_MAX ? COVER_SLOTS : 0;
+    int last = size <= SMALL_MAX ? ALL_SLOTS : COVER_SLOTS;
+
     key = crc_32(path, strlen(path), 0xffffffff) | 1;
-    for (i = 0; i < COVER_SLOTS; i++)
+    victim = first;
+    for (i = first; i < last; i++)
     {
         if (slots[i].key == key && slots[i].size == size)
         {
@@ -239,6 +279,15 @@ static const struct bitmap *cover_get(const char *path, int size)
 
     if (slot < 0)
     {
+        /* Out of decodes for this frame: nothing now, and the caller asks
+         * again on the redraw it is owed. */
+        if (decode_budget == 0)
+        {
+            decode_deferred = true;
+            return NULL;
+        }
+        if (decode_budget > 0)
+            decode_budget--;
         slot = victim;
         slots[slot].key = key;
         slots[slot].size = size;
@@ -249,7 +298,7 @@ static const struct bitmap *cover_get(const char *path, int size)
         {
             slots[slot].w = bm.width;
             slots[slot].h = bm.height;
-            memcpy((char *)core_get_data(pix_handle) + slot * SLOT_BYTES,
+            memcpy(slot_pixels(slot),
                    bm.data, (size_t)bm.width * bm.height * sizeof(fb_data));
         }
     }
@@ -261,7 +310,7 @@ static const struct bitmap *cover_get(const char *path, int size)
     out.width = slots[slot].w;
     out.height = slots[slot].h;
     out.format = FORMAT_NATIVE;
-    out.data = (unsigned char *)core_get_data(pix_handle) + slot * SLOT_BYTES;
+    out.data = slot_pixels(slot);
     return &out;
 }
 
@@ -339,7 +388,7 @@ void cover_draw_placeholder(struct screen *d, const char *text,
 void covers_forget(const char *path)
 {
     uint32_t key = path ? (crc_32(path, strlen(path), 0xffffffff) | 1) : 0;
-    for (int i = 0; i < COVER_SLOTS; i++)
+    for (int i = 0; i < ALL_SLOTS; i++)
         if (!path || slots[i].key == key)
             slots[i].key = 0;
 }

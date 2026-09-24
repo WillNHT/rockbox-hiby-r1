@@ -29,6 +29,9 @@ enum lcd_transition
     LCD_TRANSITION_SLIDE,   /* the new screen slides over the old one */
     LCD_TRANSITION_PUSH,    /* the new screen pushes the old one out */
     LCD_TRANSITION_CASCADE, /* bands of the screen arrive one after another */
+    LCD_TRANSITION_WIPE,    /* a soft edge sweeps across                   */
+    LCD_TRANSITION_DISSOLVE,/* the new screen grains in pixel by pixel     */
+    LCD_TRANSITION_BLINDS,  /* slats open across the whole screen at once  */
     LCD_TRANSITION_COUNT
 };
 

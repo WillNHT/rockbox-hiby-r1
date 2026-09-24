@@ -28,6 +28,8 @@
 #include "timeout.h"
 #include "misc.h"
 #include "fixedpoint.h"
+#include "file.h"
+#include <string.h>
 
 /** Beep generation, CPU optimized **/
 #include "asm/beep.c"
@@ -42,12 +44,44 @@
 static struct timeout duck_tmo;
 static int duck_depth;          /* 0 when the music is at full volume */
 
+/* Fading the music in after a restart is the same lever held down longer:
+ * a duck that lifts a step at a time. Kept apart from duck_depth so a cue
+ * during the fade - the radio tuning in, say - does not end it. */
+#define FADE_STEP_TICKS (HZ / 20)
+static struct timeout fade_tmo;
+static int fade_depth;          /* 0 when not fading in */
+static int fade_step;
+
+static void duck_apply(void)
+{
+    pcmbuf_duck(MAX(duck_depth, fade_depth));
+}
+
 static int duck_release(struct timeout *tmo)
 {
     (void)tmo;
     duck_depth = 0;
-    pcmbuf_duck(0);
+    duck_apply();
     return 0;                   /* <= 0 unregisters */
+}
+
+static int fade_tick(struct timeout *tmo)
+{
+    (void)tmo;
+    fade_depth = MAX(fade_depth - fade_step, 0);
+    duck_apply();
+    return fade_depth > 0 ? FADE_STEP_TICKS : 0;
+}
+
+/* Bring the music up from silence over 'duration' ms. */
+void beep_fade_in(unsigned int duration)
+{
+    int steps = MAX(1, (int)(HZ * duration / 1000 / FADE_STEP_TICKS));
+
+    fade_step = MAX(1, 100 / steps);
+    fade_depth = 100;
+    duck_apply();
+    timeout_register(&fade_tmo, fade_tick, FADE_STEP_TICKS, 0);
 }
 
 /* Step the music aside by 'percent' for the length of a sound. Several
@@ -60,7 +94,7 @@ void beep_duck(unsigned int duration, int percent)
     if (percent > duck_depth)
     {
         duck_depth = percent;
-        pcmbuf_duck(percent);
+        duck_apply();
     }
 
     timeout_register(&duck_tmo, duck_release,
@@ -126,12 +160,9 @@ beep_get_more(const void **start, size_t *size)
  * chopped into bursts, and a thump is noise with the top taken off. Five
  * separate generators would be five copies of this loop.
  *
- * Deliberately not sample playback. The beep channel takes raw PCM with no
- * decoder behind it, so shipping five WAVs would mean a WAV reader, five
- * files that have to be on the card, and a card read on a UI event.
- * ponytail: that is also what "user-replaceable sound files" (issue #64
- * item 6) would need - the knobs below are the customisation there is
- * until someone wants it enough to pay for the reader. */
+ * Generated rather than shipped as samples: nothing has to be on the card
+ * and nothing is read on a UI event. A user who wants a sound of their
+ * own drops a WAV in place of one - see beep_play_wav() below. */
 void beep_play_fx(const struct beep_fx *fx)
 {
     mixer_channel_stop(PCM_MIXER_CHAN_BEEP);
@@ -300,4 +331,109 @@ void beep_play_noise(unsigned int duration, unsigned int amplitude)
     mixer_channel_play_data(PCM_MIXER_CHAN_BEEP,
                             beep_count ? beep_get_more : NULL,
                             start, size);
+}
+
+/** Sound files **/
+
+/* Any radio noise can be a file instead (#64): a 16-bit PCM WAV, mono or
+ * stereo, at any rate - resampled here, nearest sample, to the mixer's.
+ * At most WAV_FRAMES frames, about three seconds; a longer file is cut.
+ * Read whole, on the UI thread, when the sound is played: these are short
+ * and played rarely, and a static buffer means nothing is allocated. */
+#define WAV_FRAMES (3 * 48000)
+static int16_t wav_buf[WAV_FRAMES * 2] __attribute__((aligned(4)));
+
+static uint32_t le32(const uint8_t *p)
+{
+    return p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24;
+}
+
+/* Fill wav_buf from the data chunk; returns the frames written. */
+static uint32_t wav_decode(int fd, uint32_t len, int channels, uint32_t rate,
+                           int percent)
+{
+    static int16_t chunk[256 * 2];
+    const uint32_t fout = mixer_get_frequency();
+    const uint32_t in_frames = len / (2 * channels);
+    uint32_t out_frames = (uint64_t)in_frames * fout / rate;
+    uint32_t start = 0, have = 0, j;
+
+    if (out_frames > WAV_FRAMES)
+        out_frames = WAV_FRAMES;
+
+    for (j = 0; j < out_frames; j++)
+    {
+        uint32_t s = (uint64_t)j * rate / fout;
+        while (s >= start + have)
+        {
+            uint32_t want = MIN(256, in_frames - (start + have));
+            start += have;
+            have = 0;
+            if (want == 0)
+                return j;
+            ssize_t n = read(fd, chunk, want * 2 * channels);
+            if (n <= 0)
+                return j;
+            have = n / (2 * channels);
+        }
+        const int16_t *f = &chunk[(s - start) * channels];
+        int32_t l = (int16_t)letoh16(f[0]) * percent / 100;
+        int32_t r = channels == 2 ? (int16_t)letoh16(f[1]) * percent / 100 : l;
+        wav_buf[2 * j]     = (int16_t)MAX(INT16_MIN, MIN(INT16_MAX, l));
+        wav_buf[2 * j + 1] = (int16_t)MAX(INT16_MIN, MIN(INT16_MAX, r));
+    }
+    return j;
+}
+
+/* Play a WAV on the beep channel at percent of its level. Returns its
+ * length in ms, or 0 - nothing played - when there is no such file or it
+ * is not one this reads. */
+int beep_play_wav(const char *path, int percent)
+{
+    uint8_t hdr[12], ck[8], fmt[16];
+    int channels = 0, bits = 0;
+    uint32_t rate = 0, frames = 0;
+    int fd = open(path, O_RDONLY);
+
+    if (fd < 0)
+        return 0;
+
+    mixer_channel_stop(PCM_MIXER_CHAN_BEEP);
+    beep_fx.duration = 0;
+
+    if (read(fd, hdr, 12) == 12 && !memcmp(hdr, "RIFF", 4) &&
+        !memcmp(hdr + 8, "WAVE", 4))
+    {
+        while (read(fd, ck, 8) == 8)
+        {
+            uint32_t len = le32(ck + 4);
+            if (!memcmp(ck, "fmt ", 4) && len >= 16 &&
+                read(fd, fmt, 16) == 16)
+            {
+                if ((fmt[0] | fmt[1] << 8) != 1)      /* not plain PCM */
+                    break;
+                channels = fmt[2] | fmt[3] << 8;
+                rate = le32(fmt + 4);
+                bits = fmt[14] | fmt[15] << 8;
+                lseek(fd, len - 16 + (len & 1), SEEK_CUR);
+            }
+            else if (!memcmp(ck, "data", 4))
+            {
+                if (bits == 16 && (channels == 1 || channels == 2) && rate)
+                    frames = wav_decode(fd, len, channels, rate, percent);
+                break;
+            }
+            else
+                lseek(fd, len + (len & 1), SEEK_CUR);
+        }
+    }
+    close(fd);
+
+    if (frames == 0)
+        return 0;
+
+    mixer_channel_set_amplitude(PCM_MIXER_CHAN_BEEP, MIX_AMP_UNITY);
+    mixer_channel_play_data(PCM_MIXER_CHAN_BEEP, NULL, wav_buf,
+                            frames * 2 * sizeof(int16_t));
+    return MAX(1, (int)((uint64_t)frames * 1000 / mixer_get_frequency()));
 }

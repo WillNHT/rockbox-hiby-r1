@@ -45,18 +45,73 @@ top of the station list picks a station for you first, then tunes it.
 A station is everything under its folder, any number of levels deep, so a
 station can be organised into its own subfolders without breaking scanning.
 
+## Dynamic stations
+
+A station can also be made from your music library instead of a folder of
+recordings. Put a `station.cfg` in the station's folder and the station
+plays whatever in the database matches it:
+
+```
+/radio/Groovy Baby/station.cfg
+```
+
+```
+# The late seventies
+year: 1976-1980
+```
+
+| Line | Matches |
+| --- | --- |
+| `year: 1976-1980` | tracks from those years; a single year works too, and several ranges can be given separated by commas |
+| `artist: Blink-182, Green Day, Nirvana` | tracks by any of those artists (artist or album artist, any case) |
+| `genre: Punk, Grunge` | tracks of any of those genres |
+
+Every line narrows the station further; the values on one line are
+alternatives. The file is what makes a station dynamic, so a station is
+never both: with a `station.cfg`, anything else in the folder is ignored.
+
+The station's music is written to `setlist.m3u8` next to the
+`station.cfg`. Setlists are built in the background, when you enter the
+radio, for any dynamic station that has none; tuning into one before its
+setlist exists builds it there and then, the one time you wait for it. A
+setlist stays as it is until you ask for it again, so a station is the same
+station between database updates:
+
+* **Radio Settings > Rebuild Setlists** rebuilds every dynamic station in
+  the background.
+* A long press on a dynamic station in **Stations** rebuilds that one.
+
+Everything else is the same as a folder station: it has a clock, prev/next
+moves the dial, the clock moves it on to the next song every few minutes
+rather than every two hours, and nothing is bookmarked. Its cover is the
+station's `cover.jpg` when it has one, and each song's own artwork when it
+does not.
+
+The radio WPS says which kind is on: `on air - static` or
+`on air - dynamic`. `%rd` is that word, for any skin, and is empty off the
+radio.
+
+Stations that make themselves - from what you actually listen to, say -
+would only need to write `station.cfg` files; the rest is already here.
+
 ## While tuned in
 
 Prev/next moves the dial instead of stepping through the station's files -
 a radio does not let you skip to the next track of the thing playing, it
-switches you to something else. A station with more than one file also
+switches you to something else. Next is the station after this one in the
+station list and previous the one before, wrapping round at either end, so
+every station is a few presses away. A station with more than one file also
 plays them in an order of its own rather than alphabetically.
 
 Pausing does not stop the station. Come back after more than half a minute
-and playback drops in as far along as the time you were away, wrapping round
-the recording - so a pause over lunch returns to a different part of the
+and the station is tuned in again by its clock, as far along as the time you
+were away - so a pause over lunch returns to a different part of the
 programme, not to the syllable you left on. Shorter pauses resume where they
 were, because a phone call is not an afternoon.
+
+Switching the player off does not stop it either. With a station last on,
+resuming at power-up (the WPS as the start screen, or Resume Playback) tunes
+the station in by the clock rather than resuming the second it was left on.
 
 Nothing the radio plays is bookmarked. A station was tuned into part-way
 through on purpose, so the second you left it at is an accident of when you
@@ -77,6 +132,18 @@ It is used for every file in the station, however many subfolders deep the
 file itself sits, and it wins over the ordinary album-art search. Without one
 the normal album-art rules apply.
 
+A branch of a station can have a cover of its own. The closest `cover.jpg`
+wins: the one in the file's own folder, else the one in the folder above,
+and so on up to the station folder - never one in a folder below the file.
+
+```
+/radio/Late Night/cover.jpg              <- set-01.mp3, and anything without its own
+/radio/Late Night/set-01.mp3
+/radio/Late Night/Guests/cover.jpg       <- Guests/a.mp3 and Guests/2019/b.mp3
+/radio/Late Night/Guests/a.mp3
+/radio/Late Night/Guests/2019/b.mp3
+```
+
 ## Settings
 
 **Main Menu - Radio - Radio Settings**
@@ -86,6 +153,7 @@ the normal album-art rules apply.
 | Radio Folder | `/radio` | Where the stations are. |
 | Minimum Length | 10 min | How long a recording must be to be preferred. |
 | Tuning Static | On | The hiss played while tuning in. |
+| Rebuild Setlists | - | Rebuilds every [dynamic station](#dynamic-stations)'s setlist in the background. |
 | Radio WPS | Same as Music | The WPS used while a station plays. |
 | Radio Screensaver | Same as usual | The screensaver used while a station plays. |
 
@@ -144,12 +212,28 @@ They go through the same mixer channel as the keyclick and duck the music
 the same way, at the Cue depth in
 [Audio Prioritisation](audio-prioritisation.md).
 
-All of them are generated rather than played from a file. The beep channel
-takes raw PCM with no decoder behind it, so a set of sound files would mean
-a WAV reader, five more files that have to be on the card, and a card read
-on a UI event - for noises that are three numbers each. **Static Strength**
-scales all of them together, from a tenth to twice; **Tuning Static** turns
-the lot off.
+All of them are generated, so nothing has to be on the card for them.
+**Static Strength** scales all of them together, from a tenth to twice;
+**Tuning Static** turns the lot off.
+
+#### Your own sounds
+
+Any of them can be a sound file instead. Put a WAV of the right name in
+`/.rockbox/radio/` and it plays in place of the generated noise:
+
+| File | Replaces |
+| --- | --- |
+| `tune.wav` | Tuning in |
+| `retune.wav` | Prev/next |
+| `pause.wav` | Pause |
+| `resume.wav` | Resume |
+| `leave.wav` | Leaving |
+| `band1.wav` ... `band5.wav` | The five [band noises](#band-noise), in the order listed there |
+
+Plain 16-bit PCM WAV, mono or stereo, at any sample rate; up to about three
+seconds, and a longer file is cut. **Static Strength** still scales them and
+they duck the music the same way. A theme can ship a set by including the
+folder. Delete a file to get the generated sound back.
 
 ### Band Noise
 
@@ -173,7 +257,15 @@ the parts that do not apply to a radio taken out - no elapsed, no total, no
 "3 of 52", and no file name, because the file is how the station is made
 rather than a second thing you tuned to. The station has the block to
 itself, and the footer says `on air` or `paused` with a red dot beside it
-that blinks while the carrier is up.
+that blinks while the carrier is up. No codec or bit rate either - how a
+file was ripped is not something a radio has to say - so the level meter
+has the whole width of the band.
+
+A station running on from one recording into the next is not a track change
+anybody asked for, so it is not animated: the screen stays put and the sound
+carries on. The track change transition only plays when the picture changes
+- another station, or a branch of this one with a
+[cover of its own](#station-cover).
 
 The station name comes from `%rs`, a skin tag this fork adds. It is the
 station folder's name, and it is empty when what is playing is not a

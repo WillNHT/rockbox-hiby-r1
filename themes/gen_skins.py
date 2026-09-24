@@ -15,6 +15,8 @@ SnappyLyricsLines.wps and SnappyLyricsCaption.wps, and the video demo
 SnappyCanvas.wps.
 """
 import io
+import math
+import random
 
 ACCENT = "D9E021"
 INK    = "F4F2EE"
@@ -39,6 +41,7 @@ MARGIN = 30
 ROW_Y, ROW_B = 26, 82
 CLOCK_Y, CLOCK_H = 48, 34       # the battery percentage's own row
 CLOCK_X, CLOCK_W = 30, 144      # "88:88" in the 31 px face is 81 px
+CLOCK_TEXT_X = 40               # the icon's share of the box
 
 HEADER = """#
 # Header
@@ -54,9 +57,20 @@ HEADER = """#
 # Unlabelled, so always drawn. The corner used to be shared with the sleep
 # timer and the volume number, which meant the one thing it is for was the
 # one thing it was often not showing.
+#
+# The whole widget is the inverted box, icon included, as on the battery
+# side (#85): the icon is placed by position, so the inverted line - a
+# stop that the time's own viewport then covers - fills the whole box
+# behind it, and it is drawn in the ground colour like the text. The time is the 24 px face - three quarters
+# of the battery's - in a viewport of its own, centred on the rest of the
+# box; its inverted line refills the part of the box its clear takes out.
 %%V(%d,%d,%d,%d,3)
-%%Vs(invert)%%ac%%?cH<%%xd(K)|%%xd(K)> %%cH:%%cM
-#""" % (CLOCK_X, CLOCK_Y, CLOCK_W, CLOCK_H) + """
+%%Vs(invert)%%ar%%?cH<%%xd(K)|%%xd(K)>.
+%%V(%d,%d,%d,%d,2)
+%%Vs(invert)%%ac%%cH:%%cM
+#""" % (CLOCK_X, CLOCK_Y, CLOCK_W, CLOCK_H,
+        CLOCK_X + CLOCK_TEXT_X, CLOCK_Y + (CLOCK_H - 27 + 1) // 2,
+        CLOCK_W - CLOCK_TEXT_X, 27) + """
 # Shuffle
 %V(178,28,94,22,2)
 SHF%xd(O,%ps)
@@ -74,12 +88,24 @@ SHF%xd(O,%ps)
 %Vs(invert)%ac%?bp<%xd(Bb)|%xd(Ba)> %bl%%
 #
 # Volume bar
-%Vl(volbar,30,110,-30,36,-)
-%Vt(0)
-%pv(0,0,-,-,vb,backdrop,vb_backdrop)
-%?if(%pv, >, 0)<%pv(0,0,-,-,vb_too_loud,backdrop,vb_backdrop)>
+# Above the clock, the battery bar's twin on the other side of the row: the
+# same size and the same bitmaps, so the two read as a pair (#85).
+%Vl(volbar,30,26,138,18,-)
+%pv(0,0,138,18,bb,backdrop,bb_backdrop)
 #
 """
+
+# The playlist row. Last of all, after even the LOCKED banner: declared in
+# HEADER the backdrop viewport painted it straight over, and ahead of the
+# banner the banner's own clear wiped it while the keys were free (#85). Its name comes from %pn - a saved playlist, the folder being
+# played, or the database view it was started from - and scrolls when it
+# is too long for the row.
+PLNAME = """#
+# Playlist
+# ========
+%Vl(plname,30,112,-30,34,3)
+%Vt(0)
+%s%al%?pn<%pn|>"""
 
 # Locked.
 #
@@ -103,7 +129,7 @@ PRELOAD = """%Fl(2,24-GeistMono-SemiBold.fnt)
 %Fl(4,44-GeistMono-SemiBold.fnt)
 %Fl(5,58-GeistMono-SemiBold.fnt)
 %xl(B,batt_wps.bmp,2,0,2)
-%xl(K,clock_wps.bmp)
+%xl(K,clock_wps.bmp,6,0)
 %xl(O,off_on.bmp,48,0,2)
 %xl(vb,vb.bmp)
 %xl(bb,bb.bmp)
@@ -182,7 +208,7 @@ def dial_border(x, y, w, h, ms=60, stops=12):
     return out
 
 
-def band(y, meter_h=78, h=82):
+def band(y, meter_h=78, h=82, codec=True):
     """The peak meter, the codec column, and the transport states that
     share their rectangle.
 
@@ -192,14 +218,18 @@ def band(y, meter_h=78, h=82):
     No playlist position either. It is in the footer, where it belongs;
     having it alternate with the sample rate as well meant the same
     "1 of 2279" appeared twice on the panel, in two places, out of phase.
+
+    codec=False drops the codec column and gives the meter the whole width:
+    a station's bit rate is how the file was ripped, not something the
+    radio has to say, and it flickered on every recording change.
     """
-    return """#
+    out = """#
 # The band
 # ========
 # The meter fills %d px of an %d px band. It used to be 24, because the
 # engine drew a peak meter one line of the viewport's font tall and
 # nothing else; %%pm takes a height now.
-%%Vl(pm_short,30,%d,240,%d,2)
+%%Vl(pm_short,30,%d,%s,%d,2)
 %%Vt(0)
 %%pm(%d)
 #
@@ -222,8 +252,11 @@ def band(y, meter_h=78, h=82):
 %%V(280,%d,-30,30,2)
 %%Vt(0)
 %%ar%%?if(%%St(party mode),!=,off)<party|%%?if(%%St(single mode),!=,off)<%%St(single mode)|%%fk kHz>>""" % (
-        meter_h, h, y, h, meter_h, y, h, meter_h,
+        meter_h, h, y, "240" if codec else "-30", h, meter_h, y, h, meter_h,
         y + 18, y + 18, y + 12, y + 42)
+    if not codec:
+        out = out[:out.index("#\n%V(280,")].rstrip("\n")
+    return out
 
 
 def hide_while_armed(lines):
@@ -324,8 +357,8 @@ def snappy_v2(vinyl=False):
     else:
         o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
     o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>")
-    o.append("%?mh<|%Vd(volbar)>")
-    o += dial_border(30, 110, 420, 36)
+    o.append("%Vd(volbar)%?mh<|%Vd(plname)>")
+    o += dial_border(30, 26, 138, 18)
     o.append(HEADER)
     if vinyl:
         o.append("""#
@@ -379,6 +412,7 @@ def snappy_v2(vinyl=False):
 %Vt(0)
 %al%pc/%pt%ar%pp/%pe""")
     o.append(LOCKBAR)
+    o.append(PLNAME)
     return "\n".join(o) + "\n"
 
 
@@ -421,6 +455,27 @@ SHEEN_H = sum(h for h, _ in SHEEN_PROFILE)
 SHEEN_Y0 = AY + 2
 SHEEN_STOPS = (AH - 4 - SHEEN_H) // SHEEN_STEP + 1
 SHEEN_REST = 30
+# Too clean, as a single pass at one speed every few seconds: it read as a
+# scanner. The cycle is four passes instead, each at its own pace and with
+# its own rest after it, easing in at the top and out at the bottom and
+# stumbling a little on the way (#58). A fixed seed, so the skin a build
+# ships is the skin the next build ships.
+SHEEN_PASSES = [(1.0, SHEEN_REST), (2.2, 55), (0.8, 20), (3.0, 70)]
+SHEEN_SWAY = 18
+
+
+def sheen_schedule():
+    """The stop the sheen is at on each frame of the cycle, None at rest."""
+    rnd = random.Random(58)
+    frames = []
+    for speed, rest in SHEEN_PASSES:
+        pos = 0.0
+        while pos < SHEEN_STOPS:
+            frames.append(int(pos))
+            ease = 0.5 + math.sin(math.pi * pos / SHEEN_STOPS)
+            pos += max(0.25, speed * ease + rnd.uniform(-0.35, 0.35))
+        frames += [None] * (rest + rnd.randint(-8, 8))
+    return frames
 
 
 def gate(lines, prefix, cond):
@@ -551,7 +606,7 @@ def animated(gauge=False, lyrics=None, radio=False):
     # transparent viewport in the skin language to put it in. %Vt(0) is
     # that viewport, so the special case is gone and the bar is one thing
     # in one place whether or not the track has artwork.
-    o.append("%?mh<|%Vd(volbar)>")
+    o.append("%Vd(volbar)" + ("" if radio else "%?mh<|%Vd(plname)>"))
     if radio:
         # The dot is a mono bitmap, not a drawn rectangle: a viewport whose
         # lines carry neither text nor a bitmap has no lines to render, and
@@ -575,19 +630,21 @@ def animated(gauge=False, lyrics=None, radio=False):
     # There used to be two more: a yellow segment chasing round the cover's
     # edge and a breathing rule under the title. Both are gone (#23) - the
     # cover is the picture, and a light running round it only competed.
-    frames = SHEEN_STOPS + SHEEN_REST
+    schedule = sheen_schedule()
+    frames = len(schedule)
     # The caption sits on the cover, and the sheen restores the cover as it
     # passes: %yb only redraws when its lines move, so the two would take
     # turns erasing each other. The caption variant has no sheen.
     sheen = lyrics not in ("caption", "canvas")
-    for i in range(SHEEN_STOPS if sheen else 0):
-        o.append("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%02d)>"
-                 % (frames, SHEEN_MS, i + 1, i))
+    for f, stop in enumerate(schedule if sheen else []):
+        if stop is not None:
+            o.append("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%02d)>"
+                     % (frames, SHEEN_MS, f + 1, stop))
 
     if not gauge:
         # Its enables come first in what it returns, then its viewports -
         # so it goes last among the enables.
-        o += dial_border(30, 110, 420, 36)
+        o += dial_border(30, 26, 138, 18)
 
     o.append(HEADER)
 
@@ -613,8 +670,14 @@ def animated(gauge=False, lyrics=None, radio=False):
     moving.append("#")
     for i in range(SHEEN_STOPS):
         sy = SHEEN_Y0 + i * SHEEN_STEP
+        # The sway: the band drifts sideways as it goes down, one edge
+        # pulling in and then the other, so it moves across the cover as
+        # well as down it. Kept inside the cover by narrowing, not moving
+        # past its edge.
+        sway = round(SHEEN_SWAY * math.sin(2 * math.pi * i / SHEEN_STOPS))
         moving.append("%%Vl(sh%02d,%d,%d,%d,%d,-)"
-                      % (i, AX + 2, sy, ART_W, SHEEN_H))
+                      % (i, AX + 2 + max(sway, 0), sy, ART_W - abs(sway),
+                         SHEEN_H))
         moving.append("%Vt(0)")
         y = 0
         for h, a in SHEEN_PROFILE:
@@ -695,7 +758,7 @@ def animated(gauge=False, lyrics=None, radio=False):
                               AX + 10, AY + AH // 2 - 20, AS - 20))
     if sheen:
         o += moving
-    the_band = band(BAND_Y, 62, 66)
+    the_band = band(BAND_Y, 62, 66, codec=not radio)
     if lyrics == "lines":
         the_band, enables = gate(the_band, "bd", "%%?yf<||%s>")
         o[band_slot] = "\n".join(enables)
@@ -722,14 +785,17 @@ def animated(gauge=False, lyrics=None, radio=False):
 # ======
 %V(30,768,-30,30,2)
 %Vt(0)
-%ac%?mp<off air|on air|paused|on air|on air>
+%ac%?mp<off air|on air - %rd|paused - %rd|on air - %rd|on air - %rd>
+#
+# "- static" or "- dynamic" after it (%rd): a folder of recordings, or a
+# station made from the library by its station.cfg (#88).
 #
 # The liveness light. Its own viewport so the caption stays centred on the
 # screen rather than on the pair of them, and two sublines so it blinks - a
 # red dot that sits still is a dot, one that blinks is a transmitter. Off
 # air and paused it is not enabled at all, which is the one state where a
 # light saying "live" would be lying.
-%Vl(live,176,777,14,14,-)
+%Vl(live,116,777,14,14,-)
 %Vt(0)
 %t(0.7)%Vf(CC2B2B)%xd(L);%t(0.7)%Vf(0C0D0E)%xd(L)""")
     else:
@@ -815,6 +881,7 @@ def animated(gauge=False, lyrics=None, radio=False):
         o += vp
 
     o.append(LOCKBAR)
+    o.append(PLNAME)
     return "\n".join(o) + "\n"
 
 
@@ -843,8 +910,8 @@ def lyrics_full():
 #
 %wd""", PRELOAD, "%Vd(bg)",
          "%?yf<|%Vd(plainnote)|%Vd(nolyrics)>",
-         "%?mh<|%Vd(volbar)>"]
-    o += dial_border(30, 110, 420, 36)
+         "%Vd(volbar)%?mh<|%Vd(plname)>"]
+    o += dial_border(30, 26, 138, 18)
     o.append(HEADER)
     o.append("""#
 # The backdrop
@@ -893,6 +960,7 @@ def lyrics_full():
                             LYR_Y + LYR_H // 2 - 20, LYRIC_DIM,
                             LYR_Y + LYR_H, LYRIC_DIM))
     o.append(LOCKBAR)
+    o.append(PLNAME)
     return "\n".join(o) + "\n"
 
 

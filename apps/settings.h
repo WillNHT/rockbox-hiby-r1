@@ -852,6 +852,8 @@ struct user_settings
      * of a percent of the panel's range. Zero is "go dark", the way every
      * other target behaves. */
     int dim_level;
+    /* The same while input is locked. */
+    int dim_level_locked;
     /* The old whole-percent setting, read from an old config.cfg and
      * converted once by settings_apply(); -1 when there is nothing to
      * convert. Never written. */
@@ -1047,6 +1049,8 @@ struct user_settings
      * transistor-radio feel of changing station by hand. */
     bool track_static;
     int  track_static_ms;
+    bool startup_fade;          /* resume at power-up fades in */
+    int  startup_volume_limit;  /* ...at no more than this % */
     bool emoji_enabled;      /* colour emoji from /.rockbox/emoji */
     /* Audio prioritisation: a device sound with music under it is barely
      * audible, so the music steps aside while it plays. One depth per
@@ -1086,6 +1090,8 @@ struct user_settings
     int menu_transition_ms;
     int wps_transition;      /* enum lcd_transition, on track change */
     int wps_transition_ms;
+    int book_transition;     /* 0 = as wps_transition, else effect + 1 */
+    int radio_transition;    /* the same, while a station plays */
 #endif
 #ifdef HAVE_QUICKSCREEN
     bool shortcuts_replaces_qs;

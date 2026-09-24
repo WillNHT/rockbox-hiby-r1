@@ -37,6 +37,10 @@ bool covers_init(void);
 /* Draw the cover for path centred in a size x size square at x,y of the
  * current viewport. False, with nothing drawn, when there is none. */
 bool cover_draw(struct screen *d, const char *path, int x, int y, int size);
+/* The decoded cover itself, fitted into a size x size square; NULL when
+ * there is none. Valid until the next cover is asked for. */
+struct bitmap;
+const struct bitmap *cover_get(const char *path, int size);
 #ifdef HAVE_VIDEO
 /* The same, but an animated .gif or .webp cover moves: each call draws
  * its current frame, and a still cover only when full. Returns 2 for an
@@ -49,6 +53,11 @@ int cover_draw_animated(struct screen *d, const char *path,
  * letter of text in it. */
 void cover_draw_placeholder(struct screen *d, const char *text,
                             int x, int y, int size);
+
+/* Decode at most this many uncached covers until the next call, -1 for
+ * no limit; covers_deferred() then says whether any were put off. */
+void covers_set_budget(int decodes);
+bool covers_deferred(void);
 
 /* Forget everything decoded for path (a cover file changed). NULL: all. */
 void covers_forget(const char *path);

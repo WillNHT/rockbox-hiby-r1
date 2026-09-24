@@ -38,13 +38,14 @@ This keymap restores standard media controls while keeping essential Rockbox men
 | **Power** + **Vol Up**             | **Lock** Device                                                                         |
 | **Power** + **Vol Down**           | **Quickscreen** *(Note: **Long Power** inside **Quickscreen** opens **Shortcuts**)*     |
 | **Power** + **Play**               | **Main Menu**                                                                           |
-| **Power** + **Next**               | **Pitchscreen**                                                                         |
+| **Power** + **Next**               | **Screenshot** - on every screen, see below                                             |
 | **Next/Play** + **Long Next/Play** | Go to the next/previous directory (disabled for audiobooks)                             |
 
 ---
 
 #### Notes
 
+- **Power** + **Next** takes a screenshot of whatever is on the panel, on any screen, locked or not. It is saved as a JPEG in `/screenshots` on the card, named for the time in UTC plus a random suffix - `2026-09-22-04-20-20-utc0-odml2.jpg` - and a click confirms it.
 - I had to sacrifice single presses of the volume buttons in WPS (but they still work after **Lock**). So use long presses for volume changes.
 - Quickest way to stop playback - long press **Power** twice (the first opens the **Context Menu**, the second stops playback).
 - If you just want to turn on the screen, press **Power** + **Vol Up** (**Lock** combo).

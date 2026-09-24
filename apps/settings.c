@@ -947,6 +947,7 @@ void settings_apply(bool read_disk)
         global_settings.dim_level = global_settings.dim_brightness * 10;
         global_settings.dim_brightness = -1;
     }
+    backlight_set_dim_brightness_locked(global_settings.dim_level_locked);
     backlight_set_dim_brightness(global_settings.dim_level);
     backlight_set_off_timeout(global_settings.backlight_off_timeout);
 #endif

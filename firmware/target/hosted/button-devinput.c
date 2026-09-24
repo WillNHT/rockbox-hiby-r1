@@ -233,9 +233,10 @@ int button_read_device(BDATA)
                     switch(event.type) {
                     case EV_KEY: {
 #ifdef BUTTON_TOUCH_WAKES
-                        /* A tap on a dimmed or dark screen wakes it and goes
-                         * no further. The release finds it lit and only
-                         * marks the touch as up.
+                        /* A tap on a dark screen wakes it and goes no
+                         * further. A dimmed one is readable, so the tap is
+                         * meant for it and goes through. The release finds
+                         * it lit and only marks the touch as up.
                          *
                          * Only ever one tap in a row: if the screen still
                          * reads dark on the next tap, something is keeping
@@ -244,7 +245,7 @@ int button_read_device(BDATA)
                          * tap through instead. */
                         if (event.code == BTN_TOUCH && event.value)
                         {
-                            bool dark = !is_backlight_lit();
+                            bool dark = !is_backlight_on(false);
                             /* Input locked: the screen stays dark and the
                              * tap goes nowhere. Getting back in is a key
                              * combo, which the physical path still sees. */

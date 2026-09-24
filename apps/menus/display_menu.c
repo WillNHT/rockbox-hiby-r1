@@ -183,6 +183,7 @@ MENUITEM_SETTING(lcd_sleep_after_backlight_off,
 MENUITEM_SETTING(brightness_item, &global_settings.brightness, NULL);
 #ifdef HAVE_BACKLIGHT_DIM_IDLE
 MENUITEM_SETTING(dim_brightness_item, &global_settings.dim_level, NULL);
+MENUITEM_SETTING(dim_locked_item, &global_settings.dim_level_locked, NULL);
 MENUITEM_SETTING(backlight_off_timeout_item,
                  &global_settings.backlight_off_timeout, NULL);
 #endif
@@ -222,6 +223,7 @@ MAKE_MENU(lcd_settings,ID2P(LANG_LCD_MENU),
 # endif
 # ifdef HAVE_BACKLIGHT_DIM_IDLE
             ,&dim_brightness_item
+            ,&dim_locked_item
             ,&backlight_off_timeout_item
 # endif
 #endif /* HAVE_BACKLIGHT */

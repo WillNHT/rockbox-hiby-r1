@@ -451,9 +451,12 @@ MENUITEM_SETTING(menu_transition, &global_settings.menu_transition, NULL);
 MENUITEM_SETTING(menu_transition_ms, &global_settings.menu_transition_ms, NULL);
 MENUITEM_SETTING(wps_transition, &global_settings.wps_transition, NULL);
 MENUITEM_SETTING(wps_transition_ms, &global_settings.wps_transition_ms, NULL);
+MENUITEM_SETTING(book_transition, &global_settings.book_transition, NULL);
+MENUITEM_SETTING(radio_transition, &global_settings.radio_transition, NULL);
 MAKE_MENU(transitions_menu, ID2P(LANG_TRANSITIONS), NULL, Icon_NOICON,
           &menu_transition, &menu_transition_ms,
-          &wps_transition, &wps_transition_ms);
+          &wps_transition, &wps_transition_ms,
+          &book_transition, &radio_transition);
 #endif
 #if LCD_DEPTH > 1
 MENUITEM_SETTING(sep_menu, &global_settings.list_separator_height, NULL);

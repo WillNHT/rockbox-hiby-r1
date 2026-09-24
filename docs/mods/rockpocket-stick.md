@@ -115,6 +115,11 @@ Because the meanings come from one shared keymap, some bindings collapse onto
 the same key in some screens. Per-context binding tables are the fix, and are
 the next piece of work; they are not in this change.
 
+In the quickscreen and the pitchscreen, up and down are one press per
+gesture: a flick fires once on release and a hold fires once. There every
+press is a choice rather than a row, and the scroll's one-press-per-step
+turned a single flick into ten choices in a row.
+
 Literal `go:<screen>` bindings from the design spec are deliberately absent
 for the same reason — there is no unambiguous key equivalent for them on this
 device, and inventing one would break the guarantee above.

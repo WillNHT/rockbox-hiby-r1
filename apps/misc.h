@@ -228,6 +228,8 @@ enum current_activity {
  * so a device sound is audible over it. Does nothing when audio
  * prioritisation is off. */
 void beep_duck(unsigned int duration, int percent);
+/* The music comes up from silence over duration ms. */
+void beep_fade_in(unsigned int duration);
 void beep_play(unsigned int frequency, unsigned int duration,
                unsigned int amplitude);
 /* White noise for the same duration, through the same channel: the static
@@ -256,6 +258,9 @@ struct beep_fx
     int gate_pct;               /* 0..100 of it chopped out at random    */
 };
 void beep_play_fx(const struct beep_fx *fx);
+/* A 16-bit PCM WAV on the same channel, at percent of its level. Returns
+ * its length in ms, 0 when there is no such file or it cannot be read. */
+int beep_play_wav(const char *path, int percent);
 
 enum system_sound
 {

@@ -58,6 +58,7 @@
 #include "cuesheet.h"
 #include "playback.h"
 #include "backdrop.h"
+#include "lcd-transition.h"
 #include "viewport.h"
 #if CONFIG_TUNER
 #include "radio.h"
@@ -893,14 +894,31 @@ int skin_wait_for_action(enum skinnable_screens skin, int context, int timeout)
     if (pm || anim) {
         long next_refresh = current_tick;
         long next_big_refresh = current_tick + timeout;
+        /* Only a request that arrives while waiting: one already pending
+         * with the LCD asleep is never taken, and returning for it would
+         * spin. */
+        bool was_pending = skin_full_update_pending(skin);
         button = BUTTON_NONE;
         while (TIME_BEFORE(current_tick, next_big_refresh)) {
             button = get_action(context,TIMEOUT_NOBLOCK);
             if (button != ACTION_NONE) {
                 break;
             }
+            /* A new track, say. The full redraw is the caller's to do: a
+             * refresh from here drew the new track before the caller had
+             * seen it change, so a transition armed afterwards animated
+             * from the new screen to itself. */
+            if (!was_pending && skin_full_update_pending(skin))
+                break;
             if (pm)
                 peak_meter_peek();
+            /* Nothing here ever blocks, so a screen transition armed for
+             * this frame never heard that the frame was finished and waited
+             * out its stale timer instead - half a second of the old
+             * screen, then an animation to whatever was half-drawn at that
+             * instant. After the poll above, which also redrew the
+             * statusbar, the screen is finished. */
+            lcd_transition_idle();
             sleep(0);   /* Sleep until end of current tick. */
 
             if (TIME_AFTER(current_tick, next_refresh)) {

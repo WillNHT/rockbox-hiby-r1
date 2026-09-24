@@ -136,13 +136,13 @@
  * backlight_get_current_timeout(). */
 #define SOFTLOCK_KEEPS_BACKLIGHT
 
-/* Physical keys pressed on a dimmed or dark screen only wake it; the press
+/* Physical keys pressed on a dark screen only wake it; the press
  * is dropped (firmware/drivers/button.c). Bluetooth remote keys are left
  * out: a remote is used with the player in a pocket. The value is
  * BUTTON_POWER|RIGHT|LEFT|UP|DOWN from the target's button-target.h. */
 #define BUTTON_WAKE_SWALLOWS 0x3d
 #ifndef BOOTLOADER
-/* A tap on a dimmed or dark screen wakes it (button-devinput.c). */
+/* A tap on a dark screen wakes it (button-devinput.c). */
 #define BUTTON_TOUCH_WAKES
 #endif
 
