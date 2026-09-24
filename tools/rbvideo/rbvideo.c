@@ -695,7 +695,11 @@ static void *thread_main(void *arg)
     has_video = has_video || v->webp != NULL;
 #endif
 
-    /* Last in line for the processor. */
+    /* Last in line for the processor - unless this is the player, whose
+     * clip is the one thing on screen and the only sound. SCHED_IDLE gets
+     * nothing at all while anything else can run, and the R1 has one core:
+     * the player got no sound and no pictures, only its progress bar. */
+    if (!(v->cfg.flags & RBV_AUDIO))
     {
         struct sched_param sp = { 0 };
         pthread_setschedparam(pthread_self(), SCHED_IDLE, &sp);

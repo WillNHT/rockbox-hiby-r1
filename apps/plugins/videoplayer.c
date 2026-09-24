@@ -254,6 +254,17 @@ static void osd_draw(long now_ms)
     rb->lcd_drawrect(20, y, bar_w, 8);
     if (fill > 0)
         rb->lcd_fillrect(20, y, fill, 8);
+    /* Nothing decoded yet: say what the decoder is doing, so a clip that
+     * never starts is a report rather than a guess. */
+    {
+        struct rbv_stats st;
+        memset(&st, 0, sizeof(st));
+        st.size = sizeof(st);
+        api->stats(v, &st);
+        if (st.decoded == 0)
+            rb->lcd_putsxyf(20, y + 12, "decoder: status %d, no frames yet",
+                            api->status(v));
+    }
     rb->lcd_update_rect(0, y - 26, LCD_WIDTH, 66);
 }
 
