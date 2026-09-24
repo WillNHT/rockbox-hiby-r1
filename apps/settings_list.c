@@ -2488,6 +2488,9 @@ const struct settings_list settings[] = {
     OFFON_SETTING(0, keyclick_repeats, LANG_KEYCLICK_REPEATS, false,
                   "keyclick repeats", NULL),
 #endif
+    INT_SETTING(0, keyclick_volume, LANG_KEYCLICK_VOLUME, 100,
+                "keyclick volume", UNIT_PERCENT, 10, 400, 10,
+                NULL, NULL, NULL),
     OFFON_SETTING(0, keyclick_src_button, LANG_KEYCLICK_SRC_BUTTON, true,
                   "keyclick button", NULL),
     OFFON_SETTING(0, keyclick_src_button_repeat, LANG_KEYCLICK_SRC_BUTTON_REPEAT, true,

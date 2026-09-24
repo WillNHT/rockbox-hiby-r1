@@ -20342,3 +20342,17 @@
     *: "Rebuilding setlists in the background"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_KEYCLICK_VOLUME
+  desc: in keyclick settings menu
+  user: core
+  <source>
+    *: "Keyclick Volume"
+  </source>
+  <dest>
+    *: "Keyclick Volume"
+  </dest>
+  <voice>
+    *: "Keyclick Volume"
+  </voice>
+</phrase>

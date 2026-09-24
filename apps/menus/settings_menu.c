@@ -455,6 +455,7 @@ MENUITEM_SETTING(volume_adjust_norm_steps, &global_settings.volume_adjust_norm_s
 /* Keyclick menu */
 MENUITEM_SETTING(keyclick, &global_settings.keyclick, NULL);
 MENUITEM_SETTING(keyclick_repeats, &global_settings.keyclick_repeats, NULL);
+MENUITEM_SETTING(keyclick_volume, &global_settings.keyclick_volume, NULL);
 MENUITEM_SETTING(keyclick_src_button, &global_settings.keyclick_src_button, NULL);
 MENUITEM_SETTING(keyclick_src_button_repeat, &global_settings.keyclick_src_button_repeat, NULL);
 MENUITEM_SETTING(keyclick_src_stick_arming, &global_settings.keyclick_src_stick_arming, NULL);
@@ -477,11 +478,12 @@ MAKE_MENU(keyclick_sources_menu, ID2P(LANG_KEYCLICK_SOURCES), 0, Icon_NOICON,
 #ifdef HAVE_HARDWARE_CLICK
 MENUITEM_SETTING(keyclick_hardware, &global_settings.keyclick_hardware, NULL);
 MAKE_MENU(keyclick_menu, ID2P(LANG_KEYCLICK), 0, Icon_NOICON,
-           &keyclick, &keyclick_hardware, &keyclick_repeats,
+           &keyclick, &keyclick_volume, &keyclick_hardware, &keyclick_repeats,
            &keyclick_sources_menu);
 #else
 MAKE_MENU(keyclick_menu, ID2P(LANG_KEYCLICK), 0, Icon_NOICON,
-           &keyclick, &keyclick_repeats, &keyclick_sources_menu);
+           &keyclick, &keyclick_volume, &keyclick_repeats,
+           &keyclick_sources_menu);
 #endif
 
 /* Audio prioritisation menu */

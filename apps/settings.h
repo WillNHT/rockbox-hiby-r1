@@ -476,6 +476,7 @@ struct user_settings
     int  beep;              /* system beep volume when changing tracks etc. */
     int  keyclick;          /* keyclick volume */
     int  keyclick_repeats;  /* keyclick on repeats */
+    int  keyclick_volume;   /* percent of the keyclick level's loudness */
     /* which events click; see keyclick_enabled() */
     bool keyclick_src_button;
     bool keyclick_src_button_repeat;
