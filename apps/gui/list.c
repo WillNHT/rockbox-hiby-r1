@@ -762,6 +762,20 @@ bool gui_synclist_do_button(struct gui_synclist * lists, int *actionptr)
     switch (action)
     {
         case ACTION_REDRAW:
+#ifdef HAVE_TOUCHSCREEN
+        {
+            /* A drag moves the selection without a key, so nothing clicked
+             * for it; click here whenever the highlight lands on a new row,
+             * as the stick's scroll steps did. */
+            static struct gui_synclist *click_list;
+            static int click_sel;
+            if (click_list == lists && click_sel != lists->selected_item &&
+                keyclick_enabled(KEYCLICK_SRC_STICK_SCROLL))
+                system_sound_play(SOUND_KEYCLICK);
+            click_list = lists;
+            click_sel = lists->selected_item;
+        }
+#endif
             gui_synclist_draw(lists);
             return true;
 
