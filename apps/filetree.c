@@ -589,6 +589,9 @@ int ft_enter(struct tree_context* c)
                     plugin_load(VIEWERS_DIR "/videoplayer.rock", buf);
                     break;
                 }
+                /* Say why a film is about to be played as music. */
+                if (video_is_video_file(buf) && !video_lib())
+                    splash(HZ*2, video_lib_error());
 #endif
                 int res = bookmark_autoload(c->currdir);
                 if (res == BOOKMARK_CANCEL || res == BOOKMARK_DO_RESUME)
