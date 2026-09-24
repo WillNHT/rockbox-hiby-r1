@@ -125,16 +125,37 @@ int mask = global_settings.bt_selective_softlock_actions_mask;
 /*    TAGCACHE MENU                */
 #ifdef HAVE_TAGCACHE
 
+/* Shows the scan counting up until it is done. The seconds tick on their
+ * own, so a screen that stops changing is a hang, not a long scan. Back
+ * leaves it running in the background. */
+static void tagcache_show_progress(void)
+{
+    long start = current_tick;
+    char buf[64];
+
+    while (tagcache_is_building())
+    {
+        snprintf(buf, sizeof(buf), str(LANG_BUILDING_DATABASE),
+                 tagcache_get_stat()->processed_entries);
+        splashf(0, "%s %lds", buf, (current_tick - start) / HZ);
+        if (get_action(CONTEXT_STD, HZ/4) == ACTION_STD_CANCEL)
+        {
+            splash(HZ*2, ID2P(LANG_TAGCACHE_FORCE_UPDATE_SPLASH));
+            return;
+        }
+    }
+}
+
 static void tagcache_rebuild_with_splash(void)
 {
     tagcache_rebuild();
-    splash(HZ*2, ID2P(LANG_TAGCACHE_FORCE_UPDATE_SPLASH));
+    tagcache_show_progress();
 }
 
 static void tagcache_update_with_splash(void)
 {
     tagcache_update();
-    splash(HZ*2, ID2P(LANG_TAGCACHE_FORCE_UPDATE_SPLASH));
+    tagcache_show_progress();
 }
 
 static int dirs_to_scan(void)
