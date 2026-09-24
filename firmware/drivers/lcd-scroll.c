@@ -96,7 +96,9 @@ void LCDFN(scroll_stop_viewport)(const struct viewport *vp)
 
 void LCDFN(scroll_speed)(int speed)
 {
-    LCDFN(scroll_info).ticks = scroll_tick_table[speed];
+    /* Every speed twice as fast as upstream's table: its marquees crawl
+     * on a panel as wide as the R1's. */
+    LCDFN(scroll_info).ticks = MAX(1, scroll_tick_table[speed] / 2);
 }
 
 void LCDFN(scroll_step)(int step)
