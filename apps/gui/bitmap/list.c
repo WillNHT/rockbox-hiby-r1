@@ -713,6 +713,32 @@ static bool list_touch_action_blocked(struct gui_synclist *list)
            TIME_BEFORE(current_tick, list->scroll_stop_tick + LIST_TOUCH_ACTION_COOLDOWN);
 }
 
+/* Eases the selection onto its row after a drag or a coast. Gives up as
+ * soon as anything else moves the list: a new drag, a key, a new screen. */
+static struct timeout snap_tmo;
+static struct gui_synclist *snap_list;
+
+static int snap_callback(struct timeout *tmo)
+{
+    struct gui_synclist *list = snap_list;
+    (void)tmo;
+
+    if (!list || list->scroll_mode != SCROLL_NONE || gui_synclist_is_active() != list)
+        return 0;
+
+    int line_height = list->line_height[SCREEN_MAIN];
+    int diff = list->selected_item * line_height - sel_pos;
+    if (diff == 0 || abs(diff) > line_height / 2)
+        return 0;
+
+    int step = diff / 3;
+    if (step == 0)
+        step = diff;
+    do_touch_scroll(list, sel_pos + step);
+    button_queue_post(BUTTON_REDRAW, 0);
+    return diff == step ? 0 : RELOAD_INTERVAL;
+}
+
 static void list_mark_scroll_stopped(struct gui_synclist *list)
 {
     logf("list_touch: scroll stopped mode=%d y_pos=%d base=%d selected=%d start=%d\n",
@@ -720,8 +746,8 @@ static void list_mark_scroll_stopped(struct gui_synclist *list)
           list->selected_item, list->start_item[SCREEN_MAIN]);
     list->scroll_mode = SCROLL_NONE;
     list->scroll_stop_tick = current_tick;
-    /* snap the selection onto its row */
-    do_touch_scroll(list, list->selected_item * list->line_height[SCREEN_MAIN]);
+    snap_list = list;
+    timeout_register(&snap_tmo, snap_callback, RELOAD_INTERVAL, 0);
 }
 
 static long kinetic_calc_accel(long input, long duration,
@@ -814,6 +840,12 @@ static bool kinetic_start_scrolling(struct kinetic *k, struct gui_synclist *list
           k->cb_data.velocity);
     if (yvel == 0)
         return false;
+
+    /* A short list gets a proportionally gentler throw: full strength
+     * from four screens' worth of rows up. */
+    const int full = 4 * list_get_nb_lines(list, SCREEN_MAIN);
+    if (list->nb_items < full)
+        yvel = yvel * list->nb_items / full;
 
     const int max_y_pos = get_max_y_pos(list);
     if ((yvel < 0 && sel_pos >= max_y_pos) ||
