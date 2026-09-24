@@ -730,7 +730,11 @@ static int snap_callback(struct timeout *tmo)
     struct gui_synclist *list = snap_list;
     (void)tmo;
 
-    if (!list || list->scroll_mode != SCROLL_NONE || gui_synclist_is_active() != list)
+    /* Whether the list is still the one on screen comes first: a list
+     * lives on its screen's stack, and once that screen has gone even
+     * reading it is reading someone else's memory. */
+    if (!list || gui_synclist_is_active() != list ||
+        list->scroll_mode != SCROLL_NONE)
         return 0;
 
     int line_height = list->line_height[SCREEN_MAIN];
@@ -1153,7 +1157,10 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
         {
             const int dx = gevent.x - gevent.ox;
             const int min_dx = list_vp->width / 5;
-            list_mark_scroll_stopped(list);
+            /* No snap timer here: a yes or a no usually closes the list,
+             * and a timer left behind would write into a dead one. */
+            list->scroll_mode = SCROLL_NONE;
+            list->scroll_stop_tick = current_tick;
             action_gesture_reset();
             action = dx >= min_dx ? ACTION_STD_OK :
                      dx <= -min_dx ? ACTION_STD_CANCEL : ACTION_REDRAW;
