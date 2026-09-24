@@ -308,7 +308,7 @@ void list_draw(struct screen *display, struct gui_synclist *list)
 #ifdef HAVE_TOUCHSCREEN
     /* y_pos needs to be clamped now since it can overflow the maximum
      * in some cases, and we have no easy way to prevent this beforehand */
-    int max_y_pos = list->nb_items * linedes.height - list_text[screen].height;
+    int max_y_pos = (list->nb_items - 1) * linedes.height;
     if (max_y_pos > 0 && list->y_pos > max_y_pos)
         list->y_pos = max_y_pos;
 
@@ -521,8 +521,8 @@ void list_draw(struct screen *display, struct gui_synclist *list)
 static int get_max_y_pos(struct gui_synclist *gui_list)
 {
     const int line_height = gui_list->line_height[SCREEN_MAIN];
-    const int view_height = list_text[SCREEN_MAIN].height;
-    const int max_y_pos = gui_list->nb_items * line_height - view_height;
+    /* The selection is the top row, so the last row must reach the top. */
+    const int max_y_pos = (gui_list->nb_items - 1) * line_height;
 
     return MAX(0, max_y_pos);
 }
@@ -537,14 +537,9 @@ static void do_touch_scroll(struct gui_synclist *gui_list, int new_y_pos)
 
     int line_height = gui_list->line_height[SCREEN_MAIN];
     int new_start = new_y_pos / line_height;
-    int nb_lines = list_get_nb_lines(gui_list, SCREEN_MAIN);
-    if (new_start > gui_list->nb_items - nb_lines)
-    {
-        new_start = gui_list->nb_items - nb_lines;
-        new_y_pos = new_start * line_height;
-    }
 
-    int new_item = new_start + nb_lines/2;
+    /* The selection follows the scroll: it is the row nearest the top. */
+    int new_item = (new_y_pos + line_height/2) / line_height;
     if (gui_list->selected_size > 1)
         new_item -= new_item % gui_list->selected_size;
 
@@ -587,11 +582,6 @@ static int scrollbar_scroll(struct gui_synclist *gui_list, int y)
  * beginning of scrolling. */
 static int swipe_scroll(struct gui_synclist *gui_list, int delta)
 {
-    /* nothing to do if the list does not scroll */
-    const int nb_lines = list_get_nb_lines(gui_list, SCREEN_MAIN);
-    if (nb_lines >= gui_list->nb_items)
-        return ACTION_NONE;
-
     do_touch_scroll(gui_list, gui_list->scroll_base_y - delta);
 
     return ACTION_REDRAW;
@@ -959,12 +949,6 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
 
     const enum screen_type screen = SCREEN_MAIN;
     struct viewport *list_vp = list->parent[screen];
-    int adj_x = gevent.x - list_vp->x;
-    int adj_y = gevent.y - list_vp->y;
-    int line_height = list->line_height[screen];
-    int start_item = list->start_item[screen];
-    int start_y = start_item * line_height - list->y_pos;
-    int list_y = list_text[screen].y - list_vp->y;
     int action = ACTION_NONE;
     int click_loc;
 
@@ -1030,27 +1014,11 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
         click_loc = get_click_location(list, gevent.x, gevent.y);
         if (click_loc & LIST)
         {
-            int line;
-            if(!skinlist_get_item(&screens[screen], list, adj_x, adj_y, &line))
-            {
-                line = (adj_y - list_y - start_y) / line_height;
-            }
-
-            int new_item = start_item + line;
-            if (new_item < list->nb_items)
-            {
-                if (list->selected_size > 1)
-                    new_item -= new_item % list->selected_size;
-
-                list->selected_item = new_item;
-                gui_synclist_speak_item(list);
-
-                /* A tap only picks the row; dragging it right opens it. */
-                if (gevent.id == GESTURE_LONG_PRESS)
-                    action = ACTION_STD_CONTEXT;
-                else
-                    action = ACTION_REDRAW;
-            }
+            /* Touching a row never picks it: the top row is the selection. */
+            if (gevent.id == GESTURE_LONG_PRESS)
+                action = ACTION_STD_CONTEXT;
+            else
+                action = ACTION_REDRAW;
         }
         else if (click_loc & TITLE)
         {
