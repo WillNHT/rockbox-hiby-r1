@@ -58,6 +58,9 @@ bool pradio_station_dir(const char *path, char *buf, size_t size);
 bool pradio_station_name(const char *path, char *buf, size_t size);
 /* The set going off. Call while the station is still playing. */
 void pradio_leaving(void);
+/* Whether the station on air is a dynamic one - its music from the
+ * library, by the station.cfg in its folder. What %rd says. */
+bool pradio_dynamic(void);
 /* Called from the WPS loop: every hour or two, something drifts past on
  * the band. Cheap and a no-op unless a station is playing. */
 void pradio_ambience_tick(void);

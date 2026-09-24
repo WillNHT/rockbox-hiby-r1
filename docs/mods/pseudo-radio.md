@@ -45,6 +45,55 @@ top of the station list picks a station for you first, then tunes it.
 A station is everything under its folder, any number of levels deep, so a
 station can be organised into its own subfolders without breaking scanning.
 
+## Dynamic stations
+
+A station can also be made from your music library instead of a folder of
+recordings. Put a `station.cfg` in the station's folder and the station
+plays whatever in the database matches it:
+
+```
+/radio/Groovy Baby/station.cfg
+```
+
+```
+# The late seventies
+year: 1976-1980
+```
+
+| Line | Matches |
+| --- | --- |
+| `year: 1976-1980` | tracks from those years; a single year works too, and several ranges can be given separated by commas |
+| `artist: Blink-182, Green Day, Nirvana` | tracks by any of those artists (artist or album artist, any case) |
+| `genre: Punk, Grunge` | tracks of any of those genres |
+
+Every line narrows the station further; the values on one line are
+alternatives. The file is what makes a station dynamic, so a station is
+never both: with a `station.cfg`, anything else in the folder is ignored.
+
+The station's music is written to `setlist.m3u8` next to the
+`station.cfg`. Setlists are built in the background, when you enter the
+radio, for any dynamic station that has none; tuning into one before its
+setlist exists builds it there and then, the one time you wait for it. A
+setlist stays as it is until you ask for it again, so a station is the same
+station between database updates:
+
+* **Radio Settings > Rebuild Setlists** rebuilds every dynamic station in
+  the background.
+* A long press on a dynamic station in **Stations** rebuilds that one.
+
+Everything else is the same as a folder station: it has a clock, prev/next
+moves the dial, the clock moves it on to the next song every few minutes
+rather than every two hours, and nothing is bookmarked. Its cover is the
+station's `cover.jpg` when it has one, and each song's own artwork when it
+does not.
+
+The radio WPS says which kind is on: `on air - static` or
+`on air - dynamic`. `%rd` is that word, for any skin, and is empty off the
+radio.
+
+Stations that make themselves - from what you actually listen to, say -
+would only need to write `station.cfg` files; the rest is already here.
+
 ## While tuned in
 
 Prev/next moves the dial instead of stepping through the station's files -
@@ -104,6 +153,7 @@ and so on up to the station folder - never one in a folder below the file.
 | Radio Folder | `/radio` | Where the stations are. |
 | Minimum Length | 10 min | How long a recording must be to be preferred. |
 | Tuning Static | On | The hiss played while tuning in. |
+| Rebuild Setlists | - | Rebuilds every [dynamic station](#dynamic-stations)'s setlist in the background. |
 | Radio WPS | Same as Music | The WPS used while a station plays. |
 | Radio Screensaver | Same as usual | The screensaver used while a station plays. |
 

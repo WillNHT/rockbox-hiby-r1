@@ -20300,3 +20300,45 @@
     *: "Startup Volume Limit"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_RADIO_BUILDING
+  desc: radio: a dynamic station's setlist is being built from the database
+  user: core
+  <source>
+    *: "Building setlist..."
+  </source>
+  <dest>
+    *: "Building setlist..."
+  </dest>
+  <voice>
+    *: "Building setlist"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_REBUILD
+  desc: radio settings: rebuild every dynamic station's setlist
+  user: core
+  <source>
+    *: "Rebuild Setlists"
+  </source>
+  <dest>
+    *: "Rebuild Setlists"
+  </dest>
+  <voice>
+    *: "Rebuild Setlists"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_RADIO_REBUILDING
+  desc: radio settings: splash after asking for the setlists to be rebuilt
+  user: core
+  <source>
+    *: "Rebuilding setlists in the background"
+  </source>
+  <dest>
+    *: "Rebuilding setlists in the background"
+  </dest>
+  <voice>
+    *: "Rebuilding setlists in the background"
+  </voice>
+</phrase>

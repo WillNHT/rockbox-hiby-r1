@@ -173,7 +173,11 @@ bool search_albumart_files(const struct mp3entry *id3, const char *size_string,
         size_t stlen = strlen(path);
         char *slash;
 
-        strmemccpy(dir, trackname, sizeof(dir));
+        /* A dynamic station's tracks are in the library, not under the
+         * station: the station folder's own cover is the only one that is
+         * the station's. */
+        strmemccpy(dir, strncasecmp(trackname, path, stlen) ? path : trackname,
+                   sizeof(dir));
         while ((slash = strrchr(dir, '/')) &&
                (size_t)(slash - dir) + 1 >= stlen)
         {

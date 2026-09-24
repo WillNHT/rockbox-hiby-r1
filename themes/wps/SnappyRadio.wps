@@ -1023,14 +1023,17 @@ SHF%xd(O,%ps)
 # ======
 %V(30,768,-30,30,2)
 %Vt(0)
-%ac%?mp<off air|on air|paused|on air|on air>
+%ac%?mp<off air|on air - %rd|paused - %rd|on air - %rd|on air - %rd>
+#
+# "- static" or "- dynamic" after it (%rd): a folder of recordings, or a
+# station made from the library by its station.cfg (#88).
 #
 # The liveness light. Its own viewport so the caption stays centred on the
 # screen rather than on the pair of them, and two sublines so it blinks - a
 # red dot that sits still is a dot, one that blinks is a transmitter. Off
 # air and paused it is not enabled at all, which is the one state where a
 # light saying "live" would be lying.
-%Vl(live,176,777,14,14,-)
+%Vl(live,116,777,14,14,-)
 %Vt(0)
 %t(0.7)%Vf(CC2B2B)%xd(L);%t(0.7)%Vf(0C0D0E)%xd(L)
 #
