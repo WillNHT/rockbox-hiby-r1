@@ -211,7 +211,7 @@ static bool decode_path(const char *path, int size, struct bitmap *bm)
     return decode_audio(path, size, bm);
 }
 
-static const struct bitmap *cover_get(const char *path, int size)
+const struct bitmap *cover_get(const char *path, int size)
 {
     static struct bitmap out;
     struct bitmap bm;

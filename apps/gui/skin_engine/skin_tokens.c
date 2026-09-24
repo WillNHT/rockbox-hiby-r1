@@ -1362,7 +1362,7 @@ const char *get_token_value(struct gui_wps *gwps,
         case SKIN_TOKEN_LIST_NEEDS_SCROLLBAR:
             return skinlist_needs_scrollbar(gwps->display->screen_type) ? "s" : "";
         case SKIN_TOKEN_PLAYLIST_NAME:
-            return playlist_name(NULL, buf, buf_size);
+            return playlist_title(buf, buf_size);
 
         case SKIN_TOKEN_RADIO_STATION:
             if (state->id3 &&

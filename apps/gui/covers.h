@@ -37,6 +37,10 @@ bool covers_init(void);
 /* Draw the cover for path centred in a size x size square at x,y of the
  * current viewport. False, with nothing drawn, when there is none. */
 bool cover_draw(struct screen *d, const char *path, int x, int y, int size);
+/* The decoded cover itself, fitted into a size x size square; NULL when
+ * there is none. Valid until the next cover is asked for. */
+struct bitmap;
+const struct bitmap *cover_get(const char *path, int size);
 #ifdef HAVE_VIDEO
 /* The same, but an animated .gif or .webp cover moves: each call draws
  * its current frame, and a still cover only when full. Returns 2 for an

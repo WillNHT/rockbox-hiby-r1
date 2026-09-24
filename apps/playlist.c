@@ -609,6 +609,11 @@ static ssize_t format_track_path(char *dest, char *src, int buf_length,
  * Initialize a new playlist for viewing/editing/playing.  dir is the
  * directory where the playlist is located and file is the filename.
  */
+/* What a playlist that is not a saved file is called on screen: the
+ * database view it was started from. A folder needs no help - its path is
+ * the playlist's filename, and that survives a restart. */
+static char dynamic_title[64];
+
 static void new_playlist_unlocked(struct playlist_info* playlist,
                                   const char *dir, const char *file)
 {
@@ -631,6 +636,9 @@ static void new_playlist_unlocked(struct playlist_info* playlist,
 //    else
 //        dirused = ""; /* empty playlist */
  
+
+    if (playlist == &current_playlist)
+        dynamic_title[0] = '\0';
 
     update_playlist_filename_unlocked(playlist, dir, file);
 
@@ -2994,6 +3002,43 @@ char *playlist_name(const struct playlist_info* playlist, char *buf,
         *sep = 0;
 
     return buf;
+}
+
+void playlist_set_title(const char *title)
+{
+    strmemccpy(dynamic_title, title ? title : "", sizeof(dynamic_title));
+}
+
+/* The current playlist's name for a skin: a saved playlist's own name, a
+ * folder's name when a folder is playing, or the database view it came
+ * from. NULL when there is nothing to call it. */
+char *playlist_title(char *buf, int buf_size)
+{
+    struct playlist_info *playlist = &current_playlist;
+    char *slash;
+    size_t len;
+
+    if (playlist_name(playlist, buf, buf_size))
+        return buf;
+
+    strmemccpy(buf, playlist->filename, buf_size);
+    len = strlen(buf);
+    while (len > 0 && buf[len - 1] == '/')
+        buf[--len] = '\0';
+    if (len > 0)
+    {
+        slash = strrchr(buf, '/');
+        if (slash)
+            memmove(buf, slash + 1, strlen(slash + 1) + 1);
+        return buf;
+    }
+
+    if (dynamic_title[0])
+    {
+        strmemccpy(buf, dynamic_title, buf_size);
+        return buf;
+    }
+    return NULL;
 }
 
 /*

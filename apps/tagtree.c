@@ -2786,6 +2786,8 @@ static int tagtree_play_folder(struct tree_context* c)
         logf("Failed creating playlist\n");
         return -1;
     }
+    /* A database view has no file to be named after: the view is it. */
+    playlist_set_title(tagtree_get_title(c));
 
     if (!insert_all_playlist(c, NULL, false, PLAYLIST_INSERT_LAST, false))
         return -2;

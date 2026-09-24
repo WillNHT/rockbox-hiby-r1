@@ -187,6 +187,10 @@ char *playlist_name(const struct playlist_info* playlist, char *buf,
                     int buf_size);
 char *playlist_get_name(const struct playlist_info* playlist, char *buf,
                         int buf_size);
+/* The current playlist as a skin names it: see playlist.c. */
+char *playlist_title(char *buf, int buf_size);
+/* Name a playlist that has no file: the database view it came from. */
+void playlist_set_title(const char *title);
 int playlist_get_track_info(struct playlist_info* playlist, int index,
                             struct playlist_track_info* info);
 int playlist_save(struct playlist_info* playlist, char *filename);

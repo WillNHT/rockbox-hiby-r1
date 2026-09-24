@@ -32,7 +32,7 @@
 %Fl(4,44-GeistMono-SemiBold.fnt)
 %Fl(5,58-GeistMono-SemiBold.fnt)
 %xl(B,batt_wps.bmp,2,0,2)
-%xl(K,clock_wps.bmp)
+%xl(K,clock_wps.bmp,6,0)
 %xl(O,off_on.bmp,48,0,2)
 %xl(vb,vb.bmp)
 %xl(bb,bb.bmp)
@@ -43,7 +43,7 @@
 %?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>
 %?C<%Vd(mirror)>
 %?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>
-%?mh<|%Vd(volbar)>
+%Vd(volbar)%?mh<|%Vd(plname)>
 %?if(%an(360,50),=,1)<%Vd(sh00)>
 %?if(%an(360,50),=,2)<%Vd(sh00)>
 %?if(%an(360,50),=,3)<%Vd(sh00)>
@@ -250,46 +250,46 @@
 %?if(%sd,=,1)<%?if(%an(12,60),=,11)<%Vd(vd10)>>
 %?if(%sd,=,1)<%?if(%an(12,60),=,12)<%Vd(vd11)>>
 #
-%Vl(vdrim,27,107,426,42,-)
+%Vl(vdrim,27,23,144,24,-)
 %dr(0,0,-,2,D9E021,D9E021)
-%dr(0,40,-,2,D9E021,D9E021)
+%dr(0,22,-,2,D9E021,D9E021)
 %dr(0,0,2,-,D9E021,D9E021)
-%dr(424,0,2,-,D9E021,D9E021)
+%dr(142,0,2,-,D9E021,D9E021)
 #
-%Vl(vd00,30,107,84,3,-)
+%Vl(vd00,30,23,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd01,114,107,84,3,-)
+%Vl(vd01,57,23,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd02,198,107,84,3,-)
+%Vl(vd02,84,23,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd03,282,107,84,3,-)
+%Vl(vd03,111,23,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd04,366,107,84,3,-)
+%Vl(vd04,138,23,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd05,450,110,3,36,-)
+%Vl(vd05,168,26,3,18,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd06,366,146,84,3,-)
+%Vl(vd06,138,44,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd07,282,146,84,3,-)
+%Vl(vd07,111,44,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd08,198,146,84,3,-)
+%Vl(vd08,84,44,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd09,114,146,84,3,-)
+%Vl(vd09,57,44,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd10,30,146,84,3,-)
+%Vl(vd10,30,44,27,3,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
-%Vl(vd11,27,110,3,36,-)
+%Vl(vd11,27,26,3,18,-)
 %Vt(0)
 %dr(0,0,-,-,D9E021,F4F2EE)
 #
@@ -306,8 +306,17 @@
 # Unlabelled, so always drawn. The corner used to be shared with the sleep
 # timer and the volume number, which meant the one thing it is for was the
 # one thing it was often not showing.
+#
+# The whole widget is the inverted box, icon included, as on the battery
+# side (#85): the icon is placed by position, so the inverted line - a
+# stop that the time's own viewport then covers - fills the whole box
+# behind it, and it is drawn in the ground colour like the text. The time is the 24 px face - three quarters
+# of the battery's - in a viewport of its own, centred on the rest of the
+# box; its inverted line refills the part of the box its clear takes out.
 %V(30,48,144,34,3)
-%Vs(invert)%ac%?cH<%xd(K)|%xd(K)> %cH:%cM
+%Vs(invert)%ar%?cH<%xd(K)|%xd(K)>.
+%V(70,52,104,27,2)
+%Vs(invert)%ac%cH:%cM
 #
 # Shuffle
 %V(178,28,94,22,2)
@@ -326,10 +335,10 @@ SHF%xd(O,%ps)
 %Vs(invert)%ac%?bp<%xd(Bb)|%xd(Ba)> %bl%%
 #
 # Volume bar
-%Vl(volbar,30,110,-30,36,-)
-%Vt(0)
-%pv(0,0,-,-,vb,backdrop,vb_backdrop)
-%?if(%pv, >, 0)<%pv(0,0,-,-,vb_too_loud,backdrop,vb_backdrop)>
+# Above the clock, the battery bar's twin on the other side of the row: the
+# same size and the same bitmaps, so the two read as a pair (#85).
+%Vl(volbar,30,26,138,18,-)
+%pv(0,0,138,18,bb,backdrop,bb_backdrop)
 #
 
 #
@@ -1030,3 +1039,9 @@ SHF%xd(O,%ps)
 # ======
 %V(30,102,-30,52,4)
 %Vs(invert)%ac%?mh<LOCKED|>
+#
+# Playlist
+# ========
+%Vl(plname,30,112,-30,34,3)
+%Vt(0)
+%s%al%?pn<%pn|>

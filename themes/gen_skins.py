@@ -41,6 +41,7 @@ MARGIN = 30
 ROW_Y, ROW_B = 26, 82
 CLOCK_Y, CLOCK_H = 48, 34       # the battery percentage's own row
 CLOCK_X, CLOCK_W = 30, 144      # "88:88" in the 31 px face is 81 px
+CLOCK_TEXT_X = 40               # the icon's share of the box
 
 HEADER = """#
 # Header
@@ -56,9 +57,20 @@ HEADER = """#
 # Unlabelled, so always drawn. The corner used to be shared with the sleep
 # timer and the volume number, which meant the one thing it is for was the
 # one thing it was often not showing.
+#
+# The whole widget is the inverted box, icon included, as on the battery
+# side (#85): the icon is placed by position, so the inverted line - a
+# stop that the time's own viewport then covers - fills the whole box
+# behind it, and it is drawn in the ground colour like the text. The time is the 24 px face - three quarters
+# of the battery's - in a viewport of its own, centred on the rest of the
+# box; its inverted line refills the part of the box its clear takes out.
 %%V(%d,%d,%d,%d,3)
-%%Vs(invert)%%ac%%?cH<%%xd(K)|%%xd(K)> %%cH:%%cM
-#""" % (CLOCK_X, CLOCK_Y, CLOCK_W, CLOCK_H) + """
+%%Vs(invert)%%ar%%?cH<%%xd(K)|%%xd(K)>.
+%%V(%d,%d,%d,%d,2)
+%%Vs(invert)%%ac%%cH:%%cM
+#""" % (CLOCK_X, CLOCK_Y, CLOCK_W, CLOCK_H,
+        CLOCK_X + CLOCK_TEXT_X, CLOCK_Y + (CLOCK_H - 27 + 1) // 2,
+        CLOCK_W - CLOCK_TEXT_X, 27) + """
 # Shuffle
 %V(178,28,94,22,2)
 SHF%xd(O,%ps)
@@ -76,12 +88,24 @@ SHF%xd(O,%ps)
 %Vs(invert)%ac%?bp<%xd(Bb)|%xd(Ba)> %bl%%
 #
 # Volume bar
-%Vl(volbar,30,110,-30,36,-)
-%Vt(0)
-%pv(0,0,-,-,vb,backdrop,vb_backdrop)
-%?if(%pv, >, 0)<%pv(0,0,-,-,vb_too_loud,backdrop,vb_backdrop)>
+# Above the clock, the battery bar's twin on the other side of the row: the
+# same size and the same bitmaps, so the two read as a pair (#85).
+%Vl(volbar,30,26,138,18,-)
+%pv(0,0,138,18,bb,backdrop,bb_backdrop)
 #
 """
+
+# The playlist row. Last of all, after even the LOCKED banner: declared in
+# HEADER the backdrop viewport painted it straight over, and ahead of the
+# banner the banner's own clear wiped it while the keys were free (#85). Its name comes from %pn - a saved playlist, the folder being
+# played, or the database view it was started from - and scrolls when it
+# is too long for the row.
+PLNAME = """#
+# Playlist
+# ========
+%Vl(plname,30,112,-30,34,3)
+%Vt(0)
+%s%al%?pn<%pn|>"""
 
 # Locked.
 #
@@ -105,7 +129,7 @@ PRELOAD = """%Fl(2,24-GeistMono-SemiBold.fnt)
 %Fl(4,44-GeistMono-SemiBold.fnt)
 %Fl(5,58-GeistMono-SemiBold.fnt)
 %xl(B,batt_wps.bmp,2,0,2)
-%xl(K,clock_wps.bmp)
+%xl(K,clock_wps.bmp,6,0)
 %xl(O,off_on.bmp,48,0,2)
 %xl(vb,vb.bmp)
 %xl(bb,bb.bmp)
@@ -333,8 +357,8 @@ def snappy_v2(vinyl=False):
     else:
         o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
     o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>")
-    o.append("%?mh<|%Vd(volbar)>")
-    o += dial_border(30, 110, 420, 36)
+    o.append("%Vd(volbar)%?mh<|%Vd(plname)>")
+    o += dial_border(30, 26, 138, 18)
     o.append(HEADER)
     if vinyl:
         o.append("""#
@@ -388,6 +412,7 @@ def snappy_v2(vinyl=False):
 %Vt(0)
 %al%pc/%pt%ar%pp/%pe""")
     o.append(LOCKBAR)
+    o.append(PLNAME)
     return "\n".join(o) + "\n"
 
 
@@ -581,7 +606,7 @@ def animated(gauge=False, lyrics=None, radio=False):
     # transparent viewport in the skin language to put it in. %Vt(0) is
     # that viewport, so the special case is gone and the bar is one thing
     # in one place whether or not the track has artwork.
-    o.append("%?mh<|%Vd(volbar)>")
+    o.append("%Vd(volbar)" + ("" if radio else "%?mh<|%Vd(plname)>"))
     if radio:
         # The dot is a mono bitmap, not a drawn rectangle: a viewport whose
         # lines carry neither text nor a bitmap has no lines to render, and
@@ -619,7 +644,7 @@ def animated(gauge=False, lyrics=None, radio=False):
     if not gauge:
         # Its enables come first in what it returns, then its viewports -
         # so it goes last among the enables.
-        o += dial_border(30, 110, 420, 36)
+        o += dial_border(30, 26, 138, 18)
 
     o.append(HEADER)
 
@@ -853,6 +878,7 @@ def animated(gauge=False, lyrics=None, radio=False):
         o += vp
 
     o.append(LOCKBAR)
+    o.append(PLNAME)
     return "\n".join(o) + "\n"
 
 
@@ -881,8 +907,8 @@ def lyrics_full():
 #
 %wd""", PRELOAD, "%Vd(bg)",
          "%?yf<|%Vd(plainnote)|%Vd(nolyrics)>",
-         "%?mh<|%Vd(volbar)>"]
-    o += dial_border(30, 110, 420, 36)
+         "%Vd(volbar)%?mh<|%Vd(plname)>"]
+    o += dial_border(30, 26, 138, 18)
     o.append(HEADER)
     o.append("""#
 # The backdrop
@@ -931,6 +957,7 @@ def lyrics_full():
                             LYR_Y + LYR_H // 2 - 20, LYRIC_DIM,
                             LYR_Y + LYR_H, LYRIC_DIM))
     o.append(LOCKBAR)
+    o.append(PLNAME)
     return "\n".join(o) + "\n"
 
 

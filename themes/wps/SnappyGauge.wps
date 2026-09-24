@@ -32,7 +32,7 @@
 %Fl(4,44-GeistMono-SemiBold.fnt)
 %Fl(5,58-GeistMono-SemiBold.fnt)
 %xl(B,batt_wps.bmp,2,0,2)
-%xl(K,clock_wps.bmp)
+%xl(K,clock_wps.bmp,6,0)
 %xl(O,off_on.bmp,48,0,2)
 %xl(vb,vb.bmp)
 %xl(bb,bb.bmp)
@@ -43,7 +43,7 @@
 %?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>
 %?C<%Vd(mirror)>
 %?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>
-%?mh<|%Vd(volbar)>
+%Vd(volbar)%?mh<|%Vd(plname)>
 %?if(%sd,=,1)<%Vd(gauge)>%?if(%sd,=,1)<%Vd(gaugepv)>%?if(%sd,=,1)<%Vd(gaugecap)>%?if(%sd,=,1)<%Vd(gaugebar)>
 %?if(%sd,=,0)<%Vd(pm_short)>
 %?if(%sd,=,0)<%Vd(pm_long)>
@@ -256,8 +256,17 @@
 # Unlabelled, so always drawn. The corner used to be shared with the sleep
 # timer and the volume number, which meant the one thing it is for was the
 # one thing it was often not showing.
+#
+# The whole widget is the inverted box, icon included, as on the battery
+# side (#85): the icon is placed by position, so the inverted line - a
+# stop that the time's own viewport then covers - fills the whole box
+# behind it, and it is drawn in the ground colour like the text. The time is the 24 px face - three quarters
+# of the battery's - in a viewport of its own, centred on the rest of the
+# box; its inverted line refills the part of the box its clear takes out.
 %V(30,48,144,34,3)
-%Vs(invert)%ac%?cH<%xd(K)|%xd(K)> %cH:%cM
+%Vs(invert)%ar%?cH<%xd(K)|%xd(K)>.
+%V(70,52,104,27,2)
+%Vs(invert)%ac%cH:%cM
 #
 # Shuffle
 %V(178,28,94,22,2)
@@ -276,10 +285,10 @@ SHF%xd(O,%ps)
 %Vs(invert)%ac%?bp<%xd(Bb)|%xd(Ba)> %bl%%
 #
 # Volume bar
-%Vl(volbar,30,110,-30,36,-)
-%Vt(0)
-%pv(0,0,-,-,vb,backdrop,vb_backdrop)
-%?if(%pv, >, 0)<%pv(0,0,-,-,vb_too_loud,backdrop,vb_backdrop)>
+# Above the clock, the battery bar's twin on the other side of the row: the
+# same size and the same bitmaps, so the two read as a pair (#85).
+%Vl(volbar,30,26,138,18,-)
+%pv(0,0,138,18,bb,backdrop,bb_backdrop)
 #
 
 #
@@ -1078,3 +1087,9 @@ SHF%xd(O,%ps)
 # ======
 %V(30,102,-30,52,4)
 %Vs(invert)%ac%?mh<LOCKED|>
+#
+# Playlist
+# ========
+%Vl(plname,30,112,-30,34,3)
+%Vt(0)
+%s%al%?pn<%pn|>

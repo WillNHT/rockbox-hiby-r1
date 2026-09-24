@@ -43,6 +43,8 @@ If there is no such image, the playlist uses the cover of its first track. Cover
 |---|---|
 | `%Cp(x, y, size)` | Draws the cover of the playlist that is playing, as a square |
 | `%?CP<yes\|no>` | True when the playing playlist has a cover (its own image or a first track) |
+| `%pn` | The playing playlist's name: a saved playlist's own, the folder's when a folder is playing, or the database view it was started from (an artist, an album, *All tracks*) |
+| `%Cb` | Its blurred background takes the playlist's cover when there is one, so the background stays put from track to track while the sharp cover changes |
 
 ```
 %V(30,100,-30,220,-)
