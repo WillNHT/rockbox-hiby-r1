@@ -174,6 +174,29 @@ static long clock_ms(void)
     return base_ms + played * 1000 / AUDIO_RATE;
 }
 
+/* Once a second, what the player and the decoder are doing, to
+ * /.rockbox/videoplayer.log: a clip that does not play on the device is
+ * then a file to read rather than a guess. Overwritten per clip. */
+static int log_fd = -1;
+static long log_tick;
+
+static void log_state(void)
+{
+    struct rbv_stats st;
+    if (log_fd < 0 || TIME_BEFORE(*rb->current_tick, log_tick))
+        return;
+    log_tick = *rb->current_tick + HZ;
+    memset(&st, 0, sizeof(st));
+    st.size = sizeof(st);
+    api->stats(v, &st);
+    rb->fdprintf(log_fd, "t=%ld status=%d dec=%d shown=%d drop=%d lag=%d "
+                 "ring=%d handed=%ld mixer=%d aclock=%d\n",
+                 clock_ms(), api->status(v), st.decoded, st.shown,
+                 st.dropped, st.lag_ms, ring_used(), handed_frames,
+                 (int)rb->mixer_channel_status(PCM_MIXER_CHAN_PLAYBACK),
+                 audio_clock);
+}
+
 /* --------------------------------------------------------------- video */
 
 static void layout(void)
@@ -215,6 +238,7 @@ static void draw_frame(void)
     if (!rotated)
     {
         rb->lcd_bitmap((const fb_data *)frame, dst_x, dst_y, out_w, out_h);
+        rb->lcd_update_rect(dst_x, dst_y, out_w, out_h);
         return;
     }
     /* Turned a quarter: the clip's column x becomes the panel's row. */
@@ -226,6 +250,7 @@ static void draw_frame(void)
                 row[y] = (fb_data)frame[(size_t)y * out_w + (out_w - 1 - x)];
             rb->lcd_bitmap(row, dst_x, dst_y + x, out_h, 1);
         }
+        rb->lcd_update_rect(dst_x, dst_y, out_h, out_w);
     }
 }
 
@@ -395,13 +420,21 @@ enum plugin_status plugin_start(const void *parameter)
 
     backlight_ignore_timeout();
     old_freq = rb->mixer_get_frequency();
-    if (have_audio)
+    /* info, not have_audio: that is only set once the clip is open. */
+    if (info.has_audio)
         rb->mixer_set_frequency(AUDIO_RATE);
     rb->lcd_set_foreground(LCD_WHITE);
     rb->lcd_set_background(LCD_BLACK);
     rb->lcd_clear_display();
     rb->lcd_update();
 
+    log_fd = rb->open(ROCKBOX_DIR "/videoplayer.log",
+                      O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (log_fd >= 0)
+        rb->fdprintf(log_fd, "%s\n%dx%d %ldms video=%d audio=%d %s\n",
+                     api->build, info.width, info.height,
+                     (long)info.duration_ms, info.has_video, info.has_audio,
+                     info.codec);
     if (!open_clip(0))
     {
         rb->splash(HZ * 2, "Cannot play this file");
@@ -417,6 +450,13 @@ enum plugin_status plugin_start(const void *parameter)
         int button;
 
         audio_pump();
+        /* The mixer stops a channel whose callback comes back empty, and
+         * at the start - or whenever the decoder falls behind - the ring
+         * is empty. Start it again once there is something to play. */
+        if (have_audio && !paused && ring_used() > 0 &&
+            rb->mixer_channel_status(PCM_MIXER_CHAN_PLAYBACK) == CHANNEL_STOPPED)
+            audio_start();
+        log_state();
         /* If the mixer is not taking the sound (a simulator with no
          * audio device, say), the clip still has to play: the clock
          * falls back to the tick. */
@@ -524,6 +564,9 @@ enum plugin_status plugin_start(const void *parameter)
     }
 
     pcm_off();
+    if (log_fd >= 0)
+        rb->close(log_fd);
+    log_fd = -1;
     if (v)
         api->close(v);
     v = NULL;
