@@ -308,7 +308,7 @@ void list_draw(struct screen *display, struct gui_synclist *list)
 #ifdef HAVE_TOUCHSCREEN
     /* y_pos needs to be clamped now since it can overflow the maximum
      * in some cases, and we have no easy way to prevent this beforehand */
-    int max_y_pos = (list->nb_items - 1) * linedes.height;
+    int max_y_pos = list->nb_items * linedes.height - list_text[screen].height;
     if (max_y_pos > 0 && list->y_pos > max_y_pos)
         list->y_pos = max_y_pos;
 
@@ -432,10 +432,6 @@ void list_draw(struct screen *display, struct gui_synclist *list)
 
         /* draw the selected line */
         if(
-#ifdef HAVE_TOUCHSCREEN
-            /* don't draw it during scrolling */
-            list->scroll_mode == SCROLL_NONE &&
-#endif
                 i >= list->selected_item
                 && i <  list->selected_item + list->selected_size)
         {/* The selected item must be displayed scrolling */
@@ -518,33 +514,42 @@ void list_draw(struct screen *display, struct gui_synclist *list)
 #if defined(HAVE_TOUCHSCREEN)
 /* This needs to be fixed if we ever get more than 1 touchscreen on a target. */
 
+/* A drag moves the selection, not the page: sel_pos is the selection's
+ * pixel position in the list, and the page follows it - pinned to the top
+ * for the first rows, to the bottom for the last, centred in between.
+ * One list is touched at a time, so one static is enough. */
+static int sel_pos;
+
 static int get_max_y_pos(struct gui_synclist *gui_list)
 {
     const int line_height = gui_list->line_height[SCREEN_MAIN];
-    /* The selection is the top row, so the last row must reach the top. */
-    const int max_y_pos = (gui_list->nb_items - 1) * line_height;
-
-    return MAX(0, max_y_pos);
+    return MAX(0, (gui_list->nb_items - 1) * line_height);
 }
 
-static void do_touch_scroll(struct gui_synclist *gui_list, int new_y_pos)
+static void do_touch_scroll(struct gui_synclist *gui_list, int new_sel_pos)
 {
-    const int max_y_pos = get_max_y_pos(gui_list);
+    const int max_sel_pos = get_max_y_pos(gui_list);
+    if (new_sel_pos < 0)
+        new_sel_pos = 0;
+    else if (new_sel_pos > max_sel_pos)
+        new_sel_pos = max_sel_pos;
+
+    int line_height = gui_list->line_height[SCREEN_MAIN];
+    int view_height = list_text[SCREEN_MAIN].height;
+    int max_y_pos = MAX(0, gui_list->nb_items * line_height - view_height);
+    int new_y_pos = new_sel_pos - (view_height - line_height) / 2;
     if (new_y_pos < 0)
         new_y_pos = 0;
     else if (new_y_pos > max_y_pos)
         new_y_pos = max_y_pos;
 
-    int line_height = gui_list->line_height[SCREEN_MAIN];
-    int new_start = new_y_pos / line_height;
-
-    /* The selection follows the scroll: it is the row nearest the top. */
-    int new_item = (new_y_pos + line_height/2) / line_height;
+    int new_item = (new_sel_pos + line_height/2) / line_height;
     if (gui_list->selected_size > 1)
         new_item -= new_item % gui_list->selected_size;
 
+    sel_pos = new_sel_pos;
     gui_list->selected_item = new_item;
-    gui_list->start_item[SCREEN_MAIN] = new_start;
+    gui_list->start_item[SCREEN_MAIN] = new_y_pos / line_height;
     gui_list->y_pos = new_y_pos;
 }
 
@@ -567,7 +572,6 @@ static int scrollbar_scroll(struct gui_synclist *gui_list, int y)
             bar_y = bar_height - 1;
 
         int new_y_pos = (bar_y * gui_list->nb_items * line_height) / bar_height;
-        new_y_pos -= (nb_lines * line_height) / 2;
 
         do_touch_scroll(gui_list, new_y_pos);
 
@@ -675,6 +679,7 @@ void _gui_synclist_stop_kinetic_scrolling(struct gui_synclist *list)
         kinetic_stop_scrolling(&kinetic, list);
         list->scroll_mode = SCROLL_NONE;
         list->scroll_stop_tick = current_tick;
+        do_touch_scroll(list, list->selected_item * list->line_height[SCREEN_MAIN]);
     }
 }
 
@@ -715,6 +720,8 @@ static void list_mark_scroll_stopped(struct gui_synclist *list)
           list->selected_item, list->start_item[SCREEN_MAIN]);
     list->scroll_mode = SCROLL_NONE;
     list->scroll_stop_tick = current_tick;
+    /* snap the selection onto its row */
+    do_touch_scroll(list, list->selected_item * list->line_height[SCREEN_MAIN]);
 }
 
 static long kinetic_calc_accel(long input, long duration,
@@ -781,15 +788,16 @@ static int kinetic_callback(struct timeout *tmo)
         data->velocity -= SIGN(data->velocity) * abs_decel;
 
     /* stop scrolling if we didn't move, it means we hit the end */
-    if (list->y_pos == list->scroll_base_y && pixel_diff != 0)
+    if (sel_pos == list->scroll_base_y && pixel_diff != 0)
         data->velocity = 0;
     else
         /* update base y since our scroll distance doesn't accumulate. */
-        list->scroll_base_y = list->y_pos;
+        list->scroll_base_y = sel_pos;
 
     if (data->velocity == 0)
     {
         list_mark_scroll_stopped(list);
+        button_queue_post(BUTTON_REDRAW, 0);
         return 0;
     }
 
@@ -808,8 +816,8 @@ static bool kinetic_start_scrolling(struct kinetic *k, struct gui_synclist *list
         return false;
 
     const int max_y_pos = get_max_y_pos(list);
-    if ((yvel < 0 && list->y_pos >= max_y_pos) ||
-        (yvel > 0 && list->y_pos <= 0))
+    if ((yvel < 0 && sel_pos >= max_y_pos) ||
+        (yvel > 0 && sel_pos <= 0))
         return false;
 
     long yvel_fp = yvel << LIST_KINETIC_FRACBITS;
@@ -839,7 +847,7 @@ static bool kinetic_start_scrolling(struct kinetic *k, struct gui_synclist *list
     }
 
     list->scroll_mode = SCROLL_KINETIC;
-    list->scroll_base_y = list->y_pos;
+    list->scroll_base_y = sel_pos;
     timeout_register(&k->tmo, kinetic_callback, RELOAD_INTERVAL,
                      (intptr_t)&k->cb_data);
     return true;
@@ -1079,7 +1087,8 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
 
         if (list->scroll_mode == SCROLL_NONE)
         {
-            list->scroll_base_y = list->y_pos;
+            sel_pos = list->selected_item * list->line_height[screen];
+            list->scroll_base_y = sel_pos;
             click_loc = get_click_location(list, gevent.ox, gevent.oy);
 
             if (click_loc & SCROLLBAR)
