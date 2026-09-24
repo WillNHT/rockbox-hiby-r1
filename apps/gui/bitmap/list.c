@@ -492,6 +492,13 @@ void list_draw(struct screen *display, struct gui_synclist *list)
 #endif
         linedes.style = style;
         linedes.scroll = is_selected ? true : list->scroll_all;
+#ifdef HAVE_TOUCHSCREEN
+        /* A line that scrolls is redrawn by the scroll engine as well, a
+         * frame behind the drag: that is the text flickering under the
+         * thumb. Nothing scrolls sideways until the list is still. */
+        if (list->scroll_mode != SCROLL_NONE)
+            linedes.scroll = false;
+#endif
         linedes.line = i % list->selected_size;
         icon = list->callback_get_item_icon ?
                     list->callback_get_item_icon(i, list->data) : Icon_NOICON;
