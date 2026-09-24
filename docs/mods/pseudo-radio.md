@@ -162,12 +162,28 @@ They go through the same mixer channel as the keyclick and duck the music
 the same way, at the Cue depth in
 [Audio Prioritisation](audio-prioritisation.md).
 
-All of them are generated rather than played from a file. The beep channel
-takes raw PCM with no decoder behind it, so a set of sound files would mean
-a WAV reader, five more files that have to be on the card, and a card read
-on a UI event - for noises that are three numbers each. **Static Strength**
-scales all of them together, from a tenth to twice; **Tuning Static** turns
-the lot off.
+All of them are generated, so nothing has to be on the card for them.
+**Static Strength** scales all of them together, from a tenth to twice;
+**Tuning Static** turns the lot off.
+
+#### Your own sounds
+
+Any of them can be a sound file instead. Put a WAV of the right name in
+`/.rockbox/radio/` and it plays in place of the generated noise:
+
+| File | Replaces |
+| --- | --- |
+| `tune.wav` | Tuning in |
+| `retune.wav` | Prev/next |
+| `pause.wav` | Pause |
+| `resume.wav` | Resume |
+| `leave.wav` | Leaving |
+| `band1.wav` ... `band5.wav` | The five [band noises](#band-noise), in the order listed there |
+
+Plain 16-bit PCM WAV, mono or stereo, at any sample rate; up to about three
+seconds, and a longer file is cut. **Static Strength** still scales them and
+they duck the music the same way. A theme can ship a set by including the
+folder. Delete a file to get the generated sound back.
 
 ### Band Noise
 

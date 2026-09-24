@@ -38,6 +38,7 @@
  */
 #include "config.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -61,6 +62,7 @@
 #include "string-extra.h"
 #include "crc32.h"
 #include "timefuncs.h"
+#include "rbpaths.h"
 #include "pradio.h"
 
 #define PRADIO_MAX_STATIONS 48
@@ -99,6 +101,13 @@ enum pradio_sound
     SOUND_LEAVE,        /* switching off                             */
     PRADIO_SOUNDS
 };
+
+/* Any of them can be a file instead: a WAV of this name in
+ * PRADIO_SOUND_DIR takes the place of the generated noise, and
+ * band1.wav..band5.wav of the five below. Strength still scales it. */
+#define PRADIO_SOUND_DIR ROCKBOX_DIR "/radio"
+static const char * const sound_files[PRADIO_SOUNDS] =
+    { "tune", "retune", "pause", "resume", "leave" };
 
 static const struct beep_fx pradio_sounds[PRADIO_SOUNDS] =
 {
@@ -169,9 +178,16 @@ void pradio_ambience_tick(void)
     if (TIME_BEFORE(current_tick, ambience_tick))
         return;
 
-    struct beep_fx fx = pradio_ambience[rand() % PRADIO_AMBIENCE_N];
+    int pick = rand() % PRADIO_AMBIENCE_N;
+    struct beep_fx fx = pradio_ambience[pick];
+    char path[MAX_PATH];
+    snprintf(path, sizeof(path), PRADIO_SOUND_DIR "/band%d.wav", pick + 1);
+    int ms = beep_play_wav(path, global_settings.radio_static_strength);
+    if (ms > 0)
+        beep_duck(ms, global_settings.sound_duck_cue / 2);
+
     fx.amplitude = fx.amplitude * global_settings.radio_static_strength / 100;
-    if (fx.amplitude > 0)
+    if (ms == 0 && fx.amplitude > 0)
     {
         /* Ducked shallower than a cue: this one is meant to sound like it
          * is coming through the programme, not instead of it. */
@@ -187,6 +203,15 @@ static void pradio_sound(enum pradio_sound which)
 {
     if (!global_settings.radio_static || which >= PRADIO_SOUNDS)
         return;
+
+    char path[MAX_PATH];
+    snprintf(path, sizeof(path), PRADIO_SOUND_DIR "/%s.wav", sound_files[which]);
+    int ms = beep_play_wav(path, global_settings.radio_static_strength);
+    if (ms > 0)
+    {
+        beep_duck(ms, global_settings.sound_duck_cue);
+        return;
+    }
 
     struct beep_fx fx = pradio_sounds[which];
     fx.amplitude = fx.amplitude * global_settings.radio_static_strength / 100;

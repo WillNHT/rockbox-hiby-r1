@@ -258,6 +258,9 @@ struct beep_fx
     int gate_pct;               /* 0..100 of it chopped out at random    */
 };
 void beep_play_fx(const struct beep_fx *fx);
+/* A 16-bit PCM WAV on the same channel, at percent of its level. Returns
+ * its length in ms, 0 when there is no such file or it cannot be read. */
+int beep_play_wav(const char *path, int percent);
 
 enum system_sound
 {
