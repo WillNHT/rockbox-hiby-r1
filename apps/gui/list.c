@@ -680,6 +680,12 @@ bool gui_synclist_keyclick_callback(int action, void* data)
  * two functions in the correct order or the list wont work.
  */
 
+/* True while a list screen is waiting on its next action. */
+bool gui_synclist_is_active(void)
+{
+    return current_lists != NULL;
+}
+
 static void _lists_uiviewport_update_callback(unsigned short id,
                                               void *data, void *userdata)
 {

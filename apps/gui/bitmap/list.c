@@ -56,6 +56,7 @@ enum {
     SCROLL_BAR,             /* scroll by using the scrollbar */
     SCROLL_SWIPE,           /* scroll by wiping over the screen */
     SCROLL_KINETIC,         /* state after releasing swipe */
+    SCROLL_ANSWER,          /* sideways drag: right is yes, left is no */
 };
 #endif
 
@@ -936,10 +937,6 @@ static int list_do_flick(const struct gesture_event *gevent)
     {
     case GESTURE_FLICK_TOP:
         return ACTION_STD_QUICKSCREEN;
-    case GESTURE_FLICK_LEFT:
-        return ACTION_STD_CANCEL;
-    case GESTURE_FLICK_RIGHT:
-        return ACTION_TREE_WPS;
     default:
         return ACTION_NONE;
     }
@@ -1048,9 +1045,8 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
                 list->selected_item = new_item;
                 gui_synclist_speak_item(list);
 
-                if (gevent.id == GESTURE_TAP)
-                    action = ACTION_STD_OK;
-                else if (gevent.id == GESTURE_LONG_PRESS)
+                /* A tap only picks the row; dragging it right opens it. */
+                if (gevent.id == GESTURE_LONG_PRESS)
                     action = ACTION_STD_CONTEXT;
                 else
                     action = ACTION_REDRAW;
@@ -1120,6 +1116,9 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
 
             if (click_loc & SCROLLBAR)
                 list->scroll_mode = SCROLL_BAR;
+            else if ((click_loc & LIST) &&
+                     abs(gevent.x - gevent.ox) > abs(gevent.y - gevent.oy))
+                list->scroll_mode = SCROLL_ANSWER;
             else if (click_loc & LIST)
                 list->scroll_mode = SCROLL_SWIPE;
         }
@@ -1134,6 +1133,16 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
         logf("list_touch: release mode=%d y_pos=%d base=%d vel=%ld\n",
               list->scroll_mode, list->y_pos, list->scroll_base_y,
               kinetic.cb_data.velocity);
+        if (list->scroll_mode == SCROLL_ANSWER)
+        {
+            const int dx = gevent.x - gevent.ox;
+            const int min_dx = list_vp->width / 5;
+            list_mark_scroll_stopped(list);
+            action_gesture_reset();
+            action = dx >= min_dx ? ACTION_STD_OK :
+                     dx <= -min_dx ? ACTION_STD_CANCEL : ACTION_REDRAW;
+            break;
+        }
         if (list->scroll_mode == SCROLL_BAR)
             list_mark_scroll_stopped(list);
         else if(!kinetic_start_scrolling(&kinetic, list) &&
