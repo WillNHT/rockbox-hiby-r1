@@ -1,0 +1,17 @@
+--- before:
+1:radio transition: dissolve
+2:audiobook transition: wipe
+3:dim level locked: 35
+4:startup fade in: off
+5:startup volume limit: 55
+33:menu transition: off
+35:wps transition: cascade
+--- after (rewritten by Rockbox):
+6:dim level locked: 35
+29:startup fade in: off
+30:startup volume limit: 55
+31:menu transition: off
+33:wps transition: cascade
+35:audiobook transition: wipe
+36:radio transition: dissolve
+-rw-r--r-- 1 nhti nhti 1030 08:16:31 /home/nhti/rb/wt91/sim/simdisk/.rockbox/config.cfg
