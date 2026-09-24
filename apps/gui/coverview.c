@@ -49,6 +49,7 @@
 #include "viewport.h"
 #include "covers.h"
 #include "coverview.h"
+#include "button.h"
 
 #define MAX_STATES  4
 #define MAX_TILES   16
@@ -335,6 +336,12 @@ static bool draw_list(struct screen *d, struct gui_synclist *list,
     if (list->selected_item < 0)
         list->selected_item = 0;
 
+    /* One cover decoded per redraw, and another redraw asked for while any
+     * are left: the list answers the key at once and the pictures come in
+     * behind it, instead of every step of a scroll waiting on a file read
+     * and a JPEG decode for each new cover (#79). */
+    covers_set_budget(1);
+
     /* marquees belong to the rows that were there */
     if (st->last_sel != list->selected_item || st->last_top != st->top)
     {
@@ -372,6 +379,9 @@ static bool draw_list(struct screen *d, struct gui_synclist *list,
     d->set_viewport(vp);
     st->last_sel = list->selected_item;
     st->last_top = st->top;
+    if (covers_deferred())
+        button_queue_post(BUTTON_REDRAW, 0);
+    covers_set_budget(-1);
     return true;
 }
 

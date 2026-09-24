@@ -54,6 +54,11 @@ int cover_draw_animated(struct screen *d, const char *path,
 void cover_draw_placeholder(struct screen *d, const char *text,
                             int x, int y, int size);
 
+/* Decode at most this many uncached covers until the next call, -1 for
+ * no limit; covers_deferred() then says whether any were put off. */
+void covers_set_budget(int decodes);
+bool covers_deferred(void);
+
 /* Forget everything decoded for path (a cover file changed). NULL: all. */
 void covers_forget(const char *path);
 #endif
