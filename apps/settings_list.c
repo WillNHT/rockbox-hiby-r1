@@ -2003,7 +2003,7 @@ const struct settings_list settings[] = {
     TEXT_SETTING(0, tagcache_db_path, "database path",
                  ROCKBOX_DIR, NULL, NULL),
     TEXT_SETTING(0, db_exclude_folders, "database exclude folders",
-                 "", NULL, NULL),
+                 "/Radio:/Video", NULL, NULL),
     OFFON_SETTING(0, db_exclude_audiobooks, LANG_DB_EXCLUDE_AUDIOBOOKS, true,
                   "database exclude audiobooks", NULL),
 #endif
@@ -2488,6 +2488,9 @@ const struct settings_list settings[] = {
     OFFON_SETTING(0, keyclick_repeats, LANG_KEYCLICK_REPEATS, false,
                   "keyclick repeats", NULL),
 #endif
+    INT_SETTING(0, keyclick_volume, LANG_KEYCLICK_VOLUME, 100,
+                "keyclick volume", UNIT_PERCENT, 10, 400, 10,
+                NULL, NULL, NULL),
     OFFON_SETTING(0, keyclick_src_button, LANG_KEYCLICK_SRC_BUTTON, true,
                   "keyclick button", NULL),
     OFFON_SETTING(0, keyclick_src_button_repeat, LANG_KEYCLICK_SRC_BUTTON_REPEAT, true,
@@ -2849,6 +2852,8 @@ const struct settings_list settings[] = {
 #ifdef HAVE_COVER_VIEWS
    /* Albums, tracks, playlists and audiobooks. Shelves by default: a card
     * per row keeps up/down as the only way through, which is the stick. */
+   OFFON_SETTING(0, library_title_only, LANG_LIBRARY_TITLE_ONLY, true,
+                 "library title only", NULL),
    CHOICE_SETTING(0, library_view, LANG_LIBRARY_VIEW, COVERVIEW_SHELVES,
                   "library view", "classic,thumbnails,shelves,grid,carousel",
                   NULL, COVERVIEW_COUNT,

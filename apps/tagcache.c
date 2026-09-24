@@ -197,6 +197,8 @@ static long tempbuf_left; /* Buffer space left. */
 static long tempbuf_pos;
 #ifndef __PCTOOL__
 static int tempbuf_handle;
+/* An update or rebuild has been asked for and is not finished yet. */
+static volatile bool building;
 #endif
 
 #define SORTED_TAGS_COUNT 9
@@ -5422,6 +5424,7 @@ static void tagcache_thread(void)
                 remove_files();
                 remove_db_file(TAGCACHE_FILE_TEMP);
                 tagcache_build();
+                building = false;
                 break;
 
             case Q_UPDATE:
@@ -5430,6 +5433,7 @@ static void tagcache_thread(void)
                 load_ramcache();
 #endif
                 check_deleted_files();
+                building = false;
                 break ;
 
             case Q_START_SCAN:
@@ -5559,12 +5563,21 @@ bool tagcache_update(void)
     if (!tc_stat.ready)
         return false;
 
+    building = true;
     queue_post(&tagcache_queue, Q_UPDATE, 0);
     return false;
 }
 
+/* From the moment an update or rebuild is asked for until the thread has
+ * finished it, so a screen can show that it is still going. */
+bool tagcache_is_building(void)
+{
+    return building;
+}
+
 bool tagcache_rebuild(void)
 {
+    building = true;
     queue_post(&tagcache_queue, Q_REBUILD, 0);
     return false;
 }

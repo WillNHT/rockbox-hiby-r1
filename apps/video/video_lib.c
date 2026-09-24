@@ -119,7 +119,9 @@ bool video_has_picture(const char *path)
     char osbuf[MAX_PATH];
     const char *ospath;
 
-    if (!global_settings.video_enabled || !video_is_video_file(path))
+    /* Not gated on the Video switch: that governs what decodes on its own,
+     * and a film the user opened by hand should play, not turn into music. */
+    if (!video_is_video_file(path))
         return false;
     api = video_lib();
     if (!api)

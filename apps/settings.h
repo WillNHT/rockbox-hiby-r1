@@ -476,6 +476,7 @@ struct user_settings
     int  beep;              /* system beep volume when changing tracks etc. */
     int  keyclick;          /* keyclick volume */
     int  keyclick_repeats;  /* keyclick on repeats */
+    int  keyclick_volume;   /* percent of the keyclick level's loudness */
     /* which events click; see keyclick_enabled() */
     bool keyclick_src_button;
     bool keyclick_src_button_repeat;
@@ -1061,6 +1062,7 @@ struct user_settings
     int  sound_duck_cue;     /* lock, unlock, stick arming */
 #ifdef HAVE_COVER_VIEWS
     int library_view;        /* enum coverview_style */
+    bool library_title_only; /* library track lists show the bare title */
 #endif
 #ifdef HAVE_VIDEO
     bool video_enabled;      /* master switch for everything that moves */

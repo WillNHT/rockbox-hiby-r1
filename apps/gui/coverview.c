@@ -341,6 +341,13 @@ static bool draw_list(struct screen *d, struct gui_synclist *list,
      * behind it, instead of every step of a scroll waiting on a file read
      * and a JPEG decode for each new cover (#79). */
     covers_set_budget(1);
+#ifdef HAVE_TOUCHSCREEN
+    /* Under a moving thumb not even one: a decode is a frame the drag
+     * waits on. Cached covers still draw; the rest fill in once the list
+     * settles (scroll_mode goes back to 0, SCROLL_NONE). */
+    if (list->scroll_mode != 0)
+        covers_set_budget(0);
+#endif
 
     /* marquees belong to the rows that were there */
     if (st->last_sel != list->selected_item || st->last_top != st->top)
@@ -379,7 +386,12 @@ static bool draw_list(struct screen *d, struct gui_synclist *list,
     d->set_viewport(vp);
     st->last_sel = list->selected_item;
     st->last_top = st->top;
-    if (covers_deferred())
+    /* Mid-scroll the release or the end of the coast redraws anyway. */
+    if (covers_deferred()
+#ifdef HAVE_TOUCHSCREEN
+        && list->scroll_mode == 0
+#endif
+        )
         button_queue_post(BUTTON_REDRAW, 0);
     covers_set_budget(-1);
     return true;

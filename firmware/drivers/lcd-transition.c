@@ -90,7 +90,17 @@ void lcd_transition_arm(enum lcd_transition type, int dir, int duration_ms)
 
     if (!armed)
     {
+        /* The old frame as it was on the panel, layers and all - run()
+         * takes the new one composed, and an old one without the layers
+         * made whatever a skin keeps in them vanish at the start of the
+         * animation and pop back at its end. */
+#ifdef HAVE_LCD_LAYERS
+        lcd_layers_compose(true);
+#endif
         memcpy(from_px, base_px(), sizeof(from_px));
+#ifdef HAVE_LCD_LAYERS
+        lcd_layers_compose(false);
+#endif
         armed = true;
     }
     t_type = type;

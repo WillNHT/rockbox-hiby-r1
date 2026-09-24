@@ -221,6 +221,7 @@ bool tagcache_set_folder_excluded(const char *path, bool exclude);
 #endif
 bool tagcache_is_fully_initialized(void);
 bool tagcache_is_usable(void);
+bool tagcache_is_building(void);
 void tagcache_start_scan(void);
 void tagcache_stop_scan(void);
 bool tagcache_update(void);

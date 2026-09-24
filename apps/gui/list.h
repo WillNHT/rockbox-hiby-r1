@@ -302,6 +302,7 @@ int skinlist_get_line_count(enum screen_type screen, struct gui_synclist *list);
 #if  defined(HAVE_TOUCHSCREEN)
 /* this needs to be fixed if we ever get more than 1 touchscreen on a target */
 extern unsigned gui_synclist_do_touchscreen(struct gui_synclist * gui_list);
+extern struct gui_synclist *gui_synclist_is_active(void);
 /* only for private use in gui/list.c */
 extern void _gui_synclist_stop_kinetic_scrolling(struct gui_synclist * gui_list);
 #endif

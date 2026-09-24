@@ -41,6 +41,7 @@
 #include "settings.h"
 #include "skin_engine/skin_engine.h"
 #include "splash.h"
+#include "list.h"
 #include "stick.h"
 #include "rpkeys.h"
 #include "stick_glue.h"
@@ -1808,6 +1809,23 @@ int stick_handle_touch(const struct touchevent *ev, int context,
     {
         stick_reset(&live_state, &live_cfg);
         return STICK_RESULT_CONSUMED;
+    }
+
+    /* Lists scroll under the thumb and answer sideways on their own (see
+     * gui_synclist_do_touchscreen); the stick is for everything else.
+     * The context is checked too: a list that hands over to one of these
+     * screens without handling its last button still reads as active,
+     * and the quickscreen then lost its swipes to the list's handler. */
+    if (gui_synclist_is_active() &&
+        (context & 0xff) != CONTEXT_WPS &&
+        (context & 0xff) != CONTEXT_QUICKSCREEN &&
+        (context & 0xff) != CONTEXT_PITCHSCREEN &&
+        (context & 0xff) != CONTEXT_YESNOSCREEN &&
+        (context & 0xff) != CONTEXT_KEYBOARD &&
+        (context & 0xff) != CONTEXT_FM)
+    {
+        stick_reset(&live_state, &live_cfg);
+        return STICK_RESULT_PASS;
     }
 
     if (context != cached_context)

@@ -20342,3 +20342,31 @@
     *: "Rebuilding setlists in the background"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_KEYCLICK_VOLUME
+  desc: in keyclick settings menu
+  user: core
+  <source>
+    *: "Keyclick Volume"
+  </source>
+  <dest>
+    *: "Keyclick Volume"
+  </dest>
+  <voice>
+    *: "Keyclick Volume"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LIBRARY_TITLE_ONLY
+  desc: theme settings: library track lists show only the title
+  user: core
+  <source>
+    *: "Library Shows Title Only"
+  </source>
+  <dest>
+    *: "Library Shows Title Only"
+  </dest>
+  <voice>
+    *: "Library Shows Title Only"
+  </voice>
+</phrase>

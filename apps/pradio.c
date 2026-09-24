@@ -1075,7 +1075,7 @@ MENUITEM_FUNCTION(pradio_saver_item, 0, ID2P(LANG_RADIO_SAVER),
 #endif
 static int pradio_stations(void);
 MENUITEM_FUNCTION(pradio_stations_item, 0, ID2P(LANG_RADIO_STATIONS),
-                  pradio_stations, NULL, Icon_Tuner);
+                  pradio_stations, NULL, Icon_Radio_screen);
 MENUITEM_SETTING(pradio_min_length, &global_settings.radio_min_length, NULL);
 MENUITEM_SETTING(pradio_static, &global_settings.radio_static, NULL);
 MENUITEM_SETTING(pradio_static_strength,
@@ -1084,7 +1084,7 @@ MENUITEM_SETTING(pradio_ambience_item, &global_settings.radio_ambience, NULL);
 MENUITEM_FUNCTION(pradio_rebuild_item, 0, ID2P(LANG_RADIO_REBUILD),
                   rebuild_setlists, NULL, Icon_Playlist);
 
-MAKE_MENU(pradio_settings_menu, ID2P(LANG_RADIO_SETTINGS), NULL, Icon_Tuner,
+MAKE_MENU(pradio_settings_menu, ID2P(LANG_RADIO_SETTINGS), NULL, Icon_Radio_screen,
           &pradio_stations_item,
           &pradio_rebuild_item,
           &pradio_folder_item,
@@ -1153,7 +1153,7 @@ static int pradio_stations(void)
         simplelist_info_init(&info, str(LANG_RADIO_STATIONS),
                              ROW_FIRST + nstations, NULL);
         info.get_name = row_name;
-        info.title_icon = Icon_Tuner;
+        info.title_icon = Icon_Radio_screen;
         info.selection = selection;
         info.action_callback = station_action;
         simplelist_show_list(&info);

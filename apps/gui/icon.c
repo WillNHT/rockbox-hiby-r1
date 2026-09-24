@@ -104,114 +104,46 @@ void screen_put_iconxy(struct screen * display,
     const int is_rtl = lang_is_rtl();
     const struct bitmap *iconset;
 
-    if (icon == Icon_Tuner)
+    if (icon == Icon_Book)
     {
-        int m = height / 8;
-        /* Narrower than the cell and centred in it. At full width the case
-         * plus its aerial overhung every other icon in the list by a couple
-         * of pixels, which reads as one row being indented differently
-         * rather than as a wider picture. */
-        int bw = (width - m) * 4 / 5, bh = height - 2 * m;
-        int bx = xpos + (width - bw) / 2, by = ypos + m;
-        int i;
+        /* An open book, as the icon set draws things: solid shapes with
+         * the detail cut out of them, not outlines. Two filled pages that
+         * dip into the spine, a cover joining them underneath, and two
+         * lines of text knocked out of each. Drawn rather than themed -
+         * see the note in icon.h - in the list's own foreground colour. */
+        int t  = MAX(2, height / 10);       /* the set's stroke           */
+        int bh = height - 2 * (height / 8);
+        int bw = MIN(width, height + height / 8);
+        int bx = xpos + (width - bw) / 2, by = ypos + height / 8;
+        int ph = bh - t;                    /* page height, over the cover */
+        int pw = (bw - t) / 2;              /* one page                   */
+        int rx, i;
 
         if (is_rtl)
             bx = display->getwidth() - bx - bw;
+        rx = bx + pw + t;
 
         if (bw < 8 || bh < 8)
             return;
 
-        /* A table radio seen front-on: an aerial, a case, a speaker grille
-         * filling the left of it and a tuning scale with its knob on the
-         * right. The dial is the half that says "radio" rather than
-         * "speaker", so it keeps its width even at list size. Drawn rather
-         * than themed - see the note in icon.h - and in nothing but the
-         * list's own foreground colour, so it reads the same way in a
-         * colour icon set and in a monochrome one. */
-        int cy = by + bh / 3;               /* top of the case  */
-        int ch = bh - bh / 3;               /* case height      */
-        int in = MAX(2, bw / 10);           /* inset from case  */
-        int gw = (bw - 3 * in) / 2;         /* grille width     */
-        int dx = bx + 2 * in + gw;          /* dial left edge   */
+        display->fillrect(bx, by, pw, ph);
+        display->fillrect(rx, by, pw, ph);
+        display->fillrect(bx, by + ph, bw, t);
 
-        /* the aerial, leaning out of the top right corner */
-        display->vline(bx + bw - 1 - in, by, cy);
-        display->hline(bx + bw - 2 - in, bx + bw - 1, by);
-
-        /* the case */
-        display->drawrect(bx, cy, bw, ch);
-
-        /* the speaker grille */
-        for (i = 1; (cy + in + i * 2) < cy + ch - in; i++)
-            display->hline(bx + in, bx + in + gw - 1, cy + in + i * 2);
-
-        /* the tuning scale, as ticks along the top of the right half */
+        display->set_drawmode(DRMODE_SOLID | DRMODE_INVERSEVID);
+        display->fillrect(bx + pw - t, by, t, t);
+        display->fillrect(rx, by, t, t);
+        display->hline(bx + t, bx + pw - 1, by + ph - 1);
+        display->hline(rx, rx + pw - t - 1, by + ph - 1);
+        display->drawpixel(bx, by);
+        display->drawpixel(bx + bw - 1, by);
+        for (i = 1; i <= 2; i++)
         {
-            int th = MAX(2, ch / 5);
-            for (i = 0; dx + i * 3 < bx + bw - in; i++)
-                display->vline(dx + i * 3, cy + in, cy + in + th);
-
-            /* and the knob under it */
-            int kw = MAX(3, ch / 3);
-            display->fillrect(dx, cy + ch - in - kw, kw, kw);
+            int ly = by + (ph * i) / 3 - t / 2;
+            display->fillrect(bx + t, ly, pw - 2 * t, MAX(1, t - 1));
+            display->fillrect(rx + t, ly, pw - 2 * t, MAX(1, t - 1));
         }
-        return;
-    }
-
-    if (icon == Icon_Book)
-    {
-        int m = height / 8;
-        int bx = xpos + m / 2, by = ypos + m;
-        int bw = width - m, bh = height - 2 * m;
-        int i;
-
-        if (is_rtl)
-            bx = display->getwidth() - bx - bw;
-
-        if (bw < 8 || bh < 6)
-            return;
-
-        /* An open book seen from above, as an outline: two pages meeting
-         * at a fold, a line of text on each, and a ribbon down the right
-         * one. A closed book front-on is a rectangle with a stripe, which
-         * at list size reads as a box - an open one does not read as
-         * anything else.
-         *
-         * One colour, like the radio above it. It used to be drawn in five
-         * - a blue cover, off-white pages, a red ribbon - which is a
-         * painting among an icon set that is a set of marks, and in a
-         * monochrome theme it was the one row that was not part of the
-         * theme. The list's own foreground suits a colour icon set and a
-         * monochrome one alike; see the note in icon.h. */
-        int ph  = bh - MAX(1, bh / 8);      /* page height               */
-        int mid = bx + bw / 2;              /* the fold                  */
-        int dip = MAX(1, bh / 8);           /* pages sag into the fold   */
-        int top = by + dip;
-
-        display->drawrect(bx, top, mid - bx + 1, ph - dip);
-        display->drawrect(mid, top, bx + bw - mid, ph - dip);
-
-        /* the spines rise away from the fold */
-        display->vline(bx, by, top);
-        display->vline(bx + bw - 1, by, top);
-        display->hline(bx, bx + bw - 1, by);
-        display->vline(mid, by, top);
-
-        /* the words */
-        for (i = 2; i <= 3; i++)
-        {
-            int ly = top + ((ph - dip) * i) / 5;
-            if (ly >= top + ph - dip - 1)
-                continue;
-            display->hline(bx + 3, mid - 3, ly);
-            display->hline(mid + 3, bx + bw - 4, ly);
-        }
-
-        /* the ribbon, hanging out of the bottom of the right page */
-        {
-            int rx = mid + (bx + bw - mid) / 2;
-            display->vline(rx, top + 2, by + bh - 1);
-        }
+        display->set_drawmode(DRMODE_SOLID);
         return;
     }
 

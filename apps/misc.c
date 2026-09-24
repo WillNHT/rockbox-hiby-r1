@@ -1133,9 +1133,11 @@ void system_sound_play(enum system_sound sound)
 
     if (*params->setting)
     {
+        unsigned amplitude = params->amplitude * *params->setting;
+        if (params->setting == &global_settings.keyclick)
+            amplitude = amplitude * global_settings.keyclick_volume / 100;
         beep_duck(params->duration, *params->duck);
-        beep_play(params->frequency, params->duration,
-                  params->amplitude * *params->setting);
+        beep_play(params->frequency, params->duration, amplitude);
     }
 }
 

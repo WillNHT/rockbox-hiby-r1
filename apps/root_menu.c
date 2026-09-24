@@ -593,7 +593,7 @@ MENUITEM_RETURNVALUE(audiobooks_item, ID2P(LANG_AUDIOBOOKS),
                         GO_TO_AUDIOBOOKS, NULL, Icon_Book);
 
 MENUITEM_RETURNVALUE(pseudo_radio_item, ID2P(LANG_PSEUDO_RADIO),
-                        GO_TO_PSEUDO_RADIO, NULL, Icon_Tuner);
+                        GO_TO_PSEUDO_RADIO, NULL, Icon_Radio_screen);
 
 MENUITEM_RETURNVALUE(file_browser, ID2P(LANG_DIR_BROWSER), GO_TO_FILEBROWSER,
                         NULL, Icon_file_view_menu);
