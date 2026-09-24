@@ -34,6 +34,7 @@
 %xl(B,batt_wps.bmp,2,0,2)
 %xl(O,off_on.bmp,48,0,2)
 %xl(vb,vb.bmp)
+%xl(vbg,vb.bmp,0,0)
 %xl(bb,bb.bmp)
 %xl(vb_backdrop,vb_backdrop.bmp)
 %xl(vb_too_loud,vb_too_loud.bmp)
@@ -43,7 +44,7 @@
 %?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>
 %?C<%Vd(mirror)>
 %?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>
-%Vd(volbar)
+%Vd(volbg)%Vd(volbar)
 %?mp<|%Vd(live)||%Vd(live)|%Vd(live)>
 %?if(%an(360,50),=,1)<%Vd(sh00)>
 %?if(%an(360,50),=,2)<%Vd(sh00)>
@@ -327,10 +328,15 @@ SHF%xd(O,%ps)
 # Volume bar
 # Above the clock, in the battery bar's place on the other side of the
 # row but not its look: the volume's own stripes, and the checker once it
-# is past 0 dB, so the two bars are never read as the same thing.
+# is past 0 dB, so the two bars are never read as the same thing. Behind
+# it the same stripes, dimmed, all the way across: the track the level
+# runs along.
+%Vl(volbg,30,26,138,18,-)
+%Vf(3A3B3D)
+%xd(vbg)
 %Vl(volbar,30,26,138,18,-)
-%pv(0,0,138,18,vb,backdrop,vb_backdrop)
-%?if(%pv, >, 0)<%pv(0,0,138,18,vb_too_loud,backdrop,vb_backdrop)>
+%pv(0,0,138,18,vb,backdrop)
+%?if(%pv, >, 0)<%pv(0,0,138,18,vb_too_loud,backdrop)>
 #
 
 #
