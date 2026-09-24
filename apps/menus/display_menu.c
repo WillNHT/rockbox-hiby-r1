@@ -559,6 +559,8 @@ MAKE_MENU(peak_meter_menu, ID2P(LANG_PM_MENU), NULL, Icon_NOICON,
 
 
 #ifdef HAVE_TOUCHSCREEN
+/* The R1 has one navigation scheme; see settings_apply(). */
+#if (CONFIG_KEYPAD != HIBY_R1_PAD)
 static int touch_mode_callback(int action,
                                const struct menu_item_ex *this_item,
                                struct gui_synclist *this_list)
@@ -573,6 +575,7 @@ static int touch_mode_callback(int action,
     }
     return action;
 }
+#endif
 
 static int line_padding_callback(int action,
                                  const struct menu_item_ex *this_item,
@@ -585,8 +588,10 @@ static int line_padding_callback(int action,
     return action;
 }
 
+#if (CONFIG_KEYPAD != HIBY_R1_PAD)
 MENUITEM_SETTING(touch_mode, &global_settings.touch_mode, touch_mode_callback);
 MENUITEM_SETTING(touchscreen_exemptions, &global_settings.touchscreen_exemptions, NULL);
+#endif
 
 MENUITEM_FUNCTION(touchscreen_menu_calibrate, 0,
 	              ID2P(LANG_TOUCHSCREEN_CALIBRATE), calibrate, NULL, Icon_NOICON);
@@ -640,8 +645,11 @@ MAKE_MENU(stick_menu, ID2P(LANG_STICK_SETTINGS), NULL, Icon_NOICON,
             &stick_dial_wps, &stick_dial_lists, &stick_deg_per_detent,
             &stick_overlay, &stick_overlay_style, &stick_edge_swipe);
 
-MAKE_MENU(touchscreen_menu, ID2P(LANG_TOUCHSCREEN_SETTINGS), NULL, Icon_NOICON, &list_line_padding, &touch_mode,
-            &touchscreen_exemptions, &stick_menu,
+MAKE_MENU(touchscreen_menu, ID2P(LANG_TOUCHSCREEN_SETTINGS), NULL, Icon_NOICON, &list_line_padding,
+#if (CONFIG_KEYPAD != HIBY_R1_PAD)
+            &touch_mode, &touchscreen_exemptions,
+#endif
+            &stick_menu,
             &touchscreen_menu_calibrate, &touchscreen_menu_reset_calibration);
 #endif
 

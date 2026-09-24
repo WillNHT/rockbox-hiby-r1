@@ -1157,6 +1157,12 @@ void settings_apply(bool read_disk)
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
+#if (CONFIG_KEYPAD == HIBY_R1_PAD)
+    /* One navigation scheme on the R1: the stick, with lists scrolling
+     * under the thumb. Not a choice any more, whatever an old config says. */
+    global_settings.touch_mode = TOUCHSCREEN_STICK;
+    global_settings.touchscreen_exemptions = TOUCHSCREEN_EXEMPTIONS_OFF;
+#endif
     touchscreen_set_mode(global_settings.touch_mode);
     memcpy(&calibration_parameters, &global_settings.ts_calibration_data, sizeof(struct touchscreen_parameter));
 #endif
