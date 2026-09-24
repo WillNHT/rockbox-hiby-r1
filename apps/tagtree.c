@@ -1697,6 +1697,11 @@ static int retrieve_entries(struct tree_context *c, int offset, bool init)
         fmt = formats[i];
     }
 
+    /* Not in the album-sorted table: that one sorts on the album. */
+    bool title_only = fmt && tag == tag_title &&
+                      global_settings.library_title_only &&
+                      c->currtable != TABLE_ALLSUBENTRIES_SORTED_BY_ALBUMS;
+
     if (fmt)
     {
         sort_inverse = fmt->sort_inverse;
@@ -1837,7 +1842,9 @@ static int retrieve_entries(struct tree_context *c, int offset, bool init)
                     namebufused += strlen(dptr->name)+1; /* include NULL */
                     dptr->album_name = core_get_data(c->cache.name_buffer_handle)+namebufused;
                     if ((c->cache.name_buffer_size - namebufused) > 0 &&
-                            tagcache_retrieve(&tcs, tcs.idx_id, tag_album, dptr->album_name,
+                            tagcache_retrieve(&tcs, tcs.idx_id,
+                                      title_only ? tag_title : tag_album,
+                                      dptr->album_name,
                                       c->cache.name_buffer_size - namebufused))
                         namebufused += strlen(dptr->album_name)+1;
                     else
@@ -1963,6 +1970,17 @@ entry_skip_formatter:
 
     if (sort_limit)
         total_count = MIN(total_count, sort_limit);
+
+    /* Sorted by the whole format - track number and all - and then shown
+     * as the bare title, which title_only fetched in place of the album. */
+    if (title_only)
+    {
+        dptr = get_entries(c);
+        for (i = c->special_entry_count; i < total_count; i++, dptr++)
+            if (dptr->album_name)
+                dptr->name = dptr->album_name;
+        strip = 0;
+    }
 
     if (strip)
     {

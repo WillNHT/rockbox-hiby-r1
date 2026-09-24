@@ -2003,7 +2003,7 @@ const struct settings_list settings[] = {
     TEXT_SETTING(0, tagcache_db_path, "database path",
                  ROCKBOX_DIR, NULL, NULL),
     TEXT_SETTING(0, db_exclude_folders, "database exclude folders",
-                 "", NULL, NULL),
+                 "/Radio:/Video", NULL, NULL),
     OFFON_SETTING(0, db_exclude_audiobooks, LANG_DB_EXCLUDE_AUDIOBOOKS, true,
                   "database exclude audiobooks", NULL),
 #endif
@@ -2852,6 +2852,8 @@ const struct settings_list settings[] = {
 #ifdef HAVE_COVER_VIEWS
    /* Albums, tracks, playlists and audiobooks. Shelves by default: a card
     * per row keeps up/down as the only way through, which is the stick. */
+   OFFON_SETTING(0, library_title_only, LANG_LIBRARY_TITLE_ONLY, true,
+                 "library title only", NULL),
    CHOICE_SETTING(0, library_view, LANG_LIBRARY_VIEW, COVERVIEW_SHELVES,
                   "library view", "classic,thumbnails,shelves,grid,carousel",
                   NULL, COVERVIEW_COUNT,

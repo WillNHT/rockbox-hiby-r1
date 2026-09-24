@@ -443,6 +443,7 @@ MENUITEM_FUNCTION(browse_audiobook_wps, 0, ID2P(LANG_AB_WPS),
 MENUITEM_FUNCTION_W_PARAM(browse_themes, 0, ID2P(LANG_CUSTOM_THEME),
                           browse_folder, (void*)&themes, NULL, Icon_Config);
 MENUITEM_SETTING(cursor_style, &global_settings.cursor_style, NULL);
+MENUITEM_SETTING(library_title_only_item, &global_settings.library_title_only, NULL);
 #ifdef HAVE_COVER_VIEWS
 MENUITEM_SETTING(library_view_item, &global_settings.library_view, NULL);
 #endif
@@ -497,6 +498,7 @@ MAKE_MENU(theme_menu, ID2P(LANG_THEME_MENU),
 #ifdef HAVE_COVER_VIEWS
             &library_view_item,
 #endif
+            &library_title_only_item,
 #ifdef HAVE_LCD_TRANSITIONS
             &transitions_menu,
 #endif

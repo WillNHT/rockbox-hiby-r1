@@ -20356,3 +20356,17 @@
     *: "Keyclick Volume"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_LIBRARY_TITLE_ONLY
+  desc: theme settings: library track lists show only the title
+  user: core
+  <source>
+    *: "Library Shows Title Only"
+  </source>
+  <dest>
+    *: "Library Shows Title Only"
+  </dest>
+  <voice>
+    *: "Library Shows Title Only"
+  </voice>
+</phrase>
