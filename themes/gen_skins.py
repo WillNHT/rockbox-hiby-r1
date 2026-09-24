@@ -76,15 +76,12 @@ SHF%xd(O,%ps)
 # Volume bar
 # Above the clock, in the battery bar's place on the other side of the
 # row but not its look: the volume's own stripes, and the checker once it
-# is past 0 dB, so the two bars are never read as the same thing. Behind
-# it the same stripes, dimmed, all the way across: the track the level
-# runs along.
-%Vl(volbg,30,26,138,18,-)
-%Vf(3A3B3D)
-%xd(vbg)
+# is past 0 dB, so the two bars are never read as the same thing. Under
+# it the same stripes in grey, all the way across (vb_track.bmp, grey on
+# the transparent magenta): the track the level runs along.
 %Vl(volbar,30,26,138,18,-)
-%pv(0,0,138,18,vb,backdrop)
-%?if(%pv, >, 0)<%pv(0,0,138,18,vb_too_loud,backdrop)>
+%pv(0,0,138,18,vb,backdrop,vb_track)
+%?if(%pv, >, 0)<%pv(0,0,138,18,vb_too_loud,backdrop,vb_track)>
 #
 """
 
@@ -124,7 +121,7 @@ PRELOAD = """%Fl(2,24-GeistMono-SemiBold.fnt)
 %xl(B,batt_wps.bmp,2,0,2)
 %xl(O,off_on.bmp,48,0,2)
 %xl(vb,vb.bmp)
-%xl(vbg,vb.bmp,0,0)
+%xl(vb_track,vb_track.bmp)
 %xl(bb,bb.bmp)
 %xl(vb_backdrop,vb_backdrop.bmp)
 %xl(vb_too_loud,vb_too_loud.bmp)
@@ -350,7 +347,7 @@ def snappy_v2(vinyl=False):
     else:
         o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
     o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>")
-    o.append("%Vd(volbg)%Vd(volbar)%?mh<|%Vd(plname)>")
+    o.append("%Vd(volbar)%?mh<|%Vd(plname)>")
     o += dial_border(30, 26, 138, 18)
     o.append(HEADER)
     if vinyl:
@@ -599,7 +596,7 @@ def animated(gauge=False, lyrics=None, radio=False):
     # transparent viewport in the skin language to put it in. %Vt(0) is
     # that viewport, so the special case is gone and the bar is one thing
     # in one place whether or not the track has artwork.
-    o.append("%Vd(volbg)%Vd(volbar)" + ("" if radio else "%?mh<|%Vd(plname)>"))
+    o.append("%Vd(volbar)" + ("" if radio else "%?mh<|%Vd(plname)>"))
     if radio:
         # The dot is a mono bitmap, not a drawn rectangle: a viewport whose
         # lines carry neither text nor a bitmap has no lines to render, and
@@ -903,7 +900,7 @@ def lyrics_full():
 #
 %wd""", PRELOAD, "%Vd(bg)",
          "%?yf<|%Vd(plainnote)|%Vd(nolyrics)>",
-         "%Vd(volbg)%Vd(volbar)%?mh<|%Vd(plname)>"]
+         "%Vd(volbar)%?mh<|%Vd(plname)>"]
     o += dial_border(30, 26, 138, 18)
     o.append(HEADER)
     o.append("""#
