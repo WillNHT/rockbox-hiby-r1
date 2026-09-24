@@ -1157,6 +1157,10 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
             action_gesture_reset();
             action = dx >= min_dx ? ACTION_STD_OK :
                      dx <= -min_dx ? ACTION_STD_CANCEL : ACTION_REDRAW;
+            /* Yes and no are heard, like the stick's own actions. */
+            if (action != ACTION_REDRAW &&
+                keyclick_enabled(KEYCLICK_SRC_STICK_ACTION))
+                system_sound_play(SOUND_KEYCLICK);
             break;
         }
         if (list->scroll_mode == SCROLL_BAR)
