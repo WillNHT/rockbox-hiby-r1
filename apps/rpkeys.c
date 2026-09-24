@@ -388,7 +388,9 @@ static void countdown_draw(long held_ticks)
     {
         int mode = lcd_get_drawmode();
         lcd_set_drawmode(DRMODE_SOLID | DRMODE_INVERSEVID);
-        lcd_fillrect(0, band_y, vp.width, band_h);
+        /* Inside the border: it is only ever added to, so whatever of it
+         * this clear took out would stay out - the gaps at either side. */
+        lcd_fillrect(BORDER_PX, band_y, vp.width - 2 * BORDER_PX, band_h);
         lcd_set_drawmode(mode);
     }
 
