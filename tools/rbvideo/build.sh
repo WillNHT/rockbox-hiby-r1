@@ -27,7 +27,9 @@ PREFIX=$WORK/prefix
 mkdir -p "$WORK" "$PREFIX"
 
 fetch() {
-    [ -f "$DL/$2" ] || wget -q -O "$DL/$2" "$1/$2"
+    # Offline is fine once everything is built; a step that needs the
+    # tarball fails on it later.
+    [ -f "$DL/$2" ] || wget -q -O "$DL/$2" "$1/$2" || rm -f "$DL/$2"
 }
 fetch https://zlib.net/fossils zlib-$ZLIB_VER.tar.gz
 fetch https://ffmpeg.org/releases ffmpeg-$FFMPEG_VER.tar.xz
@@ -44,6 +46,11 @@ r1)
              --disable-mipsdsp --disable-mipsdspr2 --disable-msa --disable-mmi
              --disable-mips32r5 --disable-mips32r6 --disable-mips64r2 --disable-mips64r6
              --disable-mipsfpu"
+    # Pin glibc symbols to versions the player has; see glibc_compat.c.
+    COMPAT="$HERE/glibc_compat.c -lrt"
+    for s in powf log2f exp2f glob64 clock_gettime getauxval \n             __isoc99_sscanf sched_getaffinity __sched_cpucount __xpg_strerror_r; do
+        COMPAT="$COMPAT -Wl,--wrap=$s"
+    done
     ;;
 host)
     CROSS=
@@ -136,7 +143,7 @@ fi
 link_shim() {
     $CC $CFLAGS -DRBV_WEBP -fvisibility=hidden -shared \
         -I"$PREFIX/include" -I"$ROOT/apps/video" \
-        -o "$OUT/librbvideo.so" "$HERE/rbvideo.c" \
+        -o "$OUT/librbvideo.so" "$HERE/rbvideo.c" $COMPAT \
         -L"$PREFIX/lib" -lavformat -lavcodec -lswscale -lswresample -lavutil \
         -lwebpdemux -lwebp -lsharpyuv $1 \
         -Wl,--gc-sections -Wl,--exclude-libs,ALL -Wl,-z,defs \
