@@ -53,9 +53,9 @@
 # Title Area
 # ---------
 #
-# Locked indicator / Time (on Quickscreen) or sleep timer
+# Locked indicator / Time (on Quickscreen); the sleep timer is the WPS's alone
 %Vl(status,30,30,-240,34,3)
-%?mh<%Vs(invert)%acLOCKED|%?if(%cs,!=,10)<%?bs<%bs zzz...>|%?cf<%cH:%cM|%cl:%cM %cP>>>
+%?mh<%Vs(invert)%acLOCKED|%?if(%cs,!=,10)<|%?cf<%cH:%cM|%cl:%cM %cP>>>
 #
 # Battery text and icon
 %V(-240,30,-30,32,3)
