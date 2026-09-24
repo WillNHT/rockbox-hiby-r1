@@ -33,7 +33,6 @@
 %Fl(4,44-GeistMono-SemiBold.fnt)
 %Fl(5,58-GeistMono-SemiBold.fnt)
 %xl(B,batt_wps.bmp,2,0,2)
-%xl(K,clock_wps.bmp,6,0)
 %xl(O,off_on.bmp,48,0,2)
 %xl(vb,vb.bmp)
 %xl(bb,bb.bmp)
@@ -107,26 +106,15 @@
 # Header
 # ======
 # Clock
-# Set like the battery percentage on the other side of the row: a mono
-# icon, then the number, in an inverted box of the same height on the same
-# line. The icon goes through a conditional, exactly as the battery's own
-# does: a bare bitmap is drawn before the line starts and the inverted fill
-# then begins after it, leaving the icon stranded outside its own box. clock_wps.bmp is a face rather than a themable icon: a new themable
-# icon re-slices every icon set installed on the device.
+# Set like the battery percentage on the other side of the row: an
+# inverted box of the same height on the same line. No icon: the time is
+# the whole widget, centred in a box that runs the full width of the
+# column, up to the shuffle label.
 #
 # Unlabelled, so always drawn. The corner used to be shared with the sleep
 # timer and the volume number, which meant the one thing it is for was the
 # one thing it was often not showing.
-#
-# The whole widget is the inverted box, icon included, as on the battery
-# side (#85): the icon is placed by position, so the inverted line - a
-# stop that the time's own viewport then covers - fills the whole box
-# behind it, and it is drawn in the ground colour like the text. The time is the 24 px face - three quarters
-# of the battery's - in a viewport of its own, centred on the rest of the
-# box; its inverted line refills the part of the box its clear takes out.
 %V(30,48,144,34,3)
-%Vs(invert)%ar%?cH<%xd(K)|%xd(K)>.
-%V(70,52,104,27,2)
 %Vs(invert)%ac%cH:%cM
 #
 # Shuffle
@@ -146,10 +134,12 @@ SHF%xd(O,%ps)
 %Vs(invert)%ac%?bp<%xd(Bb)|%xd(Ba)> %bl%%
 #
 # Volume bar
-# Above the clock, the battery bar's twin on the other side of the row: the
-# same size and the same bitmaps, so the two read as a pair (#85).
+# Above the clock, in the battery bar's place on the other side of the
+# row but not its look: the volume's own stripes, and the checker once it
+# is past 0 dB, so the two bars are never read as the same thing.
 %Vl(volbar,30,26,138,18,-)
-%pv(0,0,138,18,bb,backdrop,bb_backdrop)
+%pv(0,0,138,18,vb,backdrop,vb_backdrop)
+%?if(%pv, >, 0)<%pv(0,0,138,18,vb_too_loud,backdrop,vb_backdrop)>
 #
 
 #
