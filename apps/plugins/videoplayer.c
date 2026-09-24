@@ -178,6 +178,7 @@ static long clock_ms(void)
  * /.rockbox/videoplayer.log: a clip that does not play on the device is
  * then a file to read rather than a guess. Overwritten per clip. */
 static int log_fd = -1;
+static long osd_drawn = -1;
 static long log_tick;
 
 static void log_state(void)
@@ -279,17 +280,6 @@ static void osd_draw(long now_ms)
     rb->lcd_drawrect(20, y, bar_w, 8);
     if (fill > 0)
         rb->lcd_fillrect(20, y, fill, 8);
-    /* Nothing decoded yet: say what the decoder is doing, so a clip that
-     * never starts is a report rather than a guess. */
-    {
-        struct rbv_stats st;
-        memset(&st, 0, sizeof(st));
-        st.size = sizeof(st);
-        api->stats(v, &st);
-        if (st.decoded == 0)
-            rb->lcd_putsxyf(20, y + 12, "decoder: status %d, no frames yet",
-                            api->status(v));
-    }
     rb->lcd_update_rect(0, y - 26, LCD_WIDTH, 66);
 }
 
@@ -505,8 +495,13 @@ enum plugin_status plugin_start(const void *parameter)
             osd_clear();
             osd_until = 0;
         }
-        else if (osd_until)
+        else if (osd_until && now / 250 != osd_drawn)
+        {
+            /* Four times a second is plenty for a clock and a bar; every
+             * pass was a big-font redraw and a push the sound waited on. */
+            osd_drawn = now / 250;
             osd_draw(now);
+        }
 
         button = rb->button_get_w_tmo(HZ / 30);
         switch (button)
