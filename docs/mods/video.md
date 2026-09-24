@@ -120,6 +120,25 @@ Notes:
 - A picture is decoded only while it is being drawn: leave the WPS, or
   cover the viewport, and the decoder goes to sleep.
 
+## Films in the player
+
+Opening a video from **Files** plays it with its sound, whatever the
+**Video** switch says (the switch is for what decodes on its own: covers,
+music videos, screensavers). The player has no video hardware, so size
+is what decides whether a clip plays smoothly: an 854x480 H.264 file
+decodes at about 22 frames a second, just short of its 24, and nearly
+every frame arrives late and is dropped. Convert it first:
+
+```bash
+tools/r1-transcode.py clip "Film.mp4" --keep-audio
+```
+
+That is H.264 baseline tuned for fast decoding, 480 px wide, 24 fps, with
+the sound kept: 480x270 for a 16:9 film, about a third of the pixels.
+The player writes what it is doing once a second to
+`/.rockbox/videoplayer.log` (frames decoded, shown and dropped), which is
+the first thing to read when a clip does not play well.
+
 ## Screensavers
 
 A screensaver is a skin like a WPS, with the extension `.ss`, in
