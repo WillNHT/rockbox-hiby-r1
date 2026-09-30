@@ -418,6 +418,8 @@ static bool hold_skip(int button)
             struct mp3entry *id3 = get_wps_state()->id3;
             if (id3 && get_skip_length(id3) != 0)
                 play_hop(direction);
+            else if (pradio_skip(direction))
+                ;
             else if (direction > 0)
                 audio_next();
             else
@@ -498,6 +500,10 @@ static void gwps_caption_backlight(struct wps_state *state)
 static void change_dir(int direction)
 {
     if (global_settings.prevent_skip)
+        return;
+
+    /* a station's folders are not somewhere the dial goes */
+    if (pradio_playing())
         return;
 
     if (direction < 0)

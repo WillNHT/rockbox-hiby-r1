@@ -59,6 +59,7 @@
 #include "scroll_engine.h"
 #include "timeout.h"
 #include "powermgmt.h"
+#include "pradio.h"
 #include "rpkeys.h"
 #include "screenshot.h"
 #include "settings.h"
@@ -552,9 +553,16 @@ static bool handle_power(int held, bool repeat, bool release)
              * meant the second tap paused an already-paused track and
              * resume was unreachable. */
             if (audio_status() & AUDIO_STATUS_PAUSE)
+            {
+                /* a station played on while it was paused */
+                pradio_pause(false);
                 audio_resume();
+            }
             else if (audio_status() & AUDIO_STATUS_PLAY)
+            {
                 audio_pause();
+                pradio_pause(true);
+            }
         }
         return true;
     }
@@ -747,7 +755,10 @@ static bool handle_skip(int idx, int dir, bool repeat, bool release)
             skipper[idx].consumed = true;
         cue();
         seek_forget();          /* a new track: nothing to chain from */
-        if (dir > 0)
+        /* tuned in to the radio: the dial moves, not the track */
+        if (pradio_skip(dir))
+            ;
+        else if (dir > 0)
             audio_next();
         else
             audio_prev();

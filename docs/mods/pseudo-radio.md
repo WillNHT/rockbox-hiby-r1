@@ -100,7 +100,9 @@ Prev/next moves the dial instead of stepping through the station's files -
 a radio does not let you skip to the next track of the thing playing, it
 switches you to something else. Next is the station after this one in the
 station list and previous the one before, wrapping round at either end, so
-every station is a few presses away. A station with more than one file also
+every station is a few presses away. That holds wherever prev/next comes
+from: the WPS, a skin's touch buttons, or a hold of the transport keys. A
+station with more than one file also
 plays them in an order of its own rather than alphabetically.
 
 Pausing does not stop the station. Come back after more than half a minute
@@ -179,11 +181,17 @@ costs nothing to tune - there is no up-front scan of the folder.
 ### Where it drops in
 
 A station is a transmitter, not a file: it is playing whether or not anybody
-is listening, and where it has got to is a function of the clock and of
-nothing else. Leave one - for a pause, for another station, for a week with
-the device switched off - and coming back finds it exactly as far on as the
-time that went by. Nothing is written down, so there is nothing to fall out
-of step.
+is listening. Leave one - for a pause, for another station, for a week with
+the device switched off - and coming back finds it as far on as the time
+that went by: each recording played to its end and the next one started,
+just as if you had stayed.
+
+Nothing tracks that while you are away. Tuning in writes where the station
+was and when into `.onair` in the station's folder, and the next tune-in
+works out the rest from the clock. A station that has never been heard, or
+was last heard more than 64 recordings ago, is placed by the clock alone.
+It all rests on the device's clock: set it back, and a station starts
+afresh.
 
 Anywhere in the recording except its last minute: a radio has no reason to
 prefer the beginning, and the beginning is the one part you could have had
