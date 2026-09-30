@@ -4202,6 +4202,24 @@ int playback_current_aa_hid(int slot)
     return ERR_HANDLE_NOT_FOUND;
 }
 
+/* Whether the album art of the track at path - the one the user sees - has
+   been looked for yet. Not while a skip to it is pending or it is still
+   loading, when playback_current_aa_hid() answers for the track before it
+   or not at all */
+bool playback_aa_settled(int slot, const char *path)
+{
+    struct track_info user_cur;
+    struct mp3entry *id3;
+
+    if ((unsigned)slot >= MAX_MULTIPLE_AA ||
+        !track_list_user_current(skip_offset, &user_cur) ||
+        user_cur.aa_hid[slot] == ERR_HANDLE_NOT_FOUND)
+        return false;
+
+    id3 = bufgetid3(user_cur.id3_hid);
+    return id3 && !strcmp(id3->path, path);
+}
+
 /* Find an album art slot that doesn't match the dimensions of another that
    is already claimed - increment the use count if it is */
 int playback_claim_aa_slot(struct dim *dim)

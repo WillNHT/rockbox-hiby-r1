@@ -42,6 +42,10 @@
  **/
 int playback_current_aa_hid(int slot);
 
+/* Has the album art for the user's current track, the one at path, been
+ * looked for yet? */
+bool playback_aa_settled(int slot, const char *path);
+
 /*
  * Hands out an albumart slot for buffering albumart using the size
  * int the passed dim struct, it copies the data of dim in order to
