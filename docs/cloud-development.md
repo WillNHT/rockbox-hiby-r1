@@ -18,8 +18,8 @@ are free.
 | Review | `claude-code-review.yml` | runs on every PR |
 | Triage, upstream watch | `claude-triage.yml`, `upstream-tracking.yml` | on issue open / weekly |
 
-All of it is in `.github/workflows/`. The simulator job is about a minute and
-a half from a cold runner: the simulator is a native build, so it does not
+All of it is in `.github/workflows/`. The simulator job is about three minutes
+from a cold runner: the simulator is a native build, so it does not
 wait for the cross toolchain.
 
 ## Getting a screenshot with no machine
@@ -31,6 +31,12 @@ uploads the frames:
 gh run download <run-id> -n simulator-shots
 ```
 
+What comes back, from a runner, before and after the drag in the smoke
+script:
+
+![Main menu at boot](mods/screenshots/ci-simulator-boot.png)
+![Main menu after a drag](mods/screenshots/ci-simulator-drag.png)
+
 To drive something else, commit a script in the
 [simctl language](https://github.com/WillNHT/rockbox-hiby-r1/blob/master/tools/simctl/README.md)
 and point the job at it:
@@ -39,9 +45,21 @@ and point the job at it:
 gh workflow run build.yml --ref <branch> -f sim_script=tools/simctl/tests/mine.txt
 ```
 
-The simdisk on a runner is a fresh `make install`: no music, no database. A
-script that needs tracks has to stay on a machine that has them, or bring its
-own fixtures.
+The simdisk on a runner is a fresh `make install` plus the library
+`tools/simctl/fixtures.sh` makes from `tools/simctl/fixtures/library.tsv`:
+29 tracks under `Music/<artist>/<album>/`, with real tags and lengths and a
+sine tone for audio, so no recording is stored in the repo. The database is
+not built; a script that needs it has to initialise it first.
+
+The job also runs `tools/simctl/tests/library.txt`, which browses that
+library and plays a track; its frames are under `library/` in the artifact:
+
+![Tracks of an album](mods/screenshots/ci-simulator-tracks.png)
+![The WPS playing one](mods/screenshots/ci-simulator-wps.png)
+
+A fresh config has the stick on, so a script moves the way a thumb does: a
+short slow drag up is one row down, a slow drag right opens, left goes back.
+A plain tap on a row does nothing. `library.txt` is the pattern to copy.
 
 ## What it costs
 

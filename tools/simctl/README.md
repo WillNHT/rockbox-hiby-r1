@@ -65,6 +65,17 @@ they were taken. Compare them with ImageMagick:
 compare-im6.q16 -metric AE a.png b.png null:
 ```
 
+## Something to play
+
+```bash
+tools/simctl/fixtures.sh path/to/simdisk
+```
+
+writes a small library into `simdisk/Music/<artist>/<album>/`. The tags and
+lengths in `fixtures/library.tsv` come from real albums; the audio is a sine
+tone made by `ffmpeg`, so the repo carries no recordings. Add a line to the
+file to add a track.
+
 ## Two things that will bite you
 
 - **`sleep` runs inside the simulator, not in the shell.** The script is

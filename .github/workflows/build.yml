@@ -96,7 +96,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential libsdl2-dev zip gawk xvfb imagemagick
+        sudo apt-get install -y build-essential libsdl2-dev zip gawk xvfb imagemagick ffmpeg
 
     - name: Build the simulator
       run: |
@@ -105,6 +105,9 @@ jobs:
         ../tools/configure --target=hibyr1 --type=S
         make -j$(nproc)
         make install
+
+    - name: Make a test library
+      run: sh tools/simctl/fixtures.sh sim/simdisk
 
     - name: Drive it
       run: |
@@ -118,6 +121,11 @@ jobs:
         diff=$(compare -metric AE shots/shot01.png shots/shot02.png null: 2>&1 || true)
         echo "shot01 vs shot02: $diff pixel(s)"
         [ "$diff" = 0 ]
+
+    - name: Browse the test library
+      if: env.SIM_SCRIPT == 'tools/simctl/tests/smoke.txt'
+      run: |
+        RBSIM_DIR=$PWD/sim xvfb-run -a bash tools/simctl/simctl.sh "$PWD/tools/simctl/tests/library.txt" "$PWD/shots/library"
 
     - name: Simulator log
       if: always()
