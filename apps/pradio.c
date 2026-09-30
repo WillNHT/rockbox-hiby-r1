@@ -574,11 +574,16 @@ bool pradio_dynamic(void)
 /* --- the station clock ------------------------------------------------- */
 
 /* A station is a transmitter, not a file: it is playing whether or not
- * anybody is listening. Where it has got to is a function of the clock and
- * of nothing else, so leaving one - for a pause, for another station, for a
- * week with the device switched off - and coming back finds it exactly as
- * far on as the time that went by. Nothing is stored, so there is nothing
- * to fall out of step.
+ * anybody is listening, so leaving one - for a pause, for another station,
+ * for a week with the device switched off - and coming back finds it as far
+ * on as the time that went by.
+ *
+ * The clock alone says where a station nobody has heard yet has got to. It
+ * cannot say where one that has been heard is: what went out was the
+ * playlist, each recording to its real end and then the next from its
+ * start, and the clock knows no lengths. So a tune-in writes down where and
+ * when it landed (the anchor, below) and the next one runs the tape on from
+ * there.
  *
  * The station's own name is the phase, so no two stations are ever playing
  * the same second of the same thing, and the order its files go out in is
@@ -701,6 +706,79 @@ static int pick_track(int n, unsigned int seed, uint32_t now, uint32_t rotate,
     return found < 0 ? pick : found;
 }
 
+/* Where a station was when it was last tuned, in a file in its folder. It
+ * has played on in real time since whether anybody stayed to hear it, so
+ * this and the clock are all the next tune-in needs - nothing has to be
+ * written on the way out, which is as well, since leaving is a power cut
+ * as often as it is a button. */
+#define PRADIO_ANCHOR ".onair"
+/* How many recordings a tune-in will run the tape past before it gives up
+ * and asks the clock instead: each one is a metadata read, and nobody away
+ * that long can tell the difference. */
+#define PRADIO_CATCH_UP 64
+
+struct anchor
+{
+    int32_t  track;         /* index in the station's shuffled playlist */
+    uint32_t elapsed;       /* ms into it */
+    uint32_t time;          /* pradio_now() when it was there */
+};
+
+static void anchor_write(const char *dir, int track, unsigned long elapsed,
+                         uint32_t now)
+{
+    struct anchor a = { track, elapsed, now };
+    char path[MAX_PATH];
+
+    path_append(path, dir, PRADIO_ANCHOR, sizeof(path));
+    int fd = creat(path, 0666);
+    if (fd < 0)
+        return;
+    write(fd, &a, sizeof(a));
+    close(fd);
+}
+
+/* Run the station on from its anchor to now: every recording since to its
+ * end, then the next, the way it went out. False when there is no anchor to
+ * run from, or it is further back than is worth walking. */
+static bool catch_up(const char *dir, int n, uint32_t now,
+                     int *track, unsigned long *elapsed)
+{
+    static struct playlist_track_info info;
+    struct anchor a;
+    char path[MAX_PATH];
+
+    path_append(path, dir, PRADIO_ANCHOR, sizeof(path));
+    int fd = open(path, O_RDONLY);
+    if (fd < 0)
+        return false;
+    bool ok = read(fd, &a, sizeof(a)) == (ssize_t)sizeof(a);
+    close(fd);
+    /* now < time is a clock that was set back, or one that restarts at
+     * every boot: no telling how long it has been. */
+    if (!ok || a.track < 0 || a.track >= n || now < a.time)
+        return false;
+
+    uint64_t pos = a.elapsed + (uint64_t)(now - a.time) * 1000;
+    int idx = a.track;
+    for (int i = 0; i < PRADIO_CATCH_UP; i++)
+    {
+        unsigned long len = 0;
+        if (playlist_get_track_info(NULL, idx, &info) >= 0 &&
+            get_metadata(&tune_id3, -1, info.filename))
+            len = tune_id3.length;
+        if (pos < len)
+        {
+            *track = idx;
+            *elapsed = pos;
+            return true;
+        }
+        pos -= len;
+        idx = (idx + 1) % n;
+    }
+    return false;
+}
+
 /* The station tuned last, by name, so the dial comes back where it was
  * across a reboot and a rescan that renumbered the folders. -1 when there
  * is nothing remembered or the folder has gone. */
@@ -766,10 +844,17 @@ static bool tune(int station)
     if (n > 1)
         playlist_shuffle(seed, -1);
 
-    unsigned long length = 0;
-    int track = pick_track(n, seed, now,
+    unsigned long elapsed;
+    int track;
+    if (!catch_up(dir, n, now, &track, &elapsed))
+    {
+        unsigned long length = 0;
+        track = pick_track(n, seed, now,
                            dynamic ? PRADIO_ROTATE_SONG : PRADIO_ROTATE_SECS,
                            &length);
+        elapsed = clock_offset(now, seed, length);
+    }
+    anchor_write(dir, track, elapsed, now);
 
     /* The static plays over the gap between the last screen and the first
      * sample, which is the gap it exists to cover. Tuning in while
@@ -787,7 +872,7 @@ static bool tune(int station)
                (station >= 0 && station < nstations) ? stations[station] : "",
                sizeof global_settings.radio_last);
 
-    playlist_start(track, clock_offset(now, seed, length), 0);
+    playlist_start(track, elapsed, 0);
     return true;
 }
 
