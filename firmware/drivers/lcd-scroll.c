@@ -210,10 +210,14 @@ static void LCDFN(scroll_worker)(void)
 
         s->start_tick = current_tick;
 
+        /* A lyric line is over when the next one is sung, so its marquee
+         * has half the time any other has. */
+        int step = (s->vp->flags & VP_FLAG_FAST_SCROLL) ? si->step * 2 : si->step;
+
         if (s->backward)
-            s->offset -= si->step;
+            s->offset -= step;
         else
-            s->offset += si->step;
+            s->offset += step;
 
         /* this runs out of the ui thread, thus we need to
          * save and restore the current viewport since the
