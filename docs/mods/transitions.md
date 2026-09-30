@@ -47,3 +47,5 @@ transition; they share its time.
 ## How it works
 
 `firmware/drivers/lcd-transition.c`. When a screen is about to change, the code saves what is on the screen and draws the next screen as usual, but doesn't show it yet. When the UI next waits for a key (or sleeps), the new screen is complete, and the old and new frames are animated into each other. If the new screen is identical to the old one, nothing is animated. The animation runs on the UI thread, so input waits until it has finished. Plugins are not animated.
+
+A skipped-to track has its title before it has its cover, which playback only loads with the track. The While Playing Screen keeps the old track up until the cover is known (or a second has passed), so the title, the cover and its backdrop change in one animation instead of the cover arriving after it.

@@ -91,6 +91,7 @@
 
 static struct wps_state wps_state;
 static void transition_note_track(struct wps_state *state, bool animate);
+static bool transition_wait_cover(struct wps_state *state);
 
 /* initial setup of wps_data  */
 static void wps_state_init(void);
@@ -879,6 +880,7 @@ long gui_wps_show(void)
     while ( 1 )
     {
         bool hotkey = false;
+        bool wait_cover = false;
         bool audio_paused = (audio_status() & AUDIO_STATUS_PAUSE)?true:false;
         /* did someone else (i.e power thread) change audio pause mode? */
         if (state->paused != audio_paused) {
@@ -928,7 +930,7 @@ long gui_wps_show(void)
             theme_enabled = true;
             transition_note_track(state, false);
         }
-        else
+        else if (!(wait_cover = transition_wait_cover(state)))
         {
             gwps_caption_backlight(state);
             transition_note_track(state, true);
@@ -961,7 +963,9 @@ long gui_wps_show(void)
             storage_spin();
 
         long button_tick = current_tick;
-        button = skin_wait_for_action(WPS, CONTEXT_WPS|ALLOW_SOFTLOCK, HZ/5);
+        /* waiting on a cover: look again next tick, it is a short wait */
+        button = skin_wait_for_action(WPS, CONTEXT_WPS|ALLOW_SOFTLOCK,
+                                      wait_cover ? 1 : HZ/5);
 
         /* Exit if audio has stopped playing. This happens e.g. at end of
            playlist or if using the sleep timer. */
@@ -1374,9 +1378,42 @@ static void transition_note_track(struct wps_state *state, bool animate)
     strmemccpy(transition_path, path, sizeof(transition_path));
     transition_index = index;
 }
+
+/* A skip names the new track at once, but playback only has its cover once
+ * the track is loaded. Drawn in between, the screen was the new title over
+ * the old cover: the transition animated to that, and the new cover and its
+ * backdrop popped in after it. So the old screen stays until the cover is
+ * known, and then changes in one piece. Not for ever - a cover that cannot
+ * be loaded must not keep the title back. */
+static bool transition_wait_cover(struct wps_state *state)
+{
+#ifdef HAVE_ALBUMART
+    static bool waiting;
+    static long waiting_since;
+    int slot = skin_get_gwps(WPS, SCREEN_MAIN)->data->playback_aa_slot;
+
+    if (slot >= 0 && state->id3 && transition_path[0] &&
+        strcmp(state->id3->path, transition_path) &&
+        !playback_aa_settled(slot, state->id3->path))
+    {
+        if (!waiting)
+        {
+            waiting = true;
+            waiting_since = current_tick;
+        }
+        return TIME_BEFORE(current_tick, waiting_since + HZ);
+    }
+    waiting = false;
+#else
+    (void)state;
+#endif
+    return false;
+}
 #else
 static void transition_note_track(struct wps_state *state, bool animate)
 { (void)state; (void)animate; }
+static bool transition_wait_cover(struct wps_state *state)
+{ (void)state; return false; }
 #endif
 
 /* this is called from the playback thread so NO DRAWING! */
