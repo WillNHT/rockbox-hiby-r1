@@ -34,6 +34,7 @@
 #include "playlist.h"
 #include "dsp_misc.h"
 #include "playback.h"
+#include "pradio.h"
 
 /** Disarms all touchregions. */
 void skin_disarm_touchregions(struct gui_wps *gwps)
@@ -233,7 +234,8 @@ int skin_get_touchaction(struct gui_wps *gwps, int* edge_offset)
         {
             if ( global_status.resume_index != -1 )
             {
-                if (playlist_resume() != -1)
+                if (playlist_resume() != -1 &&
+                    !pradio_resume(global_status.resume_index))
                 {
                     playlist_start(global_status.resume_index,
                                    global_status.resume_elapsed,
@@ -253,13 +255,16 @@ int skin_get_touchaction(struct gui_wps *gwps, int* edge_offset)
         action = ACTION_REDRAW;
         break;
 
+    /* tuned in to the radio: a different station, not another track */
     case ACTION_WPS_SKIPPREV:
-        audio_prev();
+        if (!pradio_skip(-1))
+            audio_prev();
         action = ACTION_REDRAW;
         break;
 
     case ACTION_WPS_SKIPNEXT:
-        audio_next();
+        if (!pradio_skip(1))
+            audio_next();
         action = ACTION_REDRAW;
         break;
 
