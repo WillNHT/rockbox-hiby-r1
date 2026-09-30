@@ -7,6 +7,10 @@ on:
         required: false
         type: boolean
         default: false
+      sim_script:
+        description: 'simctl script for the simulator job to run'
+        required: false
+        default: tools/simctl/tests/smoke.txt
   push:
   pull_request:
 
@@ -74,6 +78,65 @@ jobs:
           echo "functional=false" >> "$GITHUB_OUTPUT"
           echo "Only documentation and build machinery changed; skipping the device build."
         fi
+
+  # The same UI as the device, built for the runner and driven through
+  # tools/simctl, so a change can be looked at without anybody's own machine:
+  # the screenshots are the artifact. No cross toolchain - the simulator is a
+  # native build.
+  simulator:
+    needs: changes
+    if: needs.changes.outputs.functional == 'true'
+    runs-on: ubuntu-latest
+    name: Hiby R1 simulator
+    env:
+      SIM_SCRIPT: ${{ github.event.inputs.sim_script || 'tools/simctl/tests/smoke.txt' }}
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libsdl2-dev zip gawk xvfb imagemagick ffmpeg
+
+    - name: Build the simulator
+      run: |
+        mkdir sim
+        cd sim
+        ../tools/configure --target=hibyr1 --type=S
+        make -j$(nproc)
+        make install
+
+    - name: Make a test library
+      run: sh tools/simctl/fixtures.sh sim/simdisk
+
+    - name: Drive it
+      run: |
+        RBSIM_DIR=$PWD/sim xvfb-run -a bash tools/simctl/simctl.sh "$PWD/$SIM_SCRIPT" "$PWD/shots"
+
+    - name: Negative control
+      if: env.SIM_SCRIPT == 'tools/simctl/tests/smoke.txt'
+      # Two dumps with nothing between them: any difference means the
+      # harness is lying and no other shot from this run means anything.
+      run: |
+        diff=$(compare -metric AE shots/shot01.png shots/shot02.png null: 2>&1 || true)
+        echo "shot01 vs shot02: $diff pixel(s)"
+        [ "$diff" = 0 ]
+
+    - name: Browse the test library
+      if: env.SIM_SCRIPT == 'tools/simctl/tests/smoke.txt'
+      run: |
+        RBSIM_DIR=$PWD/sim xvfb-run -a bash tools/simctl/simctl.sh "$PWD/tools/simctl/tests/library.txt" "$PWD/shots/library"
+
+    - name: Simulator log
+      if: always()
+      run: tail -n 100 /tmp/sim.log
+
+    - name: Upload screenshots
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: simulator-shots
+        path: shots/
 
   build:
     needs: changes

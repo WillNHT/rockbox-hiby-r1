@@ -1,0 +1,108 @@
+# The library fixtures.sh makes, browsed the way a thumb would: main menu,
+# files, Music, down to blink-182, into its first album, and the first
+# track played. A short drag up is one row down; a slow drag right opens.
+# Shots: the artists, the albums, the tracks, the WPS.
+sleep 3000
+# files
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 400
+up
+sleep 1500
+# Music
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 400
+up
+sleep 1500
+# blink-182
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 300
+up
+sleep 1200
+dump
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 400
+up
+sleep 1500
+dump
+# first album, first track
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 400
+up
+sleep 1500
+dump
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 400
+up
+sleep 1500
+sleep 3000
+dump

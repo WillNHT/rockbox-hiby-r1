@@ -47,4 +47,6 @@ Grab a build from the [releases page](https://github.com/WillNHT/rockbox-hiby-r1
 
 * [CLAUDE.md](https://github.com/WillNHT/rockbox-hiby-r1/blob/master/CLAUDE.md) - how this
   repo is worked on, by people and by Claude.
+* [Working without a development machine](cloud-development.md) - building, testing
+  and taking screenshots on a runner.
 * [Upstream Rockbox docs](https://www.rockbox.org/wiki/) for anything this fork does not change.
