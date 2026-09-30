@@ -79,7 +79,9 @@ A claim is not evidence. Anything user-visible ships with a screenshot in the PR
 description, and in the issue comment when it answers the report:
 
 * Capture frames by driving the simulator headlessly - `~/rb/wtNNsim.sh` to
-  build, then `~/rb/wtNNsimctl.sh script.txt outdir`. Commit shots under
+  build, then `~/rb/wtNNsimctl.sh script.txt outdir`. On a machine with no
+  simulator, push and take them from the `simulator` job instead
+  (`docs/cloud-development.md`). Commit shots under
   `docs/mods/screenshots/` only when they belong in the docs; otherwise attach
   them to the PR.
 * Before/after pairs for anything that changes existing behaviour.

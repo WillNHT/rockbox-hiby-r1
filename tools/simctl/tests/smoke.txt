@@ -1,0 +1,22 @@
+# What CI runs on every functional change: the simulator boots, holds
+# still, and answers a thumb. Shots 1 and 2 are the negative control and
+# must not differ by a pixel; shot 3 is the main menu after a slow drag
+# up, with the selection a few rows further down.
+sleep 3000
+dump
+dump
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 100
+move 240 440
+sleep 100
+move 240 420
+sleep 100
+move 240 400
+sleep 400
+up
+sleep 1500
+dump
