@@ -25,7 +25,8 @@
 #if (CONFIG_KEYPAD != HIBY_R1_PAD)
 
 /* Every other target keeps its keymap exactly as it was. */
-static inline bool rpkeys_handle(int button) { (void)button; return false; }
+static inline bool rpkeys_handle(int button, int *action)
+{ (void)button; (void)action; return false; }
 static inline bool rpkeys_locked(void) { return false; }
 static inline void rpkeys_chirp_up(void) { }
 static inline void rpkeys_chirp_down(void) { }
@@ -38,12 +39,13 @@ static inline void rpkeys_chirp_step(int s, int t, bool r)
 /* Offered every physical button, before the keymap sees it. Returns true
  * when it has taken ownership, in which case the caller must not look the
  * button up in any context: that is the whole point - these five keys mean
- * the same thing on every screen.
+ * the same thing on every screen. *action is what the caller returns in its
+ * place: ACTION_NONE, or ACTION_TREE_WPS for a POWER tap away from the WPS.
  *
  * Buttons the stick synthesises never reach here. They arrive further down
  * the action path, so the stick can still produce POWER combinations even
  * though a real POWER press no longer reaches the keymap. */
-bool rpkeys_handle(int button);
+bool rpkeys_handle(int button, int *action);
 
 /* True while input is locked. Everything except the unlock hold is
  * swallowed. */

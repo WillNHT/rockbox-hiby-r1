@@ -627,6 +627,8 @@ static int book_list_screen(const char *title, enum list_kind kind,
                 }
                 case ACTION_STD_CANCEL:
                     return 0;
+                case ACTION_TREE_WPS:
+                    return GO_TO_PREVIOUS_MUSIC;
                 case ACTION_NONE:
                     break;
                 default:
@@ -873,6 +875,8 @@ static int card_screen_run(struct card_screen *cs)
                 }
                 case ACTION_STD_CANCEL:
                     return 0;
+                case ACTION_TREE_WPS:
+                    return GO_TO_PREVIOUS_MUSIC;
                 case ACTION_NONE:
                     /* progress moves while a book plays */
                     if (card && (audio_status() & AUDIO_STATUS_PLAY))
