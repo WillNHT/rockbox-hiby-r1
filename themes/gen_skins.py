@@ -66,7 +66,7 @@ SHF%xd(O,%ps)
 %?mm<RPT%xd(Ob)|RPT%xd(O)|RP1%xd(O)|RND%xd(O)|A-B%xd(O)>
 #
 # Bluetooth: grey off, white on, blue connected
-%V(280,28,20,22,-)
+%V(280,28,21,22,-)
 %xd(bt,%BT)
 #
 # Battery bar
@@ -894,11 +894,11 @@ print("wrote SnappyV2.wps, SnappyVinyl.wps, SnappyAnimated.wps, SnappyGauge.wps,
       " SnappyCanvas.wps, SnappyRadio.wps")
 
 
-# bt.bmp: the Bluetooth indicator, %xd(bt,%BT). Three 20x22 frames stacked,
+# bt.bmp: the Bluetooth indicator, %xd(bt,%BT). Three 21x22 frames stacked,
 # the Bluetooth rune: grey off, white on, blue connected. Colour, so 24-bit
 # on the transparent magenta, not off_on's 1-bit.
 def bt_bmp():
-    fw, fh = 20, 22
+    fw, fh = 21, 22
     # The rune as strokes: the stem, then the two arrowheads that cross it
     strokes = [((9, 1), (9, 20)), ((9, 1), (15, 6)), ((15, 6), (4, 15)),
                ((9, 20), (15, 15)), ((15, 15), (4, 6))]
@@ -910,7 +910,7 @@ def bt_bmp():
             for i in range(n + 1):
                 x = x0 + round((x1 - x0) * i / n)
                 y = y0 + round((y1 - y0) * i / n)
-                f[y][x] = f[y][x + 1] = colour   # 2 px wide
+                f[y][x] = f[y][x + 1] = f[y][x + 2] = colour   # 3 px wide
         rows += f
     pad = (4 - fw * 3 % 4) % 4
     pix = b"".join(bytes(c for p in r for c in p[::-1]) + b"\0" * pad

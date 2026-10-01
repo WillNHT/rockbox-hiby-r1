@@ -130,7 +130,7 @@ SHF%xd(O,%ps)
 %?mm<RPT%xd(Ob)|RPT%xd(O)|RP1%xd(O)|RND%xd(O)|A-B%xd(O)>
 #
 # Bluetooth: grey off, white on, blue connected
-%V(280,28,20,22,-)
+%V(280,28,21,22,-)
 %xd(bt,%BT)
 #
 # Battery bar
