@@ -476,7 +476,7 @@ static int bt_scan_devices(struct bt_device *devices, int count, int max_devices
     fprintf(fp, "scan on\n");
     fflush(fp);
 
-    const int timeout = 15;
+    const int timeout = 10;
     while (waited < timeout)
     {
         splashf(0, ID2P(LANG_BT_SCANNING_PROGRESS), waited, timeout);
