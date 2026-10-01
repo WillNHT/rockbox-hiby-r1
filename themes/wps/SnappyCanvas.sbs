@@ -58,13 +58,14 @@
 %Vl(status,30,30,-240,34,3)
 %?mh<%Vs(invert)%acLOCKED|%?if(%cs,!=,10)<|%?cf<%cH:%cM|%cl:%cM %cP>>>
 #
-# Bluetooth: grey off, white on, blue connected
-%V(-240,35,38,22,-)
-%xd(bt,%BT)
-#
 # Battery text and icon
 %V(-240,30,-30,32,3)
 %ar%bl%%%?bp<%xd(batt_chg)|%xd(batt,%bl)>
+#
+# Bluetooth: grey off, white on, blue connected. After the battery,
+# whose viewport covers this spot and would paint over it.
+%V(-240,35,20,22,-)
+%xd(bt,%BT)
 #
 # Title
 %Vl(title, 30,62,-30,60,5)

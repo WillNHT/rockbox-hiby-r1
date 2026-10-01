@@ -66,7 +66,7 @@ SHF%xd(O,%ps)
 %?mm<RPT%xd(Ob)|RPT%xd(O)|RP1%xd(O)|RND%xd(O)|A-B%xd(O)>
 #
 # Bluetooth: grey off, white on, blue connected
-%V(271,28,38,22,-)
+%V(280,28,20,22,-)
 %xd(bt,%BT)
 #
 # Battery bar
@@ -894,29 +894,23 @@ print("wrote SnappyV2.wps, SnappyVinyl.wps, SnappyAnimated.wps, SnappyGauge.wps,
       " SnappyCanvas.wps, SnappyRadio.wps")
 
 
-# bt.bmp: the Bluetooth indicator, %xd(bt,%BT). Three 38x22 frames stacked,
-# the off_on.bmp box with "BT" inside: grey off, white on, blue connected.
-# Colour, so 24-bit on the transparent magenta, not off_on's 1-bit.
+# bt.bmp: the Bluetooth indicator, %xd(bt,%BT). Three 20x22 frames stacked,
+# the Bluetooth rune: grey off, white on, blue connected. Colour, so 24-bit
+# on the transparent magenta, not off_on's 1-bit.
 def bt_bmp():
-    glyph = {"B": ["1110", "1001", "1001", "1110", "1001", "1001", "1110"],
-             "T": ["11111", "00100", "00100", "00100", "00100", "00100", "00100"]}
-    fw, fh = 38, 22
+    fw, fh = 20, 22
+    # The rune as strokes: the stem, then the two arrowheads that cross it
+    strokes = [((9, 1), (9, 20)), ((9, 1), (15, 6)), ((15, 6), (4, 15)),
+               ((9, 20), (15, 15)), ((15, 15), (4, 6))]
     rows = []
     for colour in ((0x80, 0x80, 0x80), (0xef, 0xeb, 0xe7), (0x33, 0x99, 0xff)):
         f = [[(0xff, 0x00, 0xff)] * fw for _ in range(fh)]
-        for y in range(fh):
-            for x in range(fw):
-                if x < 2 or x >= fw - 2 or y < 2 or y >= fh - 2:
-                    f[y][x] = colour
-        cx = 8
-        for ch in "BT":
-            for gy, line in enumerate(glyph[ch]):
-                for gx, bit in enumerate(line):
-                    if bit == "1":
-                        for dy in (0, 1):
-                            for dx in (0, 1):
-                                f[4 + gy * 2 + dy][cx + gx * 2 + dx] = colour
-            cx += len(glyph[ch][0]) * 2 + 4
+        for (x0, y0), (x1, y1) in strokes:
+            n = max(abs(x1 - x0), abs(y1 - y0))
+            for i in range(n + 1):
+                x = x0 + round((x1 - x0) * i / n)
+                y = y0 + round((y1 - y0) * i / n)
+                f[y][x] = f[y][x + 1] = colour   # 2 px wide
         rows += f
     pad = (4 - fw * 3 % 4) % 4
     pix = b"".join(bytes(c for p in r for c in p[::-1]) + b"\0" * pad
