@@ -113,17 +113,34 @@ static void pcm_pump_locked(snd_pcm_t *handle);
 #include "hiby/pcm-alsa-hiby-hooks.h"
 
 #include "button.h" /* headphones_inserted() */
+#include "settings.h" /* video_bt_latency: what the headset adds */
 
 /* Dual output: while Bluetooth plays and something is in the jack, the same
- * frames also go to the jack. The two clocks are not locked, so the jack is
- * kept about HIBY_MIRROR_TARGET behind real time by skipping or repeating a
- * single frame per period when it drifts - inaudible, unlike dropping a whole
- * period. Bluetooth still sets the pace. */
+ * frames also go to the jack, held back by as much as Bluetooth is so both
+ * play in step: our bluealsa queue (snd_pcm_delay) plus the headset's own
+ * buffering, which nothing reports, so it is the "Bluetooth latency"
+ * setting. The two clocks are not locked: a small drift is taken up by
+ * skipping or repeating one frame per period, a large one (the target
+ * moved) by padding with silence or rewinding. Bluetooth sets the pace. */
 #define HIBY_MIRROR_DEVICE "plughw:0,0"
-#define HIBY_MIRROR_TARGET (pcm_sampr / 10)   /* 100 ms of queued audio */
 #define HIBY_MIRROR_SLACK  (pcm_sampr / 50)   /* +-20 ms before nudging */
+#define HIBY_MIRROR_JUMP   (pcm_sampr / 10)   /* past 100 ms, jump at once */
 static snd_pcm_t *hiby_mirror = NULL;
 static long hiby_mirror_retry;
+static snd_pcm_sframes_t hiby_bt_delay;       /* smoothed bluealsa delay */
+
+static snd_pcm_sframes_t hiby_pcm_mirror_target(void)
+{
+    snd_pcm_sframes_t d;
+    if (snd_pcm_delay(handle, &d) == 0)
+        hiby_bt_delay += (d - hiby_bt_delay) / 16;
+#ifdef HAVE_VIDEO
+    return hiby_bt_delay
+           + (snd_pcm_sframes_t)global_settings.video_bt_latency * pcm_sampr / 1000;
+#else
+    return hiby_bt_delay;
+#endif
+}
 
 static void hiby_pcm_mirror_close(void)
 {
@@ -134,7 +151,7 @@ static void hiby_pcm_mirror_close(void)
     hiby_mirror = NULL;
 }
 
-/* Queue n frames of silence so the jack starts with room to drift */
+/* Queue n frames of silence */
 static void hiby_pcm_mirror_pad(snd_pcm_sframes_t n)
 {
     static const sample_t zero[256 * 2];
@@ -159,19 +176,22 @@ static void hiby_pcm_mirror_open(void)
         hiby_mirror_retry = current_tick + 2*HZ;
         return;
     }
+    /* 1.5 s: room for the bluealsa queue plus the headset's delay */
     if (snd_pcm_set_params(hiby_mirror, format, SND_PCM_ACCESS_RW_INTERLEAVED,
-                           channels, pcm_sampr, 1, 200000) < 0)
+                           channels, pcm_sampr, 1, 1500000) < 0)
     {
         hiby_pcm_mirror_close();
         hiby_mirror_retry = current_tick + 2*HZ;
         return;
     }
-    hiby_pcm_mirror_pad(HIBY_MIRROR_TARGET);
+    if (snd_pcm_delay(handle, &hiby_bt_delay) < 0)
+        hiby_bt_delay = 0;
+    hiby_pcm_mirror_pad(hiby_pcm_mirror_target());
 }
 
 static void hiby_pcm_mirror_write(const sample_t *buf, snd_pcm_uframes_t count)
 {
-    snd_pcm_sframes_t delay;
+    snd_pcm_sframes_t delay, target, diff;
 
     if (!hiby_pcm_bt_active() || !headphones_inserted())
     {
@@ -187,25 +207,30 @@ static void hiby_pcm_mirror_write(const sample_t *buf, snd_pcm_uframes_t count)
             return;
     }
 
+    target = hiby_pcm_mirror_target();
     if (snd_pcm_delay(hiby_mirror, &delay) < 0)
     {
         snd_pcm_prepare(hiby_mirror);
-        hiby_pcm_mirror_pad(HIBY_MIRROR_TARGET);
-        delay = HIBY_MIRROR_TARGET;
+        delay = 0;
     }
 
-    if (delay > HIBY_MIRROR_TARGET + HIBY_MIRROR_SLACK)
-        count--;    /* jack running slow: skip one frame */
+    diff = target - delay;
+    if (diff > HIBY_MIRROR_JUMP)
+        hiby_pcm_mirror_pad(diff);
+    else if (diff < -HIBY_MIRROR_JUMP)
+        snd_pcm_rewind(hiby_mirror, -diff);
+    else if (diff < -HIBY_MIRROR_SLACK)
+        count--;    /* jack too far behind: skip one frame */
 
     if (snd_pcm_writei(hiby_mirror, buf, count) == -EPIPE)
     {
         snd_pcm_prepare(hiby_mirror);
-        hiby_pcm_mirror_pad(HIBY_MIRROR_TARGET);
+        hiby_pcm_mirror_pad(target);
         snd_pcm_writei(hiby_mirror, buf, count);
     }
-    else if (delay < HIBY_MIRROR_TARGET - HIBY_MIRROR_SLACK)
+    else if (diff > HIBY_MIRROR_SLACK && diff <= HIBY_MIRROR_JUMP)
     {
-        /* jack running fast: repeat the last frame */
+        /* jack too far ahead: repeat the last frame */
         snd_pcm_writei(hiby_mirror, buf + (count - 1) * channels, 1);
     }
 }
