@@ -49,6 +49,7 @@
 int pcm_alsa_switch_playback_device(const char *device);
 void pcm_alsa_close_device(const char *device);
 void hiby_pcm_set_bt_mac(const char *mac);
+void bt_bluealsa_change_volume(int l, int r, const char* mac);
 static bool bt_ctl_run(const char *arg1, const char *arg2, const char *success_str);
 static bool bt_get_active_mac(char *mac_out, size_t mac_out_len);
 
@@ -59,6 +60,7 @@ static bool bt_get_active_mac(char *mac_out, size_t mac_out_len);
 #define BT_DEVICE_PICK_SCAN (-2)
 #define BT_MAX_CODECS 8
 #define BT_CODEC_NAME_LEN 16
+#define BT_DEFAULT_VOLUME 85 /* bluealsa percent */
 #define BOOT_SETTING_FILE ROCKBOX_DIR"/rb_bt_on.txt"
 #define BT_SYS_PATH "/sys/class/bluetooth"
 #define BT_DEBUG_LOG_FILE "/data/mnt/sd_0/rockbox-bt-debug.log"
@@ -601,8 +603,13 @@ static bool bt_route_to_bluetooth(const char *mac, const char* codec)
     if (rc == 0)
     {
         hiby_pcm_set_bt_mac(mac);
+        /* Full scale is much louder than the wired output; start lower */
+        bt_bluealsa_change_volume(BT_DEFAULT_VOLUME, BT_DEFAULT_VOLUME, mac);
         bt_kick_audio_if_playing();
-        button_add_input_device(BT_REMOTE_INPUT_IDX);
+        /* BlueZ creates the AVRCP uinput node a moment after the A2DP link */
+        for (int i = 0; i < 30 && !button_add_input_device(BT_REMOTE_INPUT_IDX); i++)
+            sleep(HZ/10);
+        system("cat /proc/bus/input/devices >> " BT_DEBUG_LOG_FILE " 2>&1");
         return true;
     }
 
@@ -797,9 +804,15 @@ static void bt_set_active_codec(const char *mac)
     pclose(fp);
 }
 
+/* Cached adapter power for the skin's %BT, -1 until first asked */
+static int bt_powered = -1;
+
 bool bt_disable(void)
 {
-    return bt_ctl_run("power", "off", "power off succeeded");
+    bool ok = bt_ctl_run("power", "off", "power off succeeded");
+    if (ok)
+        bt_powered = 0;
+    return ok;
 }
 
 void wait_for_bt_init(void)
@@ -818,7 +831,8 @@ void wait_for_bt_init(void)
 
 bool bt_enable(void)
 {
-     return bt_ctl_run("power", "on", "power on succeeded");
+    bt_powered = bt_ctl_run("power", "on", "power on succeeded");
+    return bt_powered;
     //return system("/usr/bin/bt_enable | grep 'Powered: 1'", "r") == 0;
     //return system("bt-adapter --set \"Powered\" \"On\" | grep 'Powered: 1'") == 0;
 }
@@ -985,6 +999,15 @@ static bool bt_is_enabled(void)
     }
     //splash(0, ID2P(LANG_BT_NOT_ENABLED));
     return false;
+}
+
+bool bt_is_enabled_fast(void)
+{
+    if (bt_is_suspended_fast())
+        return false;
+    if (bt_powered < 0)
+        bt_powered = bt_is_enabled();
+    return bt_powered;
 }
 
 static int bt_get_available_codecs(const char *mac,
