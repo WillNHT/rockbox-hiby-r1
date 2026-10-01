@@ -700,6 +700,9 @@ static bool skin_render_line(struct skin_element* line, struct skin_draw_info *i
                     info->no_line_break = true;
                 if (child->tag->type == SKIN_TOKEN_SUBLINE_SCROLL)
                     info->line_scrolls = true;
+                /* %yl: a viewport of lyrics scrolls at twice the speed */
+                if (child->tag->type == SKIN_TOKEN_LYRICS_LINE)
+                    info->skin_vp->vp.flags |= VP_FLAG_FAST_SCROLL;
 
                 fix_line_alignment(info, child);
 

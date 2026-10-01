@@ -1,9 +1,9 @@
 #
-#   ____ _  _ ____ ___  ___  _   _   LYRICS LINES
+#   ____ _  _ ____ ___  ___  _   _   LYRICS METER
 #   [__  |\ | |__| |__] |__]  \_/
 #   ___] | \| |  | |    |      |
 #
-#  Snappy Lyrics Lines - Snappy V2, in motion.
+#  Snappy Lyrics Meter - Snappy V2, in motion.
 #
 #  Everything that moves here comes from something this fork added:
 #
@@ -42,9 +42,8 @@
 %Vd(bg)
 %?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>
 %?C<%Vd(mirror)>
-%?yf<%Vd(lyr1)%Vd(lyr2)|%Vd(lyr1)%Vd(lyr2)|%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>>
-%?yf<||%Vd(bd0)>
-%?yf<||%Vd(bd1)>
+%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>
+%?yf<%Vd(lyr1)|%Vd(lyr1)|>
 %Vd(volbar)%?mh<|%Vd(plname)>
 %?if(%an(360,50),=,1)<%Vd(sh00)>
 %?if(%an(360,50),=,2)<%Vd(sh00)>
@@ -319,7 +318,7 @@ SHF%xd(O,%ps)
 #
 # Battery bar
 %V(-168,26,-30,18,-)
-%pL(0,0,138,18)
+%bl(0,0,138,18,bb,backdrop,bb_backdrop)
 #
 # Battery percentage
 %V(-168,48,-30,34,3)
@@ -1006,11 +1005,11 @@ SHF%xd(O,%ps)
 %Vt(0)
 %al%>%> FF
 #
-%Vl(bd0,280,628,-30,30,2)
+%V(280,628,-30,30,2)
 %Vt(0)
 %ar%fc %fb
 #
-%Vl(bd1,280,658,-30,30,2)
+%V(280,658,-30,30,2)
 %Vt(0)
 %ar%?if(%St(party mode),!=,off)<party|%?if(%St(single mode),!=,off)<%St(single mode)|%fk kHz>>
 #
@@ -1032,17 +1031,11 @@ SHF%xd(O,%ps)
 #
 # Lyrics
 # ======
-# Where the peak meter and the codec were, while the track has lyrics:
-# the line being sung in white, the next one under it, dimmer.
-%Vl(lyr1,30,616,-30,36,3)
+# The line being sung, across the cover's reflection. The band under it
+# keeps the peak meter and the codec.
+%Vl(lyr1,30,572,-30,36,3)
 %Vt(0)
-%Vf(F4F2EE)
 %al%s%yl(0)
-#
-%Vl(lyr2,30,652,-30,30,2)
-%Vt(0)
-%Vf(8E8C86)
-%al%s%yl(1)
 #
 # Locked
 # ======

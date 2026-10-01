@@ -16,7 +16,8 @@
  *
  * So these five are resolved here, before any context lookup:
  *
- *   POWER    tap            play / pause
+ *   POWER    tap            play / pause on the WPS, to the WPS from
+ *                           anywhere else
  *            hold 1 s       lock / unlock input
  *            hold 4 s       shut down
  *   VOL+/-   tap            one step
@@ -48,6 +49,7 @@
 
 #include <stdio.h>
 
+#include "action.h"
 #include "appevents.h"
 #include "audio.h"
 #include "backlight.h"
@@ -513,7 +515,7 @@ static void seek_by(long ms)
 
 /* -------------------------------------------------------------- the keys */
 
-static bool handle_power(int held, bool repeat, bool release)
+static bool handle_power(int held, bool repeat, bool release, int *action)
 {
     long now = current_tick;
 
@@ -533,7 +535,15 @@ static bool handle_power(int held, bool repeat, bool release)
         power_consumed = false;
         shot_taken = false;
 
-        if (was_tap)
+        /* Away from the WPS a tap is the way back to it and nothing
+         * more: the screen the user asked for should not arrive with
+         * the music stopped. */
+        if (was_tap && get_current_activity() != ACTIVITY_WPS)
+        {
+            cue();
+            *action = ACTION_TREE_WPS;
+        }
+        else if (was_tap)
         {
             /* Play/pause, directly. It used to be the screen toggle, with
              * play/pause on a double tap and the first tap taken back when
@@ -766,11 +776,13 @@ static bool handle_skip(int idx, int dir, bool repeat, bool release)
     return true;
 }
 
-bool rpkeys_handle(int button)
+bool rpkeys_handle(int button, int *action)
 {
     int bare = button & ~(BUTTON_REL | BUTTON_REPEAT);
     bool repeat = (button & BUTTON_REPEAT) != 0;
     bool release = (button & BUTTON_REL) != 0;
+
+    *action = ACTION_NONE;
 
     if (button == BUTTON_NONE)
         return false;
@@ -781,7 +793,7 @@ bool rpkeys_handle(int button)
         return true;
 
     if (bare & BUTTON_POWER)
-        return handle_power(bare, repeat, release);
+        return handle_power(bare, repeat, release, action);
 
     /* Locked: everything but POWER is swallowed, which is what locked
      * means. POWER is handled above, so a 3 s hold still unlocks. */

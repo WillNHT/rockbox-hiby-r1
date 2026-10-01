@@ -1301,11 +1301,10 @@ static int get_action_worker(action_last_t *last, action_cur_t *cur)
     }
     else
 #endif
-    if (rpkeys_handle(cur->button))
+    if (rpkeys_handle(cur->button, &cur->action))
     {
         cur->button = BUTTON_NONE;
-        cur->action = ACTION_NONE;
-        return ACTION_NONE;
+        return cur->action;
     }
 
     if (get_action_touchscreen(last, cur))
