@@ -51,7 +51,7 @@ void hiby_pcm_adjust_bt_buffering(snd_pcm_sframes_t *period_size,
     *period_size *= 2;
     if (*period_size < 2048)
         *period_size = 2048;
-    *buffer_size = *period_size * 8;
+    *buffer_size = *period_size * 4;
 }
 
 unsigned int hiby_pcm_calc_poll_interval(unsigned int sample_rate,
