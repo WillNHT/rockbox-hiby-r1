@@ -235,6 +235,14 @@ struct skin_viewport {
      * the backdrop if there is one, fill the background if there is not.
      * See skin_layer.c. */
     int8_t clear_veil;
+#ifdef HAVE_LCD_LAYERS
+    /* Declared after a viewport it overlaps, so it draws into a surface
+     * of its own (skin_layer.c); bg_pattern is the surface's key while it
+     * does, and this is the colour it stands for. */
+    bool lifted;
+    bool builds_backdrop;       /* has %Cb: draws into the backdrop */
+    unsigned layer_bg;
+#endif
 #ifdef HAVE_LCD_COLOR
     struct gradient_config start_gradient;
 #endif
