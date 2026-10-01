@@ -789,6 +789,9 @@ struct user_settings
     int hiby_charge_limit_voltage;
     int hiby_charge_current;
 #endif
+#ifdef HAVE_HIBY_BLUETOOTH
+    int bt_wired_offset;     /* ms the jack is held back beyond Bluetooth */
+#endif
 #if ((CONFIG_BATTERY_MEASURE & VOLTAGE_MEASURE))
     int low_battery_poweroff_percent;
 #endif

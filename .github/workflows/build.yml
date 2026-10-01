@@ -32,9 +32,16 @@ jobs:
       run: |
         # Spec 10.1: physical keys and the boot path are provably out of
         # scope for this feature, so a diff touching them is a build error.
+        # pcm-alsa-hiby.c and hibylinux_codec.c are audio only, not input.
+        # button-r1.c/button-target.h: Bluetooth AVRCP keys only (#29),
+        # the physical key mapping is unchanged.
         FLOOR="bootloader firmware/target/hosted/hiby apps/keymaps/keymap-hibyr1.c"
         git fetch --quiet origin "$BASE_REF" || exit 0
-        CHANGED=$(git diff --name-only "origin/$BASE_REF"...HEAD -- $FLOOR)
+        CHANGED=$(git diff --name-only "origin/$BASE_REF"...HEAD -- $FLOOR \
+          ':!firmware/target/hosted/hiby/pcm-alsa-hiby.c' \
+          ':!firmware/target/hosted/hiby/hibylinux_codec.c' \
+          ':!firmware/target/hosted/hiby/r1/button-r1.c' \
+          ':!firmware/target/hosted/hiby/r1/button-target.h')
         if [ -n "$CHANGED" ]; then
           echo "The stick may not touch the keymap, the HiBy target tree or the bootloader:"
           echo "$CHANGED"

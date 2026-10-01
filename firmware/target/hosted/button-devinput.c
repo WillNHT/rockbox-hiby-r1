@@ -114,6 +114,14 @@ void button_close_device(void)
 static int button_delay_release = 0;
 static int delay_tick = 0;
 #endif
+#ifdef BUTTON_TAP_ONLY
+/* Keys whose release cannot be trusted (Bluetooth AVRCP: some earbuds send
+ * it late or never, which reads as a hold and seeks instead of skipping)
+ * are released by us shortly after the press, and their own release is
+ * ignored. */
+static int button_tap_release = 0;
+static long tap_tick = 0;
+#endif
 
 #ifdef HAVE_TOUCHSCREEN
 /* Last known touchscreen coordinates. */
@@ -222,6 +230,13 @@ int button_read_device(BDATA)
         button_delay_release = 0;
     }
 #endif
+#ifdef BUTTON_TAP_ONLY
+    if (button_tap_release && TIME_AFTER(current_tick, tap_tick))
+    {
+        button_bitmap &= ~button_tap_release;
+        button_tap_release = 0;
+    }
+#endif
 
     /* check if there are any events pending and process them */
     while(poll(poll_fds, num_devices, 0)) {
@@ -282,6 +297,15 @@ int button_read_device(BDATA)
 #ifdef BUTTON_DELAY_RELEASE
                             bmap &= ~BUTTON_DELAY_RELEASE;
 #endif
+#ifdef BUTTON_TAP_ONLY
+                            if (bmap & BUTTON_TAP_ONLY) {
+                                bmap &= ~BUTTON_TAP_ONLY;
+                                if (event.value == 2)   /* autorepeat */
+                                    bmap = 0;
+                                button_tap_release |= bmap;
+                                tap_tick = current_tick + HZ/20;
+                            }
+#endif
 #if defined(HAVE_TOUCHSCREEN) && defined(BUTTON_TOUCH)
                             /* Some touchscreens give us actual touch/untouch as a "key" */
                             if (bmap & BUTTON_TOUCH) {
@@ -315,6 +339,10 @@ int button_read_device(BDATA)
                                 delay_tick = current_tick + HZ/20;
                                 bmap = 0;
                             }
+#endif
+#ifdef BUTTON_TAP_ONLY
+                            if (bmap & BUTTON_TAP_ONLY)
+                                bmap = 0;
 #endif
 #ifdef HAVE_SCROLLWHEEL
                             /* Wheel gives us press+release back to back; ignore the release */

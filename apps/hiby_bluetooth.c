@@ -43,6 +43,8 @@
 #include "gui/list.h"
 #include "pcm-alsa.h"
 #include "yesno.h"
+#include "sound.h"
+#include "talk.h"
 
 /* HiBy hosted build provides dynamic output routing helper in its
  * target-specific PCM implementation. */
@@ -62,6 +64,7 @@ static bool bt_get_active_mac(char *mac_out, size_t mac_out_len);
 #define BOOT_SETTING_FILE ROCKBOX_DIR"/rb_bt_on.txt"
 #define BT_SYS_PATH "/sys/class/bluetooth"
 #define BT_DEBUG_LOG_FILE "/data/mnt/sd_0/rockbox-bt-debug.log"
+#define BT_STARTING_FILE "/tmp/rb_bt_starting"
 
 const int BT_REMOTE_INPUT_IDX = 4;
 
@@ -78,6 +81,11 @@ struct bt_device_menu_data
     struct bt_device *devices;
     int count;
 };
+
+static FILE *bt_scan_fp;
+static long bt_scan_next_tick;
+static int bt_parse_ctl_devices(const char *ctl_cmd, struct bt_device *devices,
+                                int count, int max_devices, bool paired);
 
 struct bt_strlist_data
 {
@@ -103,7 +111,6 @@ static bool is_busy = false;
 
 void hiby_debug_log(const char *format, ...)
 {
-    return;
     char line[512];
     va_list ap;
     int fd;
@@ -204,7 +211,16 @@ static int bt_simplelist_ok_cancel_return_action(int action, struct gui_synclist
 
 static int bt_devicelist_callback(int action, struct gui_synclist *lists)
 {
-    (void)lists;
+    if (action == ACTION_NONE && bt_scan_fp
+        && TIME_AFTER(current_tick, bt_scan_next_tick))
+    {
+        struct bt_device_menu_data* ctx = lists->data;
+        bt_scan_next_tick = current_tick + HZ;
+        ctx->count = bt_parse_ctl_devices("bluetoothctl devices 2>/dev/null",
+                                          ctx->devices, ctx->count, BT_MAX_DEVICES, false);
+        gui_synclist_set_nb_items(lists, ctx->count + 1);
+        return ACTION_REDRAW;
+    }
     if (action == ACTION_STD_OK)
         return ACTION_STD_CANCEL;
     if (action == ACTION_STD_CONTEXT)
@@ -230,7 +246,7 @@ static const char *bt_action_name_cb(int selected_item, void *data,
     char *buffer, size_t buffer_len)
 {
     const char **items = data;
-    if (selected_item < 0 || selected_item >= 3)
+    if (selected_item < 0 || selected_item >= 5)
     {
         buffer[0] = '\0';
         return buffer;
@@ -245,7 +261,8 @@ static const char *bt_device_name_cb(int selected_item, void *data,
     struct bt_device_menu_data *ctx = data;
     if (selected_item == 0)
     {
-        snprintf(buffer, buffer_len, "%s", (const char *)str(LANG_BT_SCAN_FOR_NEW));
+        snprintf(buffer, buffer_len, "%s%s", (const char *)str(LANG_BT_SCAN_FOR_NEW),
+                 bt_scan_fp ? "..." : "");
         return buffer;
     }
     selected_item--;
@@ -400,8 +417,10 @@ static int bt_device_sort_cmp(const void *a, const void *b)
 static bool bt_ctl_run(const char *arg1, const char *arg2, const char *success_str)
 {
     char cmd[256];
-    snprintf(cmd, sizeof(cmd), "bluetoothctl %s %s | grep -q '%s'", arg1, arg2, success_str);
+    snprintf(cmd, sizeof(cmd), "bluetoothctl %s %s 2>&1 | tee -a " BT_DEBUG_LOG_FILE " | grep -q '%s'",
+             arg1, arg2, success_str);
     int status = system(cmd);
+    hiby_debug_log("bt_ctl_run: %s -> %d", cmd, status);
     if (status == 0)
         return true;
     return false;
@@ -439,6 +458,10 @@ static int  bt_parse_ctl_devices(const char *ctl_cmd, struct bt_device *devices,
         snprintf(name, sizeof(name), "%s", p);
         bt_trim(name);
 
+        /* Unnamed devices (mostly BLE beacons) report their MAC as the name */
+        if (!paired && (!name[0] || bt_has_mac_pattern(name, '-')))
+            continue;
+
         count = bt_add_device_unique_ex(devices, count, max_devices, mac, name, paired);
     }
 
@@ -458,47 +481,37 @@ static int bt_load_devices_via_bluetoothctl(struct bt_device *devices, int max_d
     return count;
 }
 
-static int bt_scan_devices(struct bt_device *devices, int count, int max_devices)
+/* Discovery runs in a background bluetoothctl while the device list stays
+ * open; bt_devicelist_callback() picks up new devices once a second.
+ * BlueZ drops unpaired devices when discovery stops, so it keeps running
+ * until a device is connected or the list is left. */
+static void bt_scan_start(void)
 {
-    int waited = 0;
-    int action;
-    FILE *fp;
-
-    fp = popen("bluetoothctl", "w");
-    if (!fp)
-        return count;
-
-    fprintf(fp, "scan on\n");
-    fflush(fp);
-
-    const int timeout = 15;
-    while (waited < timeout)
-    {
-        splashf(0, ID2P(LANG_BT_SCANNING_PROGRESS), waited, timeout);
-        action = get_action(CONTEXT_STD, HZ);
-        if (action != ACTION_NONE)
-            break;
-        waited++;
-    }
-
-    fprintf(fp, "scan off\n");
-    fflush(fp);
-    fprintf(fp, "exit\n");
-    fflush(fp);
-    pclose(fp);
-
-    count = bt_parse_ctl_devices("bluetoothctl devices 2>/dev/null",
-                                 devices, count, max_devices, false);
-    if (count > 1)
-        qsort(devices, count, sizeof(devices[0]), bt_device_sort_cmp);
-    return count;
+    if (bt_scan_fp)
+        return;
+    bt_scan_fp = popen("bluetoothctl", "w");
+    if (!bt_scan_fp)
+        return;
+    fprintf(bt_scan_fp, "scan on\n");
+    fflush(bt_scan_fp);
+    bt_scan_next_tick = current_tick + HZ;
 }
 
-static int bt_choose_device(const char *title, struct bt_device *devices, int count, int selection)
+static void bt_scan_stop(void)
+{
+    if (!bt_scan_fp)
+        return;
+    fprintf(bt_scan_fp, "scan off\nexit\n");
+    fflush(bt_scan_fp);
+    pclose(bt_scan_fp);
+    bt_scan_fp = NULL;
+}
+
+static int bt_choose_device(const char *title, struct bt_device *devices, int *count, int selection)
 {
     struct bt_device_menu_data data;
     struct simplelist_info info;
-    int total_count = count + 1;
+    int total_count = *count + 1;
 
     if (total_count <= 0)
     {
@@ -507,7 +520,7 @@ static int bt_choose_device(const char *title, struct bt_device *devices, int co
     }
 
     data.devices = devices;
-    data.count = count;
+    data.count = *count;
 
     simplelist_info_init(&info, (char *)title, total_count, &data);
     info.get_name = bt_device_name_cb;
@@ -516,6 +529,8 @@ static int bt_choose_device(const char *title, struct bt_device *devices, int co
     info.title_icon = Icon_Submenu;
 
     simplelist_show_list(&info);
+    *count = data.count;
+    total_count = data.count + 1;
     if (info.selection < 0 || info.selection >= total_count)
         return BT_DEVICE_PICK_CANCEL;
 
@@ -557,6 +572,7 @@ void bt_route_to_local(void)
     bt_active_codec[0] = '\0';
     hiby_pcm_set_bt_mac(NULL);
     pcm_alsa_switch_playback_device(bt_playback_dev);
+    hiby_debug_log("bt: routed to local");
     bt_kick_audio_if_playing();
 }
 
@@ -589,8 +605,16 @@ static bool bt_route_to_bluetooth(const char *mac, const char* codec)
     if (rc == 0)
     {
         hiby_pcm_set_bt_mac(mac);
+        /* Push the current volume to the headset (85% of the jack level) */
+        sound_set_volume(global_status.volume);
         bt_kick_audio_if_playing();
-        button_add_input_device(BT_REMOTE_INPUT_IDX);
+        /* BlueZ creates the AVRCP uinput node a moment after the A2DP link */
+        for (int i = 0; i < 30 && !button_add_input_device(BT_REMOTE_INPUT_IDX); i++)
+            sleep(HZ/10);
+        system("cat /proc/bus/input/devices >> " BT_DEBUG_LOG_FILE " 2>&1");
+        /* Raw AVRCP key events (16-byte input_event), to see what the
+         * earbuds really send; ends when the node goes away */
+        system("(hexdump -v -e '16/1 \"%02x \" \"\n\"' /dev/input/event4 >> " BT_DEBUG_LOG_FILE ") 2>/dev/null &");
         return true;
     }
 
@@ -785,9 +809,19 @@ static void bt_set_active_codec(const char *mac)
     pclose(fp);
 }
 
+/* Adapter power as last set, for the skin's %BT: never ask bluetoothctl
+ * from a render, it blocks while bluetoothd starts */
+static bool bt_powered = false;
+
 bool bt_disable(void)
 {
-    return bt_ctl_run("power", "off", "power off succeeded");
+    bool ok = bt_ctl_run("power", "off", "power off succeeded");
+    if (ok)
+    {
+        bt_powered = false;
+        remove(BOOT_SETTING_FILE);
+    }
+    return ok;
 }
 
 void wait_for_bt_init(void)
@@ -806,7 +840,10 @@ void wait_for_bt_init(void)
 
 bool bt_enable(void)
 {
-     return bt_ctl_run("power", "on", "power on succeeded");
+    bt_powered = bt_ctl_run("power", "on", "power on succeeded");
+    if (bt_powered)
+        close(open(BOOT_SETTING_FILE, O_RDWR | O_CREAT, 0666));
+    return bt_powered;
     //return system("/usr/bin/bt_enable | grep 'Powered: 1'", "r") == 0;
     //return system("bt-adapter --set \"Powered\" \"On\" | grep 'Powered: 1'") == 0;
 }
@@ -819,6 +856,7 @@ static bool bt_prepare_stack(void)
     splash(0, ID2P(LANG_BT_SUSPENDED_RESUMING));
     system("/usr/bin/bt_resume");
     splash(0, ID2P(LANG_BT_DONE));
+    system("(ls /sys/class/bluetooth; pgrep -l bluetoothd; pgrep -l bluealsa) >> " BT_DEBUG_LOG_FILE " 2>&1");
     int fd = open(BOOT_SETTING_FILE, O_RDWR | O_CREAT | O_TRUNC);
     close(fd);
 
@@ -834,7 +872,7 @@ static void bt_show_devices(void)
     static struct bt_device devices[BT_MAX_DEVICES];
     int count;
 
-    if (!bt_enable())
+    if (!bt_enable() && !bt_is_connected_fast())
     {
         const char *lines[] = {(const char *)str(LANG_BT_IS_SUSPENDED),
                               (const char *)str(LANG_BT_ENABLE_IT)};
@@ -857,23 +895,23 @@ static void bt_show_devices(void)
 
     while (1)
     {
-        idx = bt_choose_device(str(LANG_BT_DEVICES), devices, count, idx);
+        idx = bt_choose_device(str(LANG_BT_DEVICES), devices, &count, idx);
         if (idx == BT_DEVICE_PICK_SCAN)
         {
-            count = bt_scan_devices(devices, count, BT_MAX_DEVICES);
-            if (count <= 0)
-                splash(HZ, ID2P(LANG_BT_NO_DEVICES_FOUND));
+            bt_scan_start();
+            idx = -1;
             continue;
         }
 
         if (idx >= 0 && idx < count)
         {
             bt_connect_device(&devices[idx]);
-            if (bt_active_codec[0])
-                bt_show_status();
-            else
+            if (!bt_active_codec[0])
                 continue;
+            bt_scan_stop();
+            bt_show_status();
         }
+        bt_scan_stop();
         return;
     }
 }
@@ -974,6 +1012,36 @@ static bool bt_is_enabled(void)
     return false;
 }
 
+bool bt_is_enabled_fast(void)
+{
+    return bt_powered && !bt_is_suspended_fast();
+}
+
+/* Bluetooth comes back the way it was left: rb_bt_on.txt is kept while it
+ * is on (the bootloader then skips bt_suspend), so power the adapter up
+ * again without waiting on bluetoothd. */
+void bt_boot_init(void)
+{
+    if (access(PIVOT_ROOT BOOT_SETTING_FILE, F_OK) != 0)
+        return;
+    /* HiBy's bt_init brings the stack up at boot and leaves the adapter
+     * off, so power on only once it has finished */
+    system("touch " BT_STARTING_FILE);
+    /* bluetoothd can still be settling after bt_init: keep asking until the
+     * adapter says it is powered (30 s at most), blinking all the while */
+    system("(sleep 3; while pgrep -f '[b]t_init' >/dev/null; do sleep 1; done; i=0; "
+           "until bluetoothctl show | grep -q 'Powered: yes' || [ $i -ge 30 ]; do "
+           "bluetoothctl power on; sleep 1; i=$((i+1)); done; "
+           "rm -f " BT_STARTING_FILE ") >>" BT_DEBUG_LOG_FILE " 2>&1 &");
+    bt_powered = true;
+}
+
+/* Still coming up after boot: the skin's %BT blinks */
+bool bt_is_starting_fast(void)
+{
+    return access(BT_STARTING_FILE, F_OK) == 0;
+}
+
 static int bt_get_available_codecs(const char *mac,
                                    char codecs[][BT_CODEC_NAME_LEN],
                                    int max_codecs)
@@ -1046,6 +1114,12 @@ static void bt_show_codec_picker(const char *mac)
 
     if (info.selection >= 0 && info.selection < count)
     {
+        /* Map of this process, to place the crash address if the switch
+         * takes Rockbox down (#29) */
+        char maps[96];
+        snprintf(maps, sizeof(maps), "cat /proc/%d/maps >> " BT_DEBUG_LOG_FILE, (int)getpid());
+        hiby_debug_log("codec switch to %s", codecs[info.selection]);
+        system(maps);
         //pcm_alsa_close_device(bt_playback_dev);
         bt_route_to_local();
         char pcm_path[96];
@@ -1056,7 +1130,7 @@ static void bt_show_codec_picker(const char *mac)
         if (bt_try_set_codec(pcm_path, codecs[info.selection]) && bt_route_to_bluetooth(mac, NULL))
         {
             //bt_set_active_codec(mac);
-            splashf(HZ, "%s: %s", ID2P(LANG_BT_CODEC), bt_active_codec );
+            splashf(HZ, "%s: %s", str(LANG_BT_CODEC), bt_active_codec);
         }
         else
             splash(HZ, ID2P(LANG_BT_CODEC_CHANGE_FAILED));
@@ -1106,7 +1180,8 @@ static void bt_show_status(void)
     if (!suspended)
     {
         wait_for_bt_init();
-        bt_on = bt_is_enabled();
+        /* a live link means it is on, whatever bluetoothctl says */
+        bt_on = bt_is_enabled() || bt_is_connected_fast();
     }
     while (1)
     {
@@ -1219,6 +1294,25 @@ static void bt_show_status(void)
     }
 }
 
+/* Unpair every device BlueZ remembers */
+static void bt_forget_all(void)
+{
+    static struct bt_device devices[BT_MAX_DEVICES];
+    const char *lines[] = {(const char *)str(LANG_BT_FORGET_ALL)};
+    const struct text_message message = {lines, 1};
+    int count, i;
+
+    if (gui_syncyesno_run(&message, NULL, NULL) != YESNO_YES)
+        return;
+    if (bt_active_codec[0])
+        bt_disconnect();
+    count = bt_parse_ctl_devices("bluetoothctl devices 2>/dev/null",
+                                 devices, 0, BT_MAX_DEVICES, true);
+    for (i = 0; i < count; i++)
+        bt_ctl_run("remove", devices[i].mac, "has been removed");
+    bt_set_selected(NULL);
+}
+
 int hiby_bluetooth_menu(void)
 {
     const char *action_items[] =
@@ -1226,6 +1320,8 @@ int hiby_bluetooth_menu(void)
         (const char *)str(LANG_BT_STATUS),
         (const char *)str(LANG_BT_DEVICES),
         (const char *)str(LANG_BT_DISCONNECT),
+        (const char *)str(LANG_BT_FORGET_ALL),
+        (const char *)str(LANG_BT_WIRED_OFFSET),
     };
 
     int action = -1;
@@ -1257,6 +1353,17 @@ int hiby_bluetooth_menu(void)
                 break;
             case 2:
                 bt_disconnect();
+                break;
+            case 3:
+                bt_forget_all();
+                break;
+            case 4:
+                /* + holds the jack back more, - less, when it plays
+                   beside a headset */
+                set_int(str(LANG_BT_WIRED_OFFSET), "ms", UNIT_MS,
+                        &global_settings.bt_wired_offset, NULL, 10, -500, 500,
+                        NULL);
+                settings_save();
                 break;
             default:
                 break;

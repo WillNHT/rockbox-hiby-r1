@@ -47,6 +47,9 @@
 #include "albumart.h"
 #include "playlist.h"
 #include "pradio.h"
+#if defined(HIBY_LINUX) && !defined(SIMULATOR)
+#include "hiby_bluetooth.h"
+#endif
 #include "playback.h"
 #include "skin_display.h"
 #include "metadata.h"
@@ -1369,6 +1372,21 @@ const char *get_token_value(struct gui_wps *gwps,
                 pradio_station_name(state->id3->path, buf, buf_size))
                 return buf;
             return NULL;
+
+        case SKIN_TOKEN_BLUETOOTH:
+            /* %?BT<off|on|connected> */
+            numeric_ret = 1;
+#if defined(HIBY_LINUX) && !defined(SIMULATOR)
+            if (bt_is_starting_fast())  /* blink off/on while it comes up */
+                numeric_ret = 1 + (current_tick / (HZ/2)) % 2;
+            else if (bt_is_connected_fast())
+                numeric_ret = 3;
+            else if (bt_is_enabled_fast())
+                numeric_ret = 2;
+#endif
+            itoa_buf(buf, buf_size, numeric_ret);
+            numeric_buf = buf;
+            goto gtv_ret_numeric_tag_info;
 
         case SKIN_TOKEN_RADIO_KIND:
             if (!state->id3 || !pradio_is_station_track(state->id3->path))

@@ -111,6 +111,133 @@ static const char *current_alsa_device;
 static void pcm_pump_locked(snd_pcm_t *handle);
 #if defined(HIBY_LINUX)
 #include "hiby/pcm-alsa-hiby-hooks.h"
+
+#include "button.h" /* headphones_inserted() */
+#include "settings.h" /* bt_wired_offset */
+
+/* Dual output: while Bluetooth plays and something is in the jack, the same
+ * frames also go to the jack, held back by as much as Bluetooth is so both
+ * play in step. bluealsa's snd_pcm_delay() already counts its own queue,
+ * the codec and the delay the headset reports, so that is the target.
+ * The two clocks are not locked: a small drift is taken up by skipping or
+ * repeating one frame per period, a large one (the target moved) by padding
+ * with silence or rewinding. Bluetooth sets the pace. */
+#define HIBY_MIRROR_DEVICE "plughw:0,0"
+#define HIBY_MIRROR_SLACK  (pcm_sampr / 50)   /* +-20 ms before nudging */
+#define HIBY_MIRROR_JUMP   (pcm_sampr / 10)   /* past 100 ms, jump at once */
+static snd_pcm_t *hiby_mirror = NULL;
+static long hiby_mirror_retry;
+static snd_pcm_sframes_t hiby_bt_delay;       /* smoothed bluealsa delay */
+
+static snd_pcm_sframes_t hiby_pcm_mirror_target(void)
+{
+    snd_pcm_sframes_t d;
+    if (snd_pcm_delay(handle, &d) == 0)
+        hiby_bt_delay += (d - hiby_bt_delay) / 16;
+    /* bt_wired_offset: the user's trim for what the headset adds unreported */
+    return hiby_bt_delay
+           + (snd_pcm_sframes_t)global_settings.bt_wired_offset * pcm_sampr / 1000;
+}
+
+static void hiby_pcm_mirror_close(void)
+{
+    if (!hiby_mirror)
+        return;
+    snd_pcm_drop(hiby_mirror);
+    snd_pcm_close(hiby_mirror);
+    hiby_mirror = NULL;
+}
+
+/* Queue n frames of silence */
+static void hiby_pcm_mirror_pad(snd_pcm_sframes_t n)
+{
+    static const sample_t zero[256 * 2];
+    while (n > 0)
+    {
+        snd_pcm_sframes_t chunk = n < 256 ? n : 256;
+        if (snd_pcm_writei(hiby_mirror, zero, chunk) < 0)
+            return;
+        n -= chunk;
+    }
+}
+
+static void hiby_pcm_mirror_open(void)
+{
+    hiby_pcm_mirror_close();
+    if (!handle || !hiby_pcm_bt_active() || !headphones_inserted())
+        return;
+    if (snd_pcm_open(&hiby_mirror, HIBY_MIRROR_DEVICE,
+                     SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK) < 0)
+    {
+        hiby_mirror = NULL;
+        hiby_mirror_retry = current_tick + 2*HZ;
+        return;
+    }
+    /* 1.5 s: room for the bluealsa queue plus the headset's delay */
+    if (snd_pcm_set_params(hiby_mirror, format, SND_PCM_ACCESS_RW_INTERLEAVED,
+                           channels, pcm_sampr, 1, 1500000) < 0)
+    {
+        hiby_pcm_mirror_close();
+        hiby_mirror_retry = current_tick + 2*HZ;
+        return;
+    }
+    /* set_params waits for a full buffer before it starts; the queue is
+       held near the target instead, so start on the first frame */
+    snd_pcm_sw_params_t *sw;
+    snd_pcm_sw_params_alloca(&sw);
+    if (snd_pcm_sw_params_current(hiby_mirror, sw) == 0
+        && snd_pcm_sw_params_set_start_threshold(hiby_mirror, sw, 1) == 0)
+        snd_pcm_sw_params(hiby_mirror, sw);
+    if (snd_pcm_delay(handle, &hiby_bt_delay) < 0)
+        hiby_bt_delay = 0;
+    hiby_pcm_mirror_pad(hiby_pcm_mirror_target());
+}
+
+static void hiby_pcm_mirror_write(const sample_t *buf, snd_pcm_uframes_t count)
+{
+    snd_pcm_sframes_t delay, target, diff;
+
+    if (!hiby_pcm_bt_active() || !headphones_inserted())
+    {
+        hiby_pcm_mirror_close();
+        return;
+    }
+    if (!hiby_mirror)
+    {
+        if (TIME_BEFORE(current_tick, hiby_mirror_retry))
+            return;
+        hiby_pcm_mirror_open();
+        if (!hiby_mirror)
+            return;
+    }
+
+    target = hiby_pcm_mirror_target();
+    if (snd_pcm_delay(hiby_mirror, &delay) < 0)
+    {
+        snd_pcm_prepare(hiby_mirror);
+        delay = 0;
+    }
+
+    diff = target - delay;
+    if (diff > HIBY_MIRROR_JUMP)
+        hiby_pcm_mirror_pad(diff);
+    else if (diff < -HIBY_MIRROR_JUMP)
+        snd_pcm_rewind(hiby_mirror, -diff);
+    else if (diff < -HIBY_MIRROR_SLACK)
+        count--;    /* jack too far behind: skip one frame */
+
+    if (snd_pcm_writei(hiby_mirror, buf, count) == -EPIPE)
+    {
+        snd_pcm_prepare(hiby_mirror);
+        hiby_pcm_mirror_pad(target);
+        snd_pcm_writei(hiby_mirror, buf, count);
+    }
+    else if (diff > HIBY_MIRROR_SLACK && diff <= HIBY_MIRROR_JUMP)
+    {
+        /* jack too far ahead: repeat the last frame */
+        snd_pcm_writei(hiby_mirror, buf + (count - 1) * channels, 1);
+    }
+}
 #endif
 
 void pcm_alsa_set_playback_device(const char *device)
@@ -489,6 +616,9 @@ static void pcm_pump_locked(snd_pcm_t *handle)
                     logf("Write error: written %i expected %li", err, period_size);
                     break;
                 }
+#if defined(HIBY_LINUX)
+                hiby_pcm_mirror_write(frames, period_size);
+#endif
             }
             else
             {
@@ -565,8 +695,17 @@ static void async_callback(snd_async_handler_t *ahandler)
 static void close_hwdev(void)
 {
     logf("closedev (%p)", handle);
+#if defined(HIBY_LINUX)
+    hiby_pcm_mirror_close();
+#endif
 
     if (handle) {
+#if defined(HIBY_LINUX)
+        /* draining a headset that just went away blocks for good */
+        if (hiby_pcm_bt_active())
+            snd_pcm_drop(handle);
+        else
+#endif
         snd_pcm_drain(handle);
 #ifdef AUDIOHW_MUTE_ON_STOP
         audiohw_mute(true);
@@ -625,7 +764,14 @@ static void open_hwdev(const char *device, snd_pcm_stream_t mode)
     /* Close old handle */
     close_hwdev();
 
+#if defined(HIBY_LINUX)
+    /* a blocking write to a headset that just went away never returns, and
+       the pump holds pcm_mtx while it waits: everything else freezes */
+    if ((err = snd_pcm_open(&handle, device, mode,
+                            hiby_pcm_is_bluealsa_device(device) ? SND_PCM_NONBLOCK : 0)) < 0)
+#else
     if ((err = snd_pcm_open(&handle, device, mode, 0)) < 0)
+#endif
     {
         panicf("%s(): Cannot open device %s: %s", __func__, device, snd_strerror(err));
     }
@@ -714,6 +860,9 @@ static void pcm_dma_apply_settings_nolock(void)
 
         set_hwparams(handle); // FIXME: check return code?
         set_swparams(handle); // FIXME: check return code?
+#if defined(HIBY_LINUX)
+        hiby_pcm_mirror_open();
+#endif
 
 #if defined(HAVE_NWZ_LINUX_CODEC)
         /* Sony NWZ linux driver uses a nonstandard mecanism to set the sampling rate */
@@ -734,7 +883,13 @@ void pcm_play_dma_stop(void)
 {
     logf("PCM DMA stop (%d)", snd_pcm_state(handle));
 
-    int err = snd_pcm_drain(handle);
+    int err;
+#if defined(HIBY_LINUX)
+    if (hiby_pcm_bt_active())
+        err = snd_pcm_drop(handle);
+    else
+#endif
+    err = snd_pcm_drain(handle);
     if (err < 0)
         if (err < 0)
             logf("Drain failed: %s", snd_strerror(err));
@@ -811,6 +966,9 @@ void pcm_play_dma_start(const void *addr, size_t size)
                             logf("Write error: written %i expected %li", err, period_size);
                             break;
                         }
+#if defined(HIBY_LINUX)
+                        hiby_pcm_mirror_write(frames, period_size);
+#endif
                     }
                 }
 #endif

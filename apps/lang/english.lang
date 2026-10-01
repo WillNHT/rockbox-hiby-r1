@@ -20370,3 +20370,31 @@
     *: "Library Shows Title Only"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_BT_FORGET_ALL
+  desc: Hiby Bluetooth: unpair every remembered device
+  user: core
+  <source>
+    *: "Forget All Devices"
+  </source>
+  <dest>
+    *: "Forget All Devices"
+  </dest>
+  <voice>
+    *: "Forget All Devices"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_WIRED_OFFSET
+  desc: Hiby Bluetooth: extra delay on the jack so it plays in step with the headset
+  user: core
+  <source>
+    *: "Wired Sync Offset"
+  </source>
+  <dest>
+    *: "Wired Sync Offset"
+  </dest>
+  <voice>
+    *: "Wired Sync Offset"
+  </voice>
+</phrase>

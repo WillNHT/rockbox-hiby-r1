@@ -16,6 +16,7 @@ SnappyLyricsMeter.wps, and the video demo SnappyCanvas.wps.
 import io
 import math
 import random
+import struct
 
 ACCENT = "D9E021"
 INK    = "F4F2EE"
@@ -63,6 +64,10 @@ SHF%xd(O,%ps)
 # Repeat
 %V(178,58,94,22,2)
 %?mm<RPT%xd(Ob)|RPT%xd(O)|RP1%xd(O)|RND%xd(O)|A-B%xd(O)>
+#
+# Bluetooth: grey off, white on, blue connected
+%V(280,28,21,22,-)
+%xd(bt,%BT)
 #
 # Battery bar
 %V(-168,26,-30,18,-)
@@ -125,6 +130,7 @@ PRELOAD = """%Fl(2,24-GeistMono-SemiBold.fnt)
 %Fl(5,58-GeistMono-SemiBold.fnt)
 %xl(B,batt_wps.bmp,2,0,2)
 %xl(O,off_on.bmp,48,0,2)
+%xl(bt,bt.bmp,0,0,3)
 %xl(vb,vb.bmp)
 %xl(vb_track,vb_track.bmp)
 %xl(bb,bb.bmp)
@@ -886,3 +892,37 @@ io.open("themes/wps/SnappyLyricsMeter.wps", "w",
 print("wrote SnappyV2.wps, SnappyVinyl.wps, SnappyAnimated.wps, SnappyGauge.wps,"
       " SnappyLyricsLines.wps, SnappyLyricsMeter.wps,"
       " SnappyCanvas.wps, SnappyRadio.wps")
+
+
+# bt.bmp: the Bluetooth indicator, %xd(bt,%BT). Three 21x22 frames stacked,
+# the Bluetooth rune: grey off, white on, blue connected. Colour, so 24-bit
+# on the transparent magenta, not off_on's 1-bit.
+def bt_bmp():
+    fw, fh = 21, 22
+    # The rune as strokes: the stem, then the two arrowheads that cross it
+    strokes = [((9, 1), (9, 20)), ((9, 1), (15, 6)), ((15, 6), (4, 15)),
+               ((9, 20), (15, 15)), ((15, 15), (4, 6))]
+    rows = []
+    for colour in ((0x80, 0x80, 0x80), (0xef, 0xeb, 0xe7), (0x33, 0x99, 0xff)):
+        f = [[(0xff, 0x00, 0xff)] * fw for _ in range(fh)]
+        for (x0, y0), (x1, y1) in strokes:
+            n = max(abs(x1 - x0), abs(y1 - y0))
+            for i in range(n + 1):
+                x = x0 + round((x1 - x0) * i / n)
+                y = y0 + round((y1 - y0) * i / n)
+                f[y][x] = f[y][x + 1] = f[y][x + 2] = colour   # 3 px wide
+        rows += f
+    pad = (4 - fw * 3 % 4) % 4
+    pix = b"".join(bytes(c for p in r for c in p[::-1]) + b"\0" * pad
+                   for r in reversed(rows))
+    head = b"BM" + struct.pack("<IHHI", 54 + len(pix), 0, 0, 54)
+    head += struct.pack("<IiiHHIIiiII", 40, fw, len(rows), 1, 24, 0,
+                        len(pix), 2835, 2835, 0, 0)
+    return head + pix
+
+
+for skin in ("SnappyV2", "SnappyVinyl", "SnappyAnimated", "SnappyGauge",
+             "SnappyLyricsLines", "SnappyLyricsMeter", "SnappyCanvas",
+             "SnappyRadio"):
+    io.open("themes/wps/%s/bt.bmp" % skin, "wb").write(bt_bmp())
+print("wrote bt.bmp")

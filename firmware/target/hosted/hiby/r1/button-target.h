@@ -37,6 +37,8 @@
 #define BUTTON_PREV                 0x00000100
 #define BUTTON_NEXT                 0x00000200
 #define BUTTON_PLAY                 0x00000400
+/* Flag, not a button: button-devinput.c releases it itself (AVRCP keys) */
+#define BUTTON_TAP_ONLY             0x00800000
 #define BUTTON_MAIN                ((BUTTON_POWER|BUTTON_RIGHT|BUTTON_LEFT|BUTTON_UP|BUTTON_DOWN)|(BUTTON_PREV|BUTTON_NEXT|BUTTON_PLAY))
 
 

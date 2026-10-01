@@ -80,6 +80,9 @@
 #ifdef USB_ENABLE_AUDIO
 #include "usbstack/usb_audio.h"
 #endif
+#if defined(HAVE_HIBY_BLUETOOTH) && !defined(SIMULATOR)
+#include "hiby_bluetooth.h"
+#endif
 
 #define FF_REWIND_MAX_PERCENT 3 /* cap ff/rewind step size at max % of file */
                                 /* 3% of 30min file == 54s step size */
@@ -560,6 +563,20 @@ static int get_skip_length(struct mp3entry *id3)
     init_alt_settings(id3);
     return id3->altsettings == ALTSETTINGS_TRUE ? global_settings.alt_skip_length : global_settings.skip_length;
 }
+
+#ifdef HAVE_HIBY_BLUETOOTH
+/* BUTTON_NEXT/BUTTON_PREV only ever come from a Bluetooth headset (AVRCP) */
+static bool wps_bt_key(int bt_button)
+{
+    int button;
+    get_action_statuscode(&button);
+#ifndef SIMULATOR
+    hiby_debug_log("wps skip: button %x elapsed %lu cue %d", button,
+                   get_wps_state()->id3->elapsed, get_wps_state()->id3->cuesheet != NULL);
+#endif
+    return (button & bt_button) != 0;
+}
+#endif
 
 static void play_hop(int direction)
 {
@@ -1134,6 +1151,12 @@ long gui_wps_show(void)
                     ab_jump_to_A_marker();
                     break;
                 }
+#ifdef HAVE_HIBY_BLUETOOTH
+                /* a headset's previous key means the previous track, never
+                   a skip-length hop */
+                else if (wps_bt_key(BUTTON_PREV))
+                    prev_track(DEFAULT_SKIP_THRESH);
+#endif
                 else /* ...otherwise, do it normally */
                     play_hop(-1);
                 break;
@@ -1160,6 +1183,10 @@ long gui_wps_show(void)
                         break;
                     }
                 }
+#ifdef HAVE_HIBY_BLUETOOTH
+                else if (wps_bt_key(BUTTON_NEXT))
+                    next_track();
+#endif
                 else /* ...otherwise, do it normally */
                     play_hop(1);
                 break;

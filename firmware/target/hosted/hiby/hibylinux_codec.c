@@ -136,6 +136,39 @@ out:
     return rc;
 }
 
+/* Bluetooth at the same volume step is much louder than the jack */
+#define HIBY_BT_VOL_PCT 85
+
+/* Set every bluealsa A2DP playback volume (0..127) straight through the
+ * ALSA mixer: no fork per key press, so it keeps up with the volume keys.
+ * The headset's own buttons still move the same control. */
+static bool hiby_bluealsa_set_volume(long step)
+{
+    snd_mixer_t *mixer;
+    snd_mixer_elem_t *elem;
+    bool set = false;
+
+    if (snd_mixer_open(&mixer, 0) < 0)
+        return false;
+    if (snd_mixer_attach(mixer, "bluealsa") == 0
+        && snd_mixer_selem_register(mixer, NULL, NULL) == 0
+        && snd_mixer_load(mixer) == 0)
+    {
+        for (elem = snd_mixer_first_elem(mixer); elem; elem = snd_mixer_elem_next(elem))
+        {
+            long min, max;
+            if (!snd_mixer_selem_has_playback_volume(elem))
+                continue;
+            snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+            snd_mixer_selem_set_playback_volume_all(elem,
+                min + (max - min) * step / HIBY_ABSVOL_MAX);
+            set = true;
+        }
+    }
+    snd_mixer_close(mixer);
+    return set;
+}
+
 static void hiby_notify_bt_absvol(int volume_cb)
 {
     const char *mac_u = hiby_pcm_get_bt_mac();
@@ -151,6 +184,12 @@ static void hiby_notify_bt_absvol(int volume_cb)
     }
 
     step = hiby_volume_to_absvol_step(volume_cb);
+
+    /* always set: a headset that reconnects comes back at its own level,
+       so "same step as last time" proves nothing */
+    if (hiby_bluealsa_set_volume(step * HIBY_BT_VOL_PCT / 100))
+        return;
+
     if (step == bt_absvol_last_step && !strcmp(mac_u, bt_absvol_last_mac))
         return;
 
