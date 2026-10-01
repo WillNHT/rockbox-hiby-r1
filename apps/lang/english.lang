@@ -20370,17 +20370,3 @@
     *: "Library Shows Title Only"
   </voice>
 </phrase>
-<phrase>
-  id: LANG_BT_WIRED_TOO
-  desc: Hiby Bluetooth: also play on the wired output
-  user: core
-  <source>
-    *: "Also Play on Wired"
-  </source>
-  <dest>
-    *: "Also Play on Wired"
-  </dest>
-  <voice>
-    *: "Also Play on Wired"
-  </voice>
-</phrase>

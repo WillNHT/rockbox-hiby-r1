@@ -2801,8 +2801,6 @@ const struct settings_list settings[] = {
    INT_SETTING(0, video_bt_latency, LANG_VIDEO_BT_LATENCY, 200,
                "video bluetooth latency", UNIT_MS, 0, 1000, 10,
                NULL, NULL, NULL),
-   OFFON_SETTING(0, bt_wired_too, LANG_BT_WIRED_TOO, false,
-                 "bluetooth wired too", NULL),
    INT_SETTING(0, video_battery_fps, LANG_VIDEO_BATTERY_FPS, 15,
                "video battery fps", UNIT_INT, 0, 30, 5,
                formatter_fps_0_is_full, getlang_fps_0_is_full, NULL),

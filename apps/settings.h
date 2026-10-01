@@ -1071,7 +1071,6 @@ struct user_settings
     bool video_show_music;   /* the WPS shows the music video (context menu) */
     int  video_latency;      /* ms the picture is held back */
     int  video_bt_latency;   /* ms more while Bluetooth plays */
-    bool bt_wired_too;       /* Bluetooth also plays on the wired output */
     int  video_battery_fps;  /* frame cap on battery, 0 = none */
     /* Screensavers: skins in WPS_DIR (.ss), "-" for none. */
     unsigned char saver_battery[MAX_FILENAME+1];

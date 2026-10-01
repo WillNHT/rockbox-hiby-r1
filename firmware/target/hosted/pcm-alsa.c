@@ -112,13 +112,18 @@ static void pcm_pump_locked(snd_pcm_t *handle);
 #if defined(HIBY_LINUX)
 #include "hiby/pcm-alsa-hiby-hooks.h"
 
-/* Dual output: while Bluetooth is the main device, the same frames also go
- * to the wired jack. The two clocks are not locked together, so the wired
- * side is non-blocking and drops or repeats a period when they drift;
- * Bluetooth still sets the pace. */
+#include "button.h" /* headphones_inserted() */
+
+/* Dual output: while Bluetooth plays and something is in the jack, the same
+ * frames also go to the jack. The two clocks are not locked, so the jack is
+ * kept about HIBY_MIRROR_TARGET behind real time by skipping or repeating a
+ * single frame per period when it drifts - inaudible, unlike dropping a whole
+ * period. Bluetooth still sets the pace. */
 #define HIBY_MIRROR_DEVICE "plughw:0,0"
+#define HIBY_MIRROR_TARGET (pcm_sampr / 10)   /* 100 ms of queued audio */
+#define HIBY_MIRROR_SLACK  (pcm_sampr / 50)   /* +-20 ms before nudging */
 static snd_pcm_t *hiby_mirror = NULL;
-static bool hiby_mirror_wanted = false;
+static long hiby_mirror_retry;
 
 static void hiby_pcm_mirror_close(void)
 {
@@ -129,42 +134,80 @@ static void hiby_pcm_mirror_close(void)
     hiby_mirror = NULL;
 }
 
+/* Queue n frames of silence so the jack starts with room to drift */
+static void hiby_pcm_mirror_pad(snd_pcm_sframes_t n)
+{
+    static const sample_t zero[256 * 2];
+    while (n > 0)
+    {
+        snd_pcm_sframes_t chunk = n < 256 ? n : 256;
+        if (snd_pcm_writei(hiby_mirror, zero, chunk) < 0)
+            return;
+        n -= chunk;
+    }
+}
+
 static void hiby_pcm_mirror_open(void)
 {
     hiby_pcm_mirror_close();
-    if (!hiby_mirror_wanted || !handle || !hiby_pcm_bt_active())
+    if (!handle || !hiby_pcm_bt_active() || !headphones_inserted())
         return;
     if (snd_pcm_open(&hiby_mirror, HIBY_MIRROR_DEVICE,
                      SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK) < 0)
     {
         hiby_mirror = NULL;
+        hiby_mirror_retry = current_tick + 2*HZ;
         return;
     }
     if (snd_pcm_set_params(hiby_mirror, format, SND_PCM_ACCESS_RW_INTERLEAVED,
                            channels, pcm_sampr, 1, 200000) < 0)
+    {
         hiby_pcm_mirror_close();
-}
-
-static void hiby_pcm_mirror_write(const void *buf, snd_pcm_uframes_t count)
-{
-    if (!hiby_mirror)
+        hiby_mirror_retry = current_tick + 2*HZ;
         return;
-    if (snd_pcm_writei(hiby_mirror, buf, count) == -EPIPE
-        && snd_pcm_prepare(hiby_mirror) == 0)
-        snd_pcm_writei(hiby_mirror, buf, count);
-    /* -EAGAIN: the jack is ahead of Bluetooth, drop this period */
+    }
+    hiby_pcm_mirror_pad(HIBY_MIRROR_TARGET);
 }
 
-void pcm_alsa_set_mirror(bool on)
+static void hiby_pcm_mirror_write(const sample_t *buf, snd_pcm_uframes_t count)
 {
-    hiby_pcm_mutex_init_once();
-    pthread_mutex_lock(&pcm_mtx);
-    hiby_mirror_wanted = on;
-    if (on && last_sample_rate)
-        hiby_pcm_mirror_open();
-    else if (!on)
+    snd_pcm_sframes_t delay;
+
+    if (!hiby_pcm_bt_active() || !headphones_inserted())
+    {
         hiby_pcm_mirror_close();
-    pthread_mutex_unlock(&pcm_mtx);
+        return;
+    }
+    if (!hiby_mirror)
+    {
+        if (TIME_BEFORE(current_tick, hiby_mirror_retry))
+            return;
+        hiby_pcm_mirror_open();
+        if (!hiby_mirror)
+            return;
+    }
+
+    if (snd_pcm_delay(hiby_mirror, &delay) < 0)
+    {
+        snd_pcm_prepare(hiby_mirror);
+        hiby_pcm_mirror_pad(HIBY_MIRROR_TARGET);
+        delay = HIBY_MIRROR_TARGET;
+    }
+
+    if (delay > HIBY_MIRROR_TARGET + HIBY_MIRROR_SLACK)
+        count--;    /* jack running slow: skip one frame */
+
+    if (snd_pcm_writei(hiby_mirror, buf, count) == -EPIPE)
+    {
+        snd_pcm_prepare(hiby_mirror);
+        hiby_pcm_mirror_pad(HIBY_MIRROR_TARGET);
+        snd_pcm_writei(hiby_mirror, buf, count);
+    }
+    else if (delay < HIBY_MIRROR_TARGET - HIBY_MIRROR_SLACK)
+    {
+        /* jack running fast: repeat the last frame */
+        snd_pcm_writei(hiby_mirror, buf + (count - 1) * channels, 1);
+    }
 }
 #endif
 
