@@ -59,6 +59,7 @@ static bool bt_get_active_mac(char *mac_out, size_t mac_out_len);
 #define BT_DEVICE_PICK_SCAN (-2)
 #define BT_MAX_CODECS 8
 #define BT_CODEC_NAME_LEN 16
+#define BT_SCAN_SECS 30
 #define BOOT_SETTING_FILE ROCKBOX_DIR"/rb_bt_on.txt"
 #define BT_SYS_PATH "/sys/class/bluetooth"
 #define BT_DEBUG_LOG_FILE "/data/mnt/sd_0/rockbox-bt-debug.log"
@@ -78,6 +79,13 @@ struct bt_device_menu_data
     struct bt_device *devices;
     int count;
 };
+
+static FILE *bt_scan_fp;
+static long bt_scan_end_tick;
+static long bt_scan_next_tick;
+static int bt_parse_ctl_devices(const char *ctl_cmd, struct bt_device *devices,
+                                int count, int max_devices, bool paired);
+static void bt_scan_stop(void);
 
 struct bt_strlist_data
 {
@@ -203,7 +211,18 @@ static int bt_simplelist_ok_cancel_return_action(int action, struct gui_synclist
 
 static int bt_devicelist_callback(int action, struct gui_synclist *lists)
 {
-    (void)lists;
+    if (action == ACTION_NONE && bt_scan_fp
+        && TIME_AFTER(current_tick, bt_scan_next_tick))
+    {
+        struct bt_device_menu_data* ctx = lists->data;
+        if (TIME_AFTER(current_tick, bt_scan_end_tick))
+            bt_scan_stop();
+        bt_scan_next_tick = current_tick + HZ;
+        ctx->count = bt_parse_ctl_devices("bluetoothctl devices 2>/dev/null",
+                                          ctx->devices, ctx->count, BT_MAX_DEVICES, false);
+        gui_synclist_set_nb_items(lists, ctx->count + 1);
+        return ACTION_REDRAW;
+    }
     if (action == ACTION_STD_OK)
         return ACTION_STD_CANCEL;
     if (action == ACTION_STD_CONTEXT)
@@ -244,7 +263,8 @@ static const char *bt_device_name_cb(int selected_item, void *data,
     struct bt_device_menu_data *ctx = data;
     if (selected_item == 0)
     {
-        snprintf(buffer, buffer_len, "%s", (const char *)str(LANG_BT_SCAN_FOR_NEW));
+        snprintf(buffer, buffer_len, "%s%s", (const char *)str(LANG_BT_SCAN_FOR_NEW),
+                 bt_scan_fp ? "..." : "");
         return buffer;
     }
     selected_item--;
@@ -463,47 +483,36 @@ static int bt_load_devices_via_bluetoothctl(struct bt_device *devices, int max_d
     return count;
 }
 
-static int bt_scan_devices(struct bt_device *devices, int count, int max_devices)
+/* Discovery runs in a background bluetoothctl while the device list stays
+ * open; bt_devicelist_callback() picks up new devices once a second. */
+static void bt_scan_start(void)
 {
-    int waited = 0;
-    int action;
-    FILE *fp;
-
-    fp = popen("bluetoothctl", "w");
-    if (!fp)
-        return count;
-
-    fprintf(fp, "scan on\n");
-    fflush(fp);
-
-    const int timeout = 10;
-    while (waited < timeout)
-    {
-        splashf(0, ID2P(LANG_BT_SCANNING_PROGRESS), waited, timeout);
-        action = get_action(CONTEXT_STD, HZ);
-        if (action != ACTION_NONE)
-            break;
-        waited++;
-    }
-
-    fprintf(fp, "scan off\n");
-    fflush(fp);
-    fprintf(fp, "exit\n");
-    fflush(fp);
-    pclose(fp);
-
-    count = bt_parse_ctl_devices("bluetoothctl devices 2>/dev/null",
-                                 devices, count, max_devices, false);
-    if (count > 1)
-        qsort(devices, count, sizeof(devices[0]), bt_device_sort_cmp);
-    return count;
+    if (bt_scan_fp)
+        return;
+    bt_scan_fp = popen("bluetoothctl", "w");
+    if (!bt_scan_fp)
+        return;
+    fprintf(bt_scan_fp, "scan on\n");
+    fflush(bt_scan_fp);
+    bt_scan_end_tick = current_tick + BT_SCAN_SECS * HZ;
+    bt_scan_next_tick = current_tick + HZ;
 }
 
-static int bt_choose_device(const char *title, struct bt_device *devices, int count, int selection)
+static void bt_scan_stop(void)
+{
+    if (!bt_scan_fp)
+        return;
+    fprintf(bt_scan_fp, "scan off\nexit\n");
+    fflush(bt_scan_fp);
+    pclose(bt_scan_fp);
+    bt_scan_fp = NULL;
+}
+
+static int bt_choose_device(const char *title, struct bt_device *devices, int *count, int selection)
 {
     struct bt_device_menu_data data;
     struct simplelist_info info;
-    int total_count = count + 1;
+    int total_count = *count + 1;
 
     if (total_count <= 0)
     {
@@ -512,7 +521,7 @@ static int bt_choose_device(const char *title, struct bt_device *devices, int co
     }
 
     data.devices = devices;
-    data.count = count;
+    data.count = *count;
 
     simplelist_info_init(&info, (char *)title, total_count, &data);
     info.get_name = bt_device_name_cb;
@@ -521,6 +530,8 @@ static int bt_choose_device(const char *title, struct bt_device *devices, int co
     info.title_icon = Icon_Submenu;
 
     simplelist_show_list(&info);
+    *count = data.count;
+    total_count = data.count + 1;
     if (info.selection < 0 || info.selection >= total_count)
         return BT_DEVICE_PICK_CANCEL;
 
@@ -863,15 +874,15 @@ static void bt_show_devices(void)
 
     while (1)
     {
-        idx = bt_choose_device(str(LANG_BT_DEVICES), devices, count, idx);
+        idx = bt_choose_device(str(LANG_BT_DEVICES), devices, &count, idx);
         if (idx == BT_DEVICE_PICK_SCAN)
         {
-            count = bt_scan_devices(devices, count, BT_MAX_DEVICES);
-            if (count <= 0)
-                splash(HZ, ID2P(LANG_BT_NO_DEVICES_FOUND));
+            bt_scan_start();
+            idx = -1;
             continue;
         }
 
+        bt_scan_stop();
         if (idx >= 0 && idx < count)
         {
             bt_connect_device(&devices[idx]);
