@@ -78,13 +78,13 @@ int button_map_with_id(int keycode, int id)
         case KEY_PLAY:
         case KEY_PLAYCD:
         case KEY_PAUSECD:
-            return BUTTON_PLAY;
+            return BUTTON_PLAY | BUTTON_TAP_ONLY;
         case KEY_REWIND:
         case KEY_PREVIOUSSONG:
-            return BUTTON_PREV;
+            return BUTTON_PREV | BUTTON_TAP_ONLY;
         case KEY_FASTFORWARD:
         case KEY_NEXTSONG:
-            return BUTTON_NEXT;
+            return BUTTON_NEXT | BUTTON_TAP_ONLY;
 
         default:
             return 0;
