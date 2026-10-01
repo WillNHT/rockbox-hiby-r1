@@ -244,7 +244,7 @@ static const char *bt_action_name_cb(int selected_item, void *data,
     char *buffer, size_t buffer_len)
 {
     const char **items = data;
-    if (selected_item < 0 || selected_item >= 3)
+    if (selected_item < 0 || selected_item >= 4)
     {
         buffer[0] = '\0';
         return buffer;
@@ -609,6 +609,9 @@ static bool bt_route_to_bluetooth(const char *mac, const char* codec)
         for (int i = 0; i < 30 && !button_add_input_device(BT_REMOTE_INPUT_IDX); i++)
             sleep(HZ/10);
         system("cat /proc/bus/input/devices >> " BT_DEBUG_LOG_FILE " 2>&1");
+        /* Raw AVRCP key events (16-byte input_event), to see what the
+         * earbuds really send; ends when the node goes away */
+        system("(hexdump -v -e '16/1 \"%02x \" \"\n\"' /dev/input/event4 >> " BT_DEBUG_LOG_FILE ") 2>/dev/null &");
         return true;
     }
 
@@ -1018,7 +1021,10 @@ void bt_boot_init(void)
 {
     if (access(PIVOT_ROOT BOOT_SETTING_FILE, F_OK) != 0)
         return;
-    system("bluetoothctl power on >/dev/null 2>&1 &");
+    /* HiBy's bt_init brings the stack up at boot and leaves the adapter
+     * off, so power on only once it has finished */
+    system("(sleep 3; while pgrep -f '[b]t_init' >/dev/null; do sleep 1; done; "
+           "bluetoothctl power on) >/dev/null 2>&1 &");
     bt_powered = true;
 }
 
@@ -1104,7 +1110,7 @@ static void bt_show_codec_picker(const char *mac)
         if (bt_try_set_codec(pcm_path, codecs[info.selection]) && bt_route_to_bluetooth(mac, NULL))
         {
             //bt_set_active_codec(mac);
-            splashf(HZ, "%s: %s", ID2P(LANG_BT_CODEC), bt_active_codec );
+            splashf(HZ, "%s: %s", str(LANG_BT_CODEC), bt_active_codec);
         }
         else
             splash(HZ, ID2P(LANG_BT_CODEC_CHANGE_FAILED));
@@ -1267,6 +1273,25 @@ static void bt_show_status(void)
     }
 }
 
+/* Unpair every device BlueZ remembers */
+static void bt_forget_all(void)
+{
+    static struct bt_device devices[BT_MAX_DEVICES];
+    const char *lines[] = {(const char *)str(LANG_BT_FORGET_ALL)};
+    const struct text_message message = {lines, 1};
+    int count, i;
+
+    if (gui_syncyesno_run(&message, NULL, NULL) != YESNO_YES)
+        return;
+    if (bt_active_codec[0])
+        bt_disconnect();
+    count = bt_parse_ctl_devices("bluetoothctl devices 2>/dev/null",
+                                 devices, 0, BT_MAX_DEVICES, true);
+    for (i = 0; i < count; i++)
+        bt_ctl_run("remove", devices[i].mac, "has been removed");
+    bt_set_selected(NULL);
+}
+
 int hiby_bluetooth_menu(void)
 {
     const char *action_items[] =
@@ -1274,6 +1299,7 @@ int hiby_bluetooth_menu(void)
         (const char *)str(LANG_BT_STATUS),
         (const char *)str(LANG_BT_DEVICES),
         (const char *)str(LANG_BT_DISCONNECT),
+        (const char *)str(LANG_BT_FORGET_ALL),
     };
 
     int action = -1;
@@ -1305,6 +1331,9 @@ int hiby_bluetooth_menu(void)
                 break;
             case 2:
                 bt_disconnect();
+                break;
+            case 3:
+                bt_forget_all();
                 break;
             default:
                 break;

@@ -20370,3 +20370,17 @@
     *: "Library Shows Title Only"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_BT_FORGET_ALL
+  desc: Hiby Bluetooth: unpair every remembered device
+  user: core
+  <source>
+    *: "Forget All Devices"
+  </source>
+  <dest>
+    *: "Forget All Devices"
+  </dest>
+  <voice>
+    *: "Forget All Devices"
+  </voice>
+</phrase>
