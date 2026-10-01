@@ -212,7 +212,8 @@ enum skin_token_type {
      * to know it is a radio at all. */
     SKIN_TOKEN_RADIO_STATION,
 
-    /* Bluetooth: 1 off or suspended, 2 on, 3 a device connected */
+    /* Bluetooth: 1 off or suspended, 2 on, 3 a device connected; 1 and 2
+     * alternate while it is still coming up after boot */
     SKIN_TOKEN_BLUETOOTH,
     /* "dynamic" or "static" while a station is on air, empty otherwise. */
     SKIN_TOKEN_RADIO_KIND,

@@ -113,6 +113,7 @@ static void pcm_pump_locked(snd_pcm_t *handle);
 #include "hiby/pcm-alsa-hiby-hooks.h"
 
 #include "button.h" /* headphones_inserted() */
+#include "settings.h" /* bt_wired_offset */
 
 /* Dual output: while Bluetooth plays and something is in the jack, the same
  * frames also go to the jack, held back by as much as Bluetooth is so both
@@ -133,7 +134,9 @@ static snd_pcm_sframes_t hiby_pcm_mirror_target(void)
     snd_pcm_sframes_t d;
     if (snd_pcm_delay(handle, &d) == 0)
         hiby_bt_delay += (d - hiby_bt_delay) / 16;
-    return hiby_bt_delay;
+    /* bt_wired_offset: the user's trim for what the headset adds unreported */
+    return hiby_bt_delay
+           + (snd_pcm_sframes_t)global_settings.bt_wired_offset * pcm_sampr / 1000;
 }
 
 static void hiby_pcm_mirror_close(void)
@@ -690,6 +693,12 @@ static void close_hwdev(void)
 #endif
 
     if (handle) {
+#if defined(HIBY_LINUX)
+        /* draining a headset that just went away blocks for good */
+        if (hiby_pcm_bt_active())
+            snd_pcm_drop(handle);
+        else
+#endif
         snd_pcm_drain(handle);
 #ifdef AUDIOHW_MUTE_ON_STOP
         audiohw_mute(true);
@@ -860,7 +869,13 @@ void pcm_play_dma_stop(void)
 {
     logf("PCM DMA stop (%d)", snd_pcm_state(handle));
 
-    int err = snd_pcm_drain(handle);
+    int err;
+#if defined(HIBY_LINUX)
+    if (hiby_pcm_bt_active())
+        err = snd_pcm_drop(handle);
+    else
+#endif
+    err = snd_pcm_drain(handle);
     if (err < 0)
         if (err < 0)
             logf("Drain failed: %s", snd_strerror(err));

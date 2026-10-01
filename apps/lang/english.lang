@@ -20384,3 +20384,17 @@
     *: "Forget All Devices"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_BT_WIRED_OFFSET
+  desc: Hiby Bluetooth: extra delay on the jack so it plays in step with the headset
+  user: core
+  <source>
+    *: "Wired Sync Offset"
+  </source>
+  <dest>
+    *: "Wired Sync Offset"
+  </dest>
+  <voice>
+    *: "Wired Sync Offset"
+  </voice>
+</phrase>

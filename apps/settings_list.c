@@ -1420,6 +1420,11 @@ const struct settings_list settings[] = {
                 MAX_FILES_IN_DIR_STEP /* min */, MAX_FILES_IN_DIR_MAX,
                 MAX_FILES_IN_DIR_STEP,
                 NULL, NULL, NULL),
+#ifdef HAVE_HIBY_BLUETOOTH
+    INT_SETTING(0, bt_wired_offset, LANG_BT_WIRED_OFFSET, 0,
+                "bluetooth wired offset", UNIT_MS, -500, 500, 10,
+                NULL, NULL, NULL),
+#endif
 #if defined(HAVE_HIBY_LINUX_POWER_CHARGE_LIMIT) && !defined(SIMULATOR)
     STRINGCHOICE_SETTING(F_CB_ON_SELECT_ONLY | F_CB_ONLY_IF_CHANGED , hiby_charge_limit_voltage, LANG_CHARGE_LIMIT_VOLTAGE,0,
                        "charge limit v",

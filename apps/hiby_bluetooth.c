@@ -63,6 +63,7 @@ static bool bt_get_active_mac(char *mac_out, size_t mac_out_len);
 #define BOOT_SETTING_FILE ROCKBOX_DIR"/rb_bt_on.txt"
 #define BT_SYS_PATH "/sys/class/bluetooth"
 #define BT_DEBUG_LOG_FILE "/data/mnt/sd_0/rockbox-bt-debug.log"
+#define BT_STARTING_FILE "/tmp/rb_bt_starting"
 
 const int BT_REMOTE_INPUT_IDX = 4;
 
@@ -244,7 +245,7 @@ static const char *bt_action_name_cb(int selected_item, void *data,
     char *buffer, size_t buffer_len)
 {
     const char **items = data;
-    if (selected_item < 0 || selected_item >= 4)
+    if (selected_item < 0 || selected_item >= 5)
     {
         buffer[0] = '\0';
         return buffer;
@@ -1023,9 +1024,16 @@ void bt_boot_init(void)
         return;
     /* HiBy's bt_init brings the stack up at boot and leaves the adapter
      * off, so power on only once it has finished */
+    system("touch " BT_STARTING_FILE);
     system("(sleep 3; while pgrep -f '[b]t_init' >/dev/null; do sleep 1; done; "
-           "bluetoothctl power on) >/dev/null 2>&1 &");
+           "bluetoothctl power on; rm -f " BT_STARTING_FILE ") >/dev/null 2>&1 &");
     bt_powered = true;
+}
+
+/* Still coming up after boot: the skin's %BT blinks */
+bool bt_is_starting_fast(void)
+{
+    return access(BT_STARTING_FILE, F_OK) == 0;
 }
 
 static int bt_get_available_codecs(const char *mac,
@@ -1100,6 +1108,12 @@ static void bt_show_codec_picker(const char *mac)
 
     if (info.selection >= 0 && info.selection < count)
     {
+        /* Map of this process, to place the crash address if the switch
+         * takes Rockbox down (#29) */
+        char maps[96];
+        snprintf(maps, sizeof(maps), "cat /proc/%d/maps >> " BT_DEBUG_LOG_FILE, (int)getpid());
+        hiby_debug_log("codec switch to %s", codecs[info.selection]);
+        system(maps);
         //pcm_alsa_close_device(bt_playback_dev);
         bt_route_to_local();
         char pcm_path[96];
@@ -1300,6 +1314,7 @@ int hiby_bluetooth_menu(void)
         (const char *)str(LANG_BT_DEVICES),
         (const char *)str(LANG_BT_DISCONNECT),
         (const char *)str(LANG_BT_FORGET_ALL),
+        (const char *)str(LANG_BT_WIRED_OFFSET),
     };
 
     int action = -1;
@@ -1334,6 +1349,14 @@ int hiby_bluetooth_menu(void)
                 break;
             case 3:
                 bt_forget_all();
+                break;
+            case 4:
+                /* + holds the jack back more, - less, when it plays
+                   beside a headset */
+                set_int(str(LANG_BT_WIRED_OFFSET), "ms", UNIT_MS,
+                        &global_settings.bt_wired_offset, NULL, 10, -500, 500,
+                        NULL);
+                settings_save();
                 break;
             default:
                 break;
