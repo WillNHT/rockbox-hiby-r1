@@ -440,6 +440,10 @@ static int  bt_parse_ctl_devices(const char *ctl_cmd, struct bt_device *devices,
         snprintf(name, sizeof(name), "%s", p);
         bt_trim(name);
 
+        /* Unnamed devices (mostly BLE beacons) report their MAC as the name */
+        if (!paired && (!name[0] || bt_has_mac_pattern(name, '-')))
+            continue;
+
         count = bt_add_device_unique_ex(devices, count, max_devices, mac, name, paired);
     }
 
