@@ -59,7 +59,6 @@ static bool bt_get_active_mac(char *mac_out, size_t mac_out_len);
 #define BT_DEVICE_PICK_SCAN (-2)
 #define BT_MAX_CODECS 8
 #define BT_CODEC_NAME_LEN 16
-#define BT_SCAN_SECS 30
 #define BOOT_SETTING_FILE ROCKBOX_DIR"/rb_bt_on.txt"
 #define BT_SYS_PATH "/sys/class/bluetooth"
 #define BT_DEBUG_LOG_FILE "/data/mnt/sd_0/rockbox-bt-debug.log"
@@ -81,11 +80,9 @@ struct bt_device_menu_data
 };
 
 static FILE *bt_scan_fp;
-static long bt_scan_end_tick;
 static long bt_scan_next_tick;
 static int bt_parse_ctl_devices(const char *ctl_cmd, struct bt_device *devices,
                                 int count, int max_devices, bool paired);
-static void bt_scan_stop(void);
 
 struct bt_strlist_data
 {
@@ -215,8 +212,6 @@ static int bt_devicelist_callback(int action, struct gui_synclist *lists)
         && TIME_AFTER(current_tick, bt_scan_next_tick))
     {
         struct bt_device_menu_data* ctx = lists->data;
-        if (TIME_AFTER(current_tick, bt_scan_end_tick))
-            bt_scan_stop();
         bt_scan_next_tick = current_tick + HZ;
         ctx->count = bt_parse_ctl_devices("bluetoothctl devices 2>/dev/null",
                                           ctx->devices, ctx->count, BT_MAX_DEVICES, false);
@@ -484,7 +479,9 @@ static int bt_load_devices_via_bluetoothctl(struct bt_device *devices, int max_d
 }
 
 /* Discovery runs in a background bluetoothctl while the device list stays
- * open; bt_devicelist_callback() picks up new devices once a second. */
+ * open; bt_devicelist_callback() picks up new devices once a second.
+ * BlueZ drops unpaired devices when discovery stops, so it keeps running
+ * until a device is connected or the list is left. */
 static void bt_scan_start(void)
 {
     if (bt_scan_fp)
@@ -494,7 +491,6 @@ static void bt_scan_start(void)
         return;
     fprintf(bt_scan_fp, "scan on\n");
     fflush(bt_scan_fp);
-    bt_scan_end_tick = current_tick + BT_SCAN_SECS * HZ;
     bt_scan_next_tick = current_tick + HZ;
 }
 
@@ -882,15 +878,15 @@ static void bt_show_devices(void)
             continue;
         }
 
-        bt_scan_stop();
         if (idx >= 0 && idx < count)
         {
             bt_connect_device(&devices[idx]);
-            if (bt_active_codec[0])
-                bt_show_status();
-            else
+            if (!bt_active_codec[0])
                 continue;
+            bt_scan_stop();
+            bt_show_status();
         }
+        bt_scan_stop();
         return;
     }
 }
