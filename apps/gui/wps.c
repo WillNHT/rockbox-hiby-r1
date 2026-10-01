@@ -80,6 +80,9 @@
 #ifdef USB_ENABLE_AUDIO
 #include "usbstack/usb_audio.h"
 #endif
+#if defined(HAVE_HIBY_BLUETOOTH) && !defined(SIMULATOR)
+#include "hiby_bluetooth.h"
+#endif
 
 #define FF_REWIND_MAX_PERCENT 3 /* cap ff/rewind step size at max % of file */
                                 /* 3% of 30min file == 54s step size */
@@ -567,6 +570,10 @@ static bool wps_bt_key(int bt_button)
 {
     int button;
     get_action_statuscode(&button);
+#ifndef SIMULATOR
+    hiby_debug_log("wps skip: button %x elapsed %lu cue %d", button,
+                   get_wps_state()->id3->elapsed, get_wps_state()->id3->cuesheet != NULL);
+#endif
     return (button & bt_button) != 0;
 }
 #endif

@@ -181,6 +181,13 @@ static void hiby_pcm_mirror_open(void)
         hiby_mirror_retry = current_tick + 2*HZ;
         return;
     }
+    /* set_params waits for a full buffer before it starts; the queue is
+       held near the target instead, so start on the first frame */
+    snd_pcm_sw_params_t *sw;
+    snd_pcm_sw_params_alloca(&sw);
+    if (snd_pcm_sw_params_current(hiby_mirror, sw) == 0
+        && snd_pcm_sw_params_set_start_threshold(hiby_mirror, sw, 1) == 0)
+        snd_pcm_sw_params(hiby_mirror, sw);
     if (snd_pcm_delay(handle, &hiby_bt_delay) < 0)
         hiby_bt_delay = 0;
     hiby_pcm_mirror_pad(hiby_pcm_mirror_target());
@@ -757,7 +764,14 @@ static void open_hwdev(const char *device, snd_pcm_stream_t mode)
     /* Close old handle */
     close_hwdev();
 
+#if defined(HIBY_LINUX)
+    /* a blocking write to a headset that just went away never returns, and
+       the pump holds pcm_mtx while it waits: everything else freezes */
+    if ((err = snd_pcm_open(&handle, device, mode,
+                            hiby_pcm_is_bluealsa_device(device) ? SND_PCM_NONBLOCK : 0)) < 0)
+#else
     if ((err = snd_pcm_open(&handle, device, mode, 0)) < 0)
+#endif
     {
         panicf("%s(): Cannot open device %s: %s", __func__, device, snd_strerror(err));
     }

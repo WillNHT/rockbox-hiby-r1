@@ -777,7 +777,9 @@ long default_event_handler_ex(long event, void (*callback)(void *), void *parame
     case SYS_BT_UNPLUGGED:
         if (bt_can_autoconnect() && hiby_pcm_get_bt_mac() != NULL)
         {
+            hiby_debug_log("bt unplugged: pausing");
             audio_pause();
+            hiby_debug_log("bt unplugged: routing to local");
             //This works only with stopped playback, otherwise it will cause a crash
             //But with active playback we are f**ed anyway 
             //(we are just deferring it... pcm threading code needs some looking into)

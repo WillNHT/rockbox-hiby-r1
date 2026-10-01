@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 int hiby_bluetooth_menu(void);
+void hiby_debug_log(const char *format, ...);
 
 bool bt_is_enabled_fast(void);
 void bt_boot_init(void);

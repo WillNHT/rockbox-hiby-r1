@@ -419,8 +419,8 @@ static bool bt_ctl_run(const char *arg1, const char *arg2, const char *success_s
     char cmd[256];
     snprintf(cmd, sizeof(cmd), "bluetoothctl %s %s 2>&1 | tee -a " BT_DEBUG_LOG_FILE " | grep -q '%s'",
              arg1, arg2, success_str);
-    hiby_debug_log("bt_ctl_run: %s", cmd);
     int status = system(cmd);
+    hiby_debug_log("bt_ctl_run: %s -> %d", cmd, status);
     if (status == 0)
         return true;
     return false;
@@ -572,6 +572,7 @@ void bt_route_to_local(void)
     bt_active_codec[0] = '\0';
     hiby_pcm_set_bt_mac(NULL);
     pcm_alsa_switch_playback_device(bt_playback_dev);
+    hiby_debug_log("bt: routed to local");
     bt_kick_audio_if_playing();
 }
 
@@ -871,7 +872,7 @@ static void bt_show_devices(void)
     static struct bt_device devices[BT_MAX_DEVICES];
     int count;
 
-    if (!bt_enable())
+    if (!bt_enable() && !bt_is_connected_fast())
     {
         const char *lines[] = {(const char *)str(LANG_BT_IS_SUSPENDED),
                               (const char *)str(LANG_BT_ENABLE_IT)};
@@ -1026,8 +1027,12 @@ void bt_boot_init(void)
     /* HiBy's bt_init brings the stack up at boot and leaves the adapter
      * off, so power on only once it has finished */
     system("touch " BT_STARTING_FILE);
-    system("(sleep 3; while pgrep -f '[b]t_init' >/dev/null; do sleep 1; done; "
-           "bluetoothctl power on; rm -f " BT_STARTING_FILE ") >/dev/null 2>&1 &");
+    /* bluetoothd can still be settling after bt_init: keep asking until the
+     * adapter says it is powered (30 s at most), blinking all the while */
+    system("(sleep 3; while pgrep -f '[b]t_init' >/dev/null; do sleep 1; done; i=0; "
+           "until bluetoothctl show | grep -q 'Powered: yes' || [ $i -ge 30 ]; do "
+           "bluetoothctl power on; sleep 1; i=$((i+1)); done; "
+           "rm -f " BT_STARTING_FILE ") >>" BT_DEBUG_LOG_FILE " 2>&1 &");
     bt_powered = true;
 }
 
@@ -1175,7 +1180,8 @@ static void bt_show_status(void)
     if (!suspended)
     {
         wait_for_bt_init();
-        bt_on = bt_is_enabled();
+        /* a live link means it is on, whatever bluetoothctl says */
+        bt_on = bt_is_enabled() || bt_is_connected_fast();
     }
     while (1)
     {

@@ -184,15 +184,14 @@ static void hiby_notify_bt_absvol(int volume_cb)
     }
 
     step = hiby_volume_to_absvol_step(volume_cb);
-    if (step == bt_absvol_last_step && !strcmp(mac_u, bt_absvol_last_mac))
+
+    /* always set: a headset that reconnects comes back at its own level,
+       so "same step as last time" proves nothing */
+    if (hiby_bluealsa_set_volume(step * HIBY_BT_VOL_PCT / 100))
         return;
 
-    if (hiby_bluealsa_set_volume(step * HIBY_BT_VOL_PCT / 100))
-    {
-        bt_absvol_last_step = step;
-        snprintf(bt_absvol_last_mac, sizeof(bt_absvol_last_mac), "%s", mac_u);
+    if (step == bt_absvol_last_step && !strcmp(mac_u, bt_absvol_last_mac))
         return;
-    }
 
     snprintf(cmd, sizeof(cmd), "BT:ABSVOL:%s %d", mac_u, step);
     if (hiby_sys_server_command(cmd, reply, sizeof(reply)) < 0)
