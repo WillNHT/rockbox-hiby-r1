@@ -51,8 +51,9 @@ bool skin_layer_fillrect(struct screen *display, struct viewport *vp,
  * FM screen lift; each one's surfaces go when it does
  * (skin_layer_leave(), with its enum skinnable_screens). */
 #if defined(HAVE_LCD_LAYERS) && !defined(__PCTOOL__)
-/* Before a pass: which viewports are lifted. A full pass starts the
- * skin's surfaces again and clears the ground beneath them. */
+/* Before a pass. A full one decides which viewports are lifted, starts
+ * the skin's surfaces again and clears the ground beneath them; any other
+ * keeps what the last full one decided. */
 void skin_layer_begin(struct gui_wps *gwps, bool full);
 /* Around one lifted viewport's render. enter() is true if its surface is
  * new, and the viewport has to render in full. */

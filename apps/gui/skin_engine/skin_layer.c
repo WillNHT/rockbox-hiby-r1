@@ -172,16 +172,16 @@ void skin_layer_begin(struct gui_wps *gwps, bool full)
                                       : NULL;
     int skin = skin_of(gwps);
 
-    if (skin < 0)
+    /* Lifting depends on where viewports are, which only a full pass can
+     * change - and a skin like Snappy Animated has a hundred and fifty of
+     * them to compare, pair by pair. */
+    if (skin < 0 || !full)
         return;
 
     /* Everything renders again, so every surface is taken again, in
      * order, and none is left behind by a viewport that has gone. */
-    if (full)
-    {
-        lcd_surface_put_tag(skin);
-        flattened[skin] = false;
-    }
+    lcd_surface_put_tag(skin);
+    flattened[skin] = false;
 
     /* Hidden viewports count: lifting must not come and go with %Vd, or
      * a viewport would change surfaces every time one under it did. The
@@ -209,7 +209,7 @@ void skin_layer_begin(struct gui_wps *gwps, bool full)
         /* A lifted viewport never clears the framebuffer, so on a full
          * pass the ground beneath it is cleared here, before anything
          * beneath it draws. */
-        if (svp->lifted && full)
+        if (svp->lifted)
         {
             struct viewport ground = svp->vp;
             ground.buffer = NULL;

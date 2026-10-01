@@ -72,6 +72,8 @@ static struct layer layers[LCD_LAYER_COUNT] =
 };
 
 static bool composed;
+/* The last partial update, for lcd_update_rect(). */
+static struct lrect last_rect;
 
 extern struct frame_buffer_t lcd_framebuffer_default;
 
@@ -355,14 +357,32 @@ void lcd_surface_veil(struct lcd_surface *s, int x, int y, int w, int h,
     v->src = src;
 }
 
-/* RGB565 lerp, a of 255 towards src. */
+/* RGB565 lerp, a of 255 towards src. All three channels in one multiply,
+ * at 5-bit alpha: a divide per channel per pixel was most of what the
+ * compositor cost on the device. */
 static inline fb_data blend565(fb_data dst, fb_data src, unsigned a)
 {
-    unsigned na = 255 - a;
-    unsigned r = (((src >> 11) & 0x1f) * a + ((dst >> 11) & 0x1f) * na) / 255;
-    unsigned g = (((src >>  5) & 0x3f) * a + ((dst >>  5) & 0x3f) * na) / 255;
-    unsigned b = (((src      ) & 0x1f) * a + ((dst      ) & 0x1f) * na) / 255;
-    return (fb_data)((r << 11) | (g << 5) | b);
+    unsigned a5 = (a + 4) >> 3;
+    uint32_t d = (dst | ((uint32_t)dst << 16)) & 0x07e0f81fu;
+    uint32_t s = (src | ((uint32_t)src << 16)) & 0x07e0f81fu;
+    uint32_t p = ((s * a5 + d * (32 - a5)) >> 5) & 0x07e0f81fu;
+    return (fb_data)(p | (p >> 16));
+}
+
+/* What a compose touches, on the panel. Only the pixels the panel is
+ * about to take matter: the rest is restored straight after. */
+static struct lrect clip_r = { 0, 0, LCD_WIDTH, LCD_HEIGHT };
+
+/* r := r n clip_r, false if nothing is left. */
+static bool clip_to(int *x, int *y, int *w, int *h)
+{
+    int x1 = MIN(*x + *w, clip_r.x + clip_r.w);
+    int y1 = MIN(*y + *h, clip_r.y + clip_r.h);
+    *x = MAX(*x, clip_r.x);
+    *y = MAX(*y, clip_r.y);
+    *w = x1 - *x;
+    *h = y1 - *y;
+    return *w > 0 && *h > 0;
 }
 
 /* Painter's order: the veils - the surface's background - over what is
@@ -371,22 +391,26 @@ static inline fb_data blend565(fb_data dst, fb_data src, unsigned a)
 static void paint_surface(const struct lcd_surface *s, fb_data *base)
 {
     int i, row, c;
+    int sx = s->x, sy = s->y, sw = s->w, sh = s->h;
+
+    if (!clip_to(&sx, &sy, &sw, &sh))
+        return;
 
     for (i = 0; i < s->nveils; i++)
     {
         const struct lcd_veil *v = &s->veil[i];
-        int x = v->x, y = v->y, w = v->w, h = v->h;
-        int x0 = MAX(x, s->x), y0 = MAX(y, s->y);
-        int x1 = MIN(x + w, s->x + s->w), y1 = MIN(y + h, s->y + s->h);
+        int y = v->y, h = v->h;
+        int x0 = MAX(v->x, sx), y0 = MAX(y, sy);
+        int x1 = MIN(v->x + v->w, sx + sw), y1 = MIN(y + h, sy + sh);
 
         for (row = y0; row < y1; row++)
         {
             const fb_data *sp = arena_row(s, row - s->y) + (x0 - s->x);
+            const unsigned char *cp = arena_cov + (sp - arena_px);
             size_t off = (size_t)row * LAYER_STRIDE + x0;
             fb_data *bp = base + off;
             fb_data colour = blend565(v->top, v->bottom,
                                       h > 1 ? (row - y) * 255 / (h - 1) : 0);
-            const unsigned char *cp = arena_cov + (sp - arena_px);
             for (c = 0; c < x1 - x0; c++)
             {
                 if (sp[c] != LCD_LAYER_KEY && cp[c] == 255)
@@ -397,12 +421,12 @@ static void paint_surface(const struct lcd_surface *s, fb_data *base)
         }
     }
 
-    for (row = 0; row < s->h; row++)
+    for (row = sy; row < sy + sh; row++)
     {
-        const fb_data *sp = arena_row(s, row);
+        const fb_data *sp = arena_row(s, row - s->y) + (sx - s->x);
         const unsigned char *cp = arena_cov + (sp - arena_px);
-        fb_data *bp = base + (size_t)(s->y + row) * LAYER_STRIDE + s->x;
-        for (c = 0; c < s->w; c++)
+        fb_data *bp = base + (size_t)row * LAYER_STRIDE + sx;
+        for (c = 0; c < sw; c++)
         {
             if (sp[c] == LCD_LAYER_KEY)
                 continue;
@@ -440,6 +464,8 @@ static void copy_rect(enum pass pass, int x, int y, int w, int h)
     fb_data *base = base_px();
     int row;
 
+    if (!clip_to(&x, &y, &w, &h))
+        return;
     for (row = 0; row < h; row++)
     {
         size_t off = (size_t)(y + row) * LAYER_STRIDE + x;
@@ -470,18 +496,21 @@ static void run_pass(enum pass pass)
         const struct layer *ly = &layers[l];
         for (i = 0; i < ly->n; i++)
         {
-            const struct lrect *r = &ly->r[i];
+            int x = ly->r[i].x, y = ly->r[i].y;
+            int w = ly->r[i].w, h = ly->r[i].h;
             if (pass != PAINT)
             {
-                copy_rect(pass, r->x, r->y, r->w, r->h);
+                copy_rect(pass, x, y, w, h);
                 continue;
             }
-            for (row = 0; row < r->h; row++)
+            if (!clip_to(&x, &y, &w, &h))
+                continue;
+            for (row = 0; row < h; row++)
             {
-                size_t off = (size_t)(r->y + row) * LAYER_STRIDE + r->x;
+                size_t off = (size_t)(y + row) * LAYER_STRIDE + x;
                 const fb_data *lp = ly->px + off;
                 fb_data *bp = base + off;
-                for (c = 0; c < r->w; c++)
+                for (c = 0; c < w; c++)
                     if (lp[c] != LCD_LAYER_KEY)
                         bp[c] = lp[c];
             }
@@ -519,6 +548,7 @@ void lcd_update(void)
     if (lcd_transition_hold())
         return;
 #endif
+    last_rect.w = 0;
     if (composed || !any_content())
     {
         lcd_update_base();
@@ -529,18 +559,37 @@ void lcd_update(void)
     lcd_layers_compose(false);
 }
 
+/* A partial update composes only what the panel will read: this
+ * rectangle, and the one before it. A page-flipping driver replays into
+ * the back plane what it missed while it was the front one - the last
+ * update, as the planes swap on every update - out of the framebuffer,
+ * and that replay has to see the layers too or the two planes disagree
+ * and flicker. A driver without page flipping reads less than this. */
 void lcd_update_rect(int x, int y, int width, int height)
 {
+    int x0 = x, y0 = y, x1 = x + width, y1 = y + height;
 #if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
     if (lcd_transition_hold())
         return;
 #endif
+    if (last_rect.w > 0)
+    {
+        x0 = MIN(x0, last_rect.x);
+        y0 = MIN(y0, last_rect.y);
+        x1 = MAX(x1, last_rect.x + last_rect.w);
+        y1 = MAX(y1, last_rect.y + last_rect.h);
+    }
+    last_rect.x = x; last_rect.y = y;
+    last_rect.w = width; last_rect.h = height;
+
     if (composed || !any_content())
     {
         lcd_update_rect_base(x, y, width, height);
         return;
     }
+    clip_r.x = x0; clip_r.y = y0; clip_r.w = x1 - x0; clip_r.h = y1 - y0;
     lcd_layers_compose(true);
     lcd_update_rect_base(x, y, width, height);
     lcd_layers_compose(false);
+    clip_r.x = 0; clip_r.y = 0; clip_r.w = LCD_WIDTH; clip_r.h = LCD_HEIGHT;
 }
