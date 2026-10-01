@@ -43,14 +43,13 @@
 #include "gui/list.h"
 #include "pcm-alsa.h"
 #include "yesno.h"
+#include "sound.h"
 
 /* HiBy hosted build provides dynamic output routing helper in its
  * target-specific PCM implementation. */
 int pcm_alsa_switch_playback_device(const char *device);
 void pcm_alsa_close_device(const char *device);
 void hiby_pcm_set_bt_mac(const char *mac);
-void pcm_alsa_set_mirror(bool on);
-void bt_bluealsa_change_volume(int l, int r, const char* mac);
 static bool bt_ctl_run(const char *arg1, const char *arg2, const char *success_str);
 static bool bt_get_active_mac(char *mac_out, size_t mac_out_len);
 
@@ -61,7 +60,6 @@ static bool bt_get_active_mac(char *mac_out, size_t mac_out_len);
 #define BT_DEVICE_PICK_SCAN (-2)
 #define BT_MAX_CODECS 8
 #define BT_CODEC_NAME_LEN 16
-#define BT_DEFAULT_VOLUME 85 /* bluealsa percent */
 #define BOOT_SETTING_FILE ROCKBOX_DIR"/rb_bt_on.txt"
 #define BT_SYS_PATH "/sys/class/bluetooth"
 #define BT_DEBUG_LOG_FILE "/data/mnt/sd_0/rockbox-bt-debug.log"
@@ -246,7 +244,7 @@ static const char *bt_action_name_cb(int selected_item, void *data,
     char *buffer, size_t buffer_len)
 {
     const char **items = data;
-    if (selected_item < 0 || selected_item >= 4)
+    if (selected_item < 0 || selected_item >= 3)
     {
         buffer[0] = '\0';
         return buffer;
@@ -598,15 +596,14 @@ static bool bt_route_to_bluetooth(const char *mac, const char* codec)
         strcpy(bt_active_codec, codec);
     }
 
-    pcm_alsa_set_mirror(global_settings.bt_wired_too);
     rc = -1;
     if (*bt_active_codec)
         rc = pcm_alsa_switch_playback_device(bt_playback_dev);
     if (rc == 0)
     {
         hiby_pcm_set_bt_mac(mac);
-        /* Full scale is much louder than the wired output; start lower */
-        bt_bluealsa_change_volume(BT_DEFAULT_VOLUME, BT_DEFAULT_VOLUME, mac);
+        /* Push the current volume to the headset (85% of the jack level) */
+        sound_set_volume(global_status.volume);
         bt_kick_audio_if_playing();
         /* BlueZ creates the AVRCP uinput node a moment after the A2DP link */
         for (int i = 0; i < 30 && !button_add_input_device(BT_REMOTE_INPUT_IDX); i++)
@@ -1264,7 +1261,6 @@ int hiby_bluetooth_menu(void)
         (const char *)str(LANG_BT_STATUS),
         (const char *)str(LANG_BT_DEVICES),
         (const char *)str(LANG_BT_DISCONNECT),
-        (const char *)str(LANG_BT_WIRED_TOO),
     };
 
     int action = -1;
@@ -1296,11 +1292,6 @@ int hiby_bluetooth_menu(void)
                 break;
             case 2:
                 bt_disconnect();
-                break;
-            case 3:
-                set_bool(str(LANG_BT_WIRED_TOO), &global_settings.bt_wired_too);
-                settings_save();
-                pcm_alsa_set_mirror(global_settings.bt_wired_too);
                 break;
             default:
                 break;
