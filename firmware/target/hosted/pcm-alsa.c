@@ -113,15 +113,14 @@ static void pcm_pump_locked(snd_pcm_t *handle);
 #include "hiby/pcm-alsa-hiby-hooks.h"
 
 #include "button.h" /* headphones_inserted() */
-#include "settings.h" /* video_bt_latency: what the headset adds */
 
 /* Dual output: while Bluetooth plays and something is in the jack, the same
  * frames also go to the jack, held back by as much as Bluetooth is so both
- * play in step: our bluealsa queue (snd_pcm_delay) plus the headset's own
- * buffering, which nothing reports, so it is the "Bluetooth latency"
- * setting. The two clocks are not locked: a small drift is taken up by
- * skipping or repeating one frame per period, a large one (the target
- * moved) by padding with silence or rewinding. Bluetooth sets the pace. */
+ * play in step. bluealsa's snd_pcm_delay() already counts its own queue,
+ * the codec and the delay the headset reports, so that is the target.
+ * The two clocks are not locked: a small drift is taken up by skipping or
+ * repeating one frame per period, a large one (the target moved) by padding
+ * with silence or rewinding. Bluetooth sets the pace. */
 #define HIBY_MIRROR_DEVICE "plughw:0,0"
 #define HIBY_MIRROR_SLACK  (pcm_sampr / 50)   /* +-20 ms before nudging */
 #define HIBY_MIRROR_JUMP   (pcm_sampr / 10)   /* past 100 ms, jump at once */
@@ -134,12 +133,7 @@ static snd_pcm_sframes_t hiby_pcm_mirror_target(void)
     snd_pcm_sframes_t d;
     if (snd_pcm_delay(handle, &d) == 0)
         hiby_bt_delay += (d - hiby_bt_delay) / 16;
-#ifdef HAVE_VIDEO
-    return hiby_bt_delay
-           + (snd_pcm_sframes_t)global_settings.video_bt_latency * pcm_sampr / 1000;
-#else
     return hiby_bt_delay;
-#endif
 }
 
 static void hiby_pcm_mirror_close(void)
