@@ -44,6 +44,7 @@
 #include "pcm-alsa.h"
 #include "yesno.h"
 #include "sound.h"
+#include "talk.h"
 
 /* HiBy hosted build provides dynamic output routing helper in its
  * target-specific PCM implementation. */
