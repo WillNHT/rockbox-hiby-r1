@@ -103,7 +103,6 @@ static bool is_busy = false;
 
 void hiby_debug_log(const char *format, ...)
 {
-    return;
     char line[512];
     va_list ap;
     int fd;
@@ -400,7 +399,9 @@ static int bt_device_sort_cmp(const void *a, const void *b)
 static bool bt_ctl_run(const char *arg1, const char *arg2, const char *success_str)
 {
     char cmd[256];
-    snprintf(cmd, sizeof(cmd), "bluetoothctl %s %s | grep -q '%s'", arg1, arg2, success_str);
+    snprintf(cmd, sizeof(cmd), "bluetoothctl %s %s 2>&1 | tee -a " BT_DEBUG_LOG_FILE " | grep -q '%s'",
+             arg1, arg2, success_str);
+    hiby_debug_log("bt_ctl_run: %s", cmd);
     int status = system(cmd);
     if (status == 0)
         return true;
@@ -819,6 +820,7 @@ static bool bt_prepare_stack(void)
     splash(0, ID2P(LANG_BT_SUSPENDED_RESUMING));
     system("/usr/bin/bt_resume");
     splash(0, ID2P(LANG_BT_DONE));
+    system("(ls /sys/class/bluetooth; pgrep -l bluetoothd; pgrep -l bluealsa) >> " BT_DEBUG_LOG_FILE " 2>&1");
     int fd = open(BOOT_SETTING_FILE, O_RDWR | O_CREAT | O_TRUNC);
     close(fd);
 
