@@ -211,6 +211,9 @@ enum skin_token_type {
      * when what is playing is not a station track. A skin conditions on it
      * to know it is a radio at all. */
     SKIN_TOKEN_RADIO_STATION,
+
+    /* Bluetooth: 1 off or suspended, 2 on, 3 a device connected */
+    SKIN_TOKEN_BLUETOOTH,
     /* "dynamic" or "static" while a station is on air, empty otherwise. */
     SKIN_TOKEN_RADIO_KIND,
 

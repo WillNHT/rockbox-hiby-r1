@@ -55,6 +55,10 @@
 %Vl(status,30,30,-240,34,3)
 %?mh<%Vs(invert)%acLOCKED|%?if(%cs,!=,10)<|%?cf<%cH:%cM|%cl:%cM %cP>>>
 #
+# Bluetooth: grey off, white on, blue connected
+%V(-240,30,60,32,3)
+%?BT<%Vf(808080)|%Vf(FFFFFF)|%Vf(3399FF)>BT
+#
 # Battery text and icon
 %V(-240,30,-30,32,3)
 %ar%bl%%%?bp<%xd(batt_chg)|%xd(batt,%bl)>

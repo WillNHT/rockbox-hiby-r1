@@ -64,6 +64,10 @@ SHF%xd(O,%ps)
 %V(178,58,94,22,2)
 %?mm<RPT%xd(Ob)|RPT%xd(O)|RP1%xd(O)|RND%xd(O)|A-B%xd(O)>
 #
+# Bluetooth: grey off, white on, blue connected
+%V(276,28,34,22,2)
+%?BT<%Vf(808080)|%Vf(FFFFFF)|%Vf(3399FF)>BT
+#
 # Battery bar
 %V(-168,26,-30,18,-)
 %bl(0,0,138,18,bb,backdrop,bb_backdrop)
