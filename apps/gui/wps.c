@@ -519,6 +519,7 @@ static void prev_track(unsigned long skip_thresh)
     struct wps_state *state = get_wps_state();
     if (state->id3->elapsed < skip_thresh)
     {
+        track_static();
         audio_prev();
         return;
     }
@@ -549,6 +550,7 @@ static void next_track(void)
         }
     }
 
+    track_static();
     audio_next();
 }
 
@@ -610,6 +612,7 @@ static void play_hop(int direction)
         {
             if (step > 0 && global_settings.rewind_across_tracks && elapsed < DEFAULT_SKIP_THRESH && playlist_check(-1))
             {
+                track_static();
                 audio_skip(-1, -step);
                 return;
             }
@@ -1125,8 +1128,6 @@ long gui_wps_show(void)
                 if (pradio_skip(-1))
                     break;
 
-                track_static();
-
                 /* if we're in A/B repeat mode and the current position
                    is past the A marker, jump back to the A marker... */
                 if ( ab_repeat_mode_enabled() && ab_after_A_marker(state->id3->elapsed) )
@@ -1147,8 +1148,6 @@ long gui_wps_show(void)
                    next track of this one */
                 if (pradio_skip(1))
                     break;
-
-                track_static();
 
                 /* if we're in A/B repeat mode and the current position is
                    before the A marker, jump to the A marker... */
