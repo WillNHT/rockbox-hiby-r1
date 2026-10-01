@@ -111,6 +111,61 @@ static const char *current_alsa_device;
 static void pcm_pump_locked(snd_pcm_t *handle);
 #if defined(HIBY_LINUX)
 #include "hiby/pcm-alsa-hiby-hooks.h"
+
+/* Dual output: while Bluetooth is the main device, the same frames also go
+ * to the wired jack. The two clocks are not locked together, so the wired
+ * side is non-blocking and drops or repeats a period when they drift;
+ * Bluetooth still sets the pace. */
+#define HIBY_MIRROR_DEVICE "plughw:0,0"
+static snd_pcm_t *hiby_mirror = NULL;
+static bool hiby_mirror_wanted = false;
+
+static void hiby_pcm_mirror_close(void)
+{
+    if (!hiby_mirror)
+        return;
+    snd_pcm_drop(hiby_mirror);
+    snd_pcm_close(hiby_mirror);
+    hiby_mirror = NULL;
+}
+
+static void hiby_pcm_mirror_open(void)
+{
+    hiby_pcm_mirror_close();
+    if (!hiby_mirror_wanted || !handle || !hiby_pcm_bt_active())
+        return;
+    if (snd_pcm_open(&hiby_mirror, HIBY_MIRROR_DEVICE,
+                     SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK) < 0)
+    {
+        hiby_mirror = NULL;
+        return;
+    }
+    if (snd_pcm_set_params(hiby_mirror, format, SND_PCM_ACCESS_RW_INTERLEAVED,
+                           channels, pcm_sampr, 1, 200000) < 0)
+        hiby_pcm_mirror_close();
+}
+
+static void hiby_pcm_mirror_write(const void *buf, snd_pcm_uframes_t count)
+{
+    if (!hiby_mirror)
+        return;
+    if (snd_pcm_writei(hiby_mirror, buf, count) == -EPIPE
+        && snd_pcm_prepare(hiby_mirror) == 0)
+        snd_pcm_writei(hiby_mirror, buf, count);
+    /* -EAGAIN: the jack is ahead of Bluetooth, drop this period */
+}
+
+void pcm_alsa_set_mirror(bool on)
+{
+    hiby_pcm_mutex_init_once();
+    pthread_mutex_lock(&pcm_mtx);
+    hiby_mirror_wanted = on;
+    if (on && last_sample_rate)
+        hiby_pcm_mirror_open();
+    else if (!on)
+        hiby_pcm_mirror_close();
+    pthread_mutex_unlock(&pcm_mtx);
+}
 #endif
 
 void pcm_alsa_set_playback_device(const char *device)
@@ -489,6 +544,9 @@ static void pcm_pump_locked(snd_pcm_t *handle)
                     logf("Write error: written %i expected %li", err, period_size);
                     break;
                 }
+#if defined(HIBY_LINUX)
+                hiby_pcm_mirror_write(frames, period_size);
+#endif
             }
             else
             {
@@ -565,6 +623,9 @@ static void async_callback(snd_async_handler_t *ahandler)
 static void close_hwdev(void)
 {
     logf("closedev (%p)", handle);
+#if defined(HIBY_LINUX)
+    hiby_pcm_mirror_close();
+#endif
 
     if (handle) {
         snd_pcm_drain(handle);
@@ -714,6 +775,9 @@ static void pcm_dma_apply_settings_nolock(void)
 
         set_hwparams(handle); // FIXME: check return code?
         set_swparams(handle); // FIXME: check return code?
+#if defined(HIBY_LINUX)
+        hiby_pcm_mirror_open();
+#endif
 
 #if defined(HAVE_NWZ_LINUX_CODEC)
         /* Sony NWZ linux driver uses a nonstandard mecanism to set the sampling rate */
@@ -811,6 +875,9 @@ void pcm_play_dma_start(const void *addr, size_t size)
                             logf("Write error: written %i expected %li", err, period_size);
                             break;
                         }
+#if defined(HIBY_LINUX)
+                        hiby_pcm_mirror_write(frames, period_size);
+#endif
                     }
                 }
 #endif

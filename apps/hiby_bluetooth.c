@@ -49,6 +49,7 @@
 int pcm_alsa_switch_playback_device(const char *device);
 void pcm_alsa_close_device(const char *device);
 void hiby_pcm_set_bt_mac(const char *mac);
+void pcm_alsa_set_mirror(bool on);
 void bt_bluealsa_change_volume(int l, int r, const char* mac);
 static bool bt_ctl_run(const char *arg1, const char *arg2, const char *success_str);
 static bool bt_get_active_mac(char *mac_out, size_t mac_out_len);
@@ -245,7 +246,7 @@ static const char *bt_action_name_cb(int selected_item, void *data,
     char *buffer, size_t buffer_len)
 {
     const char **items = data;
-    if (selected_item < 0 || selected_item >= 3)
+    if (selected_item < 0 || selected_item >= 4)
     {
         buffer[0] = '\0';
         return buffer;
@@ -597,6 +598,7 @@ static bool bt_route_to_bluetooth(const char *mac, const char* codec)
         strcpy(bt_active_codec, codec);
     }
 
+    pcm_alsa_set_mirror(global_settings.bt_wired_too);
     rc = -1;
     if (*bt_active_codec)
         rc = pcm_alsa_switch_playback_device(bt_playback_dev);
@@ -1262,6 +1264,7 @@ int hiby_bluetooth_menu(void)
         (const char *)str(LANG_BT_STATUS),
         (const char *)str(LANG_BT_DEVICES),
         (const char *)str(LANG_BT_DISCONNECT),
+        (const char *)str(LANG_BT_WIRED_TOO),
     };
 
     int action = -1;
@@ -1293,6 +1296,11 @@ int hiby_bluetooth_menu(void)
                 break;
             case 2:
                 bt_disconnect();
+                break;
+            case 3:
+                set_bool(str(LANG_BT_WIRED_TOO), &global_settings.bt_wired_too);
+                settings_save();
+                pcm_alsa_set_mirror(global_settings.bt_wired_too);
                 break;
             default:
                 break;
