@@ -803,14 +803,18 @@ static void bt_set_active_codec(const char *mac)
     pclose(fp);
 }
 
-/* Cached adapter power for the skin's %BT, -1 until first asked */
-static int bt_powered = -1;
+/* Adapter power as last set, for the skin's %BT: never ask bluetoothctl
+ * from a render, it blocks while bluetoothd starts */
+static bool bt_powered = false;
 
 bool bt_disable(void)
 {
     bool ok = bt_ctl_run("power", "off", "power off succeeded");
     if (ok)
-        bt_powered = 0;
+    {
+        bt_powered = false;
+        remove(BOOT_SETTING_FILE);
+    }
     return ok;
 }
 
@@ -831,6 +835,8 @@ void wait_for_bt_init(void)
 bool bt_enable(void)
 {
     bt_powered = bt_ctl_run("power", "on", "power on succeeded");
+    if (bt_powered)
+        close(open(BOOT_SETTING_FILE, O_RDWR | O_CREAT, 0666));
     return bt_powered;
     //return system("/usr/bin/bt_enable | grep 'Powered: 1'", "r") == 0;
     //return system("bt-adapter --set \"Powered\" \"On\" | grep 'Powered: 1'") == 0;
@@ -1002,11 +1008,18 @@ static bool bt_is_enabled(void)
 
 bool bt_is_enabled_fast(void)
 {
-    if (bt_is_suspended_fast())
-        return false;
-    if (bt_powered < 0)
-        bt_powered = bt_is_enabled();
-    return bt_powered;
+    return bt_powered && !bt_is_suspended_fast();
+}
+
+/* Bluetooth comes back the way it was left: rb_bt_on.txt is kept while it
+ * is on (the bootloader then skips bt_suspend), so power the adapter up
+ * again without waiting on bluetoothd. */
+void bt_boot_init(void)
+{
+    if (access(PIVOT_ROOT BOOT_SETTING_FILE, F_OK) != 0)
+        return;
+    system("bluetoothctl power on >/dev/null 2>&1 &");
+    bt_powered = true;
 }
 
 static int bt_get_available_codecs(const char *mac,

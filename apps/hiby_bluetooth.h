@@ -6,6 +6,7 @@
 int hiby_bluetooth_menu(void);
 
 bool bt_is_enabled_fast(void);
+void bt_boot_init(void);
 bool bt_disable(void);
 bool bt_enable(void);
 bool bt_is_connected_fast(void);
