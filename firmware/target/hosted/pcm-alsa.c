@@ -810,10 +810,27 @@ static void open_hwdev(const char *device, snd_pcm_stream_t mode)
     for (int i = 0; i < 40 && hiby_pcm_is_bluealsa_device(device)
                     && __sync_fetch_and_add(&hiby_pcm_closing, 0); i++)
         usleep(50000);
+    /* Opened non-blocking: a blocking open of a busy device waits for ever,
+       and something takes the jack for a moment when a headset leaves.
+       Wait for it here, 5 s at most, logging who has it. */
+    hiby_debug_log("pcm: opening %s", device);
+    for (int i = 0; (err = snd_pcm_open(&handle, device, mode, SND_PCM_NONBLOCK)) == -EBUSY
+                    && i < 100; i++)
+    {
+        if (i == 0)
+        {
+            hiby_debug_log("pcm: %s busy, held by:", device);
+            system("for p in /proc/[0-9]*; do ls -l $p/fd 2>/dev/null | grep -q /dev/snd/pcm"
+                   " && echo \"  $p $(cat $p/comm)\"; done >> /data/mnt/sd_0/rockbox-bt-debug.log");
+        }
+        usleep(50000);
+    }
     /* a blocking write to a headset that just went away never returns, and
-       the pump holds pcm_mtx while it waits: everything else freezes */
-    if ((err = snd_pcm_open(&handle, device, mode,
-                            hiby_pcm_is_bluealsa_device(device) ? SND_PCM_NONBLOCK : 0)) < 0)
+       the pump holds pcm_mtx while it waits: everything else freezes; the
+       jack keeps writing the way it always has */
+    if (err >= 0 && !hiby_pcm_is_bluealsa_device(device))
+        snd_pcm_nonblock(handle, 0);
+    if (err < 0)
 #else
     if ((err = snd_pcm_open(&handle, device, mode, 0)) < 0)
 #endif
