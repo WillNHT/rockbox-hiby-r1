@@ -1163,6 +1163,27 @@ bool bt_autoconnection_route_to_bluetooth(char* active_mac, bool bt_on)
 
     is_busy = true;
     bool bt_connected = bt_on && bt_get_active_mac(active_mac, 18);
+    static long bt_nudge_tick;
+    hiby_debug_log("bt plugged: audio %s", bt_connected ? active_mac : "none");
+    if (bt_on && !bt_connected && bt_selected_mac[0] && bt_is_connected_fast()
+        && TIME_AFTER(current_tick, bt_nudge_tick))
+    {
+        /* Back for its buttons only: earbuds out of the case leave A2DP
+         * to the player, and nothing asked for it. A connect does, the
+         * way the menu's always has; then wait for its audio */
+        char cmd[64];
+        bt_nudge_tick = current_tick + 10*HZ;
+        hiby_debug_log("bt plugged: no audio yet, connecting %s", bt_selected_mac);
+        splash(0, ID2P(LANG_BT_CONNECTING));
+        snprintf(cmd, sizeof(cmd), "bluetoothctl connect %s >/dev/null 2>&1 &",
+                 bt_selected_mac);
+        system(cmd);
+        if (bt_wait_for_bluealsa_pcm(bt_selected_mac, HZ * 6))
+        {
+            strcpy(active_mac, bt_selected_mac);
+            bt_connected = true;
+        }
+    }
     bool active_mac_changed = bt_connected && (strcmp(bt_selected_mac, active_mac) != 0);
     /* Auto-route to BT if headphone is connected but output is still local (connected by Hiby OS) */
     if (bt_connected && 
