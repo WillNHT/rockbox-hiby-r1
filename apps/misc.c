@@ -790,6 +790,7 @@ long default_event_handler_ex(long event, void (*callback)(void *), void *parame
             pcm_play_stop();
             hiby_debug_log("bt unplugged: routing to local");
             bt_route_to_local();
+            hiby_debug_log("bt unplugged: done");
         }
         return SYS_BT_UNPLUGGED;
 #endif

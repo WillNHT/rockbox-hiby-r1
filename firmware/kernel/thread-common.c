@@ -22,6 +22,24 @@
 #include "system.h"
 #include "lcd-transition.h"
 
+#if defined(HAVE_SIGALTSTACK_THREADS) && !defined(SLEEP_KERNEL_HOOK)
+/* sleep() and yield() are exported with the binary, so a shared library
+ * calling libc's on an OS thread of its own (bluealsa closing a headset
+ * that went away) lands here instead. Running the scheduler there leaves
+ * the kernel's idle mutex held by that thread, and everything freezes.
+ * Off the kernel's thread - the process' main thread - they do what
+ * libc's would: sleep seconds, or yield the CPU. */
+#include <sched.h>
+#include <time.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#define FOREIGN_OS_THREAD() (getpid() != (pid_t)syscall(SYS_gettid))
+#define SLEEP_KERNEL_HOOK(ticks) \
+    (FOREIGN_OS_THREAD() && \
+     (nanosleep(&(struct timespec){ (ticks), 0 }, NULL), true))
+#define YIELD_KERNEL_HOOK() (FOREIGN_OS_THREAD() && (sched_yield(), true))
+#endif
+
 /* Unless otherwise defined, do nothing */
 #ifndef YIELD_KERNEL_HOOK
 #define YIELD_KERNEL_HOOK() false
