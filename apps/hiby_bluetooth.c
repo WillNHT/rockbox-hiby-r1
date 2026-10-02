@@ -1118,7 +1118,7 @@ static void bt_show_codec_picker(const char *mac)
     data.items = codecs;
     data.count = count;
 
-    simplelist_info_init(&info, ID2P(LANG_BT_SELECT_CODEC), count, &data);
+    simplelist_info_init(&info, (char *)str(LANG_BT_SELECT_CODEC), count, &data);
     info.get_name = bt_strlist_name_cb;
     info.action_callback = bt_simplelist_ok_cancel;
     info.selection = -1;
