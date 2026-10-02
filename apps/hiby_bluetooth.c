@@ -36,6 +36,7 @@
 #include "kernel.h"
 #include "audio.h"
 #include "action.h"
+#include "button.h"
 #include "button-devinput.h"
 #include "menu.h"
 #include "misc.h"
@@ -1017,6 +1018,17 @@ bool bt_is_enabled_fast(void)
     return bt_powered && !bt_is_suspended_fast();
 }
 
+/* Lists sleep a second between redraws: wake them often enough to show
+ * the rune's half-second blink, for as long as it blinks */
+static int bt_blink_wake(struct timeout *tmo)
+{
+    (void)tmo;
+    if (!bt_is_starting_fast())
+        return 0;
+    button_queue_post(BUTTON_NONE, 0);
+    return HZ/4;
+}
+
 /* Bluetooth comes back the way it was left: rb_bt_on.txt is kept while it
  * is on (the bootloader then skips bt_suspend), so power the adapter up
  * again without waiting on bluetoothd. */
@@ -1034,6 +1046,8 @@ void bt_boot_init(void)
            "bluetoothctl power on; sleep 1; i=$((i+1)); done; "
            "rm -f " BT_STARTING_FILE ") >>" BT_DEBUG_LOG_FILE " 2>&1 &");
     bt_powered = true;
+    static struct timeout blink;
+    timeout_register(&blink, bt_blink_wake, HZ/4, 0);
 }
 
 /* Still coming up after boot: the skin's %BT blinks */
