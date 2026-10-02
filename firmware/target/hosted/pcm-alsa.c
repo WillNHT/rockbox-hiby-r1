@@ -123,8 +123,10 @@ static void pcm_pump_locked(snd_pcm_t *handle);
  * repeating one frame per period, a large one (the target moved) by padding
  * with silence or leaving frames out. Bluetooth sets the pace. */
 #define HIBY_MIRROR_DEVICE "plughw:0,0"
-#define HIBY_MIRROR_SLACK  (pcm_sampr / 50)   /* +-20 ms before nudging */
-#define HIBY_MIRROR_JUMP   (pcm_sampr / 25)   /* past 40 ms, jump at once */
+/* pcm_sampr is unsigned long: everything here is signed and goes negative */
+#define HIBY_SAMPR         ((snd_pcm_sframes_t)pcm_sampr)
+#define HIBY_MIRROR_SLACK  (HIBY_SAMPR / 50)  /* +-20 ms before nudging */
+#define HIBY_MIRROR_JUMP   (HIBY_SAMPR / 25)  /* past 40 ms, jump at once */
 static snd_pcm_t *hiby_mirror = NULL;
 static long hiby_mirror_retry;
 static snd_pcm_sframes_t hiby_bt_delay;       /* smoothed bluealsa delay */
@@ -136,7 +138,7 @@ static snd_pcm_sframes_t hiby_pcm_mirror_target(void)
         hiby_bt_delay += (d - hiby_bt_delay) / 16;
     /* bt_wired_offset: the user's trim for what the headset adds unreported */
     t = hiby_bt_delay
-        + (snd_pcm_sframes_t)global_settings.bt_wired_offset * pcm_sampr / 1000;
+        + (snd_pcm_sframes_t)global_settings.bt_wired_offset * HIBY_SAMPR / 1000;
     /* the jack is fed a period at a time: with less queued it runs dry */
     return t < 2 * period_size ? 2 * period_size : t;
 }
@@ -227,8 +229,9 @@ static void hiby_pcm_mirror_write(const sample_t *buf, snd_pcm_uframes_t count)
     else if (diff < -HIBY_MIRROR_JUMP)
     {
         /* jack far behind: leave frames out rather than rewind, which the
-           plug device does not honour and a negative trim hit every period */
-        snd_pcm_uframes_t skip = -diff < (snd_pcm_sframes_t)count ? -diff : count;
+           plug device does not honour */
+        snd_pcm_uframes_t skip = -diff < (snd_pcm_sframes_t)count
+                                 ? (snd_pcm_uframes_t)-diff : count;
         buf += skip * channels;
         count -= skip;
         if (count == 0)
