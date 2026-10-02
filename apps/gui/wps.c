@@ -1078,6 +1078,16 @@ long gui_wps_show(void)
             /* fast forward
                 OR next dir if this is straight after ACTION_WPS_SKIPNEXT */
             case ACTION_WPS_SEEKFWD:
+#ifdef HAVE_HIBY_BLUETOOTH
+                /* a headset never seeks: a press it reports as held is
+                   still one next, and its repeats do nothing */
+                if (wps_bt_key(BUTTON_NEXT))
+                {
+                    if (!(get_action_statuscode(NULL) & ACTION_REPEAT))
+                        next_track();
+                    break;
+                }
+#endif
                 if (get_skip_length(state->id3) == 0 &&  current_tick -last_right < HZ)
                 {
                     if (state->id3->cuesheet && playlist_check(1))
@@ -1101,6 +1111,14 @@ long gui_wps_show(void)
             /* fast rewind
                 OR prev dir if this is straight after ACTION_WPS_SKIPPREV,*/
             case ACTION_WPS_SEEKBACK:
+#ifdef HAVE_HIBY_BLUETOOTH
+                if (wps_bt_key(BUTTON_PREV))
+                {
+                    if (!(get_action_statuscode(NULL) & ACTION_REPEAT))
+                        prev_track(DEFAULT_SKIP_THRESH);
+                    break;
+                }
+#endif
                 if (get_skip_length(state->id3) == 0 && current_tick - last_left < HZ)
                 {
                     if (state->id3->cuesheet && playlist_check(-1))
