@@ -1377,8 +1377,10 @@ const char *get_token_value(struct gui_wps *gwps,
             /* %?BT<off|on|connected> */
             numeric_ret = 1;
 #if defined(HIBY_LINUX) && !defined(SIMULATOR)
-            if (bt_is_starting_fast())  /* blink off/on while it comes up */
-                numeric_ret = 1 + (current_tick / (HZ/2)) % 2;
+            /* blink off/on while it comes up, a second each: lists redraw
+               once a second, so a faster blink always shows the same phase */
+            if (bt_is_starting_fast())
+                numeric_ret = 1 + (current_tick / HZ) % 2;
             else if (bt_is_connected_fast())
                 numeric_ret = 3;
             else if (bt_is_enabled_fast())
