@@ -1019,14 +1019,14 @@ bool bt_is_enabled_fast(void)
 }
 
 /* Lists sleep a second between redraws: wake them often enough to show
- * the rune's half-second blink, for as long as it blinks */
+ * the rune's quarter-second blink, for as long as it blinks */
 static int bt_blink_wake(struct timeout *tmo)
 {
     (void)tmo;
     if (!bt_is_starting_fast())
         return 0;
     button_queue_post(BUTTON_NONE, 0);
-    return HZ/4;
+    return HZ/8;
 }
 
 /* Bluetooth comes back the way it was left: rb_bt_on.txt is kept while it
@@ -1047,7 +1047,7 @@ void bt_boot_init(void)
            "rm -f " BT_STARTING_FILE ") >>" BT_DEBUG_LOG_FILE " 2>&1 &");
     bt_powered = true;
     static struct timeout blink;
-    timeout_register(&blink, bt_blink_wake, HZ/4, 0);
+    timeout_register(&blink, bt_blink_wake, HZ/8, 0);
 }
 
 /* Still coming up after boot: the skin's %BT blinks */
