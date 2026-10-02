@@ -706,6 +706,21 @@ static void async_callback(snd_async_handler_t *ahandler)
     pthread_mutex_unlock(&pcm_mtx);
 }
 
+#if defined(HIBY_LINUX)
+void hiby_debug_log(const char *format, ...);
+
+static int hiby_pcm_closing;    /* headset handles still being closed */
+
+static void *hiby_pcm_close_fn(void *h)
+{
+    snd_pcm_drop(h);
+    snd_pcm_close(h);
+    __sync_fetch_and_sub(&hiby_pcm_closing, 1);
+    hiby_debug_log("pcm: headset closed");
+    return NULL;
+}
+#endif
+
 static void close_hwdev(void)
 {
     logf("closedev (%p)", handle);
@@ -715,10 +730,21 @@ static void close_hwdev(void)
 
     if (handle) {
 #if defined(HIBY_LINUX)
-        /* draining a headset that just went away blocks for good */
+        /* a headset that just went away can block drop and close for good:
+           a thread of their own waits on them, and playback carries on */
         if (hiby_pcm_bt_active())
-            snd_pcm_drop(handle);
-        else
+        {
+            pthread_t closer;
+            hiby_debug_log("pcm: closing %s", current_alsa_device);
+            __sync_fetch_and_add(&hiby_pcm_closing, 1);
+            if (pthread_create(&closer, NULL, hiby_pcm_close_fn, handle) == 0)
+                pthread_detach(closer);
+            else
+                hiby_pcm_close_fn(handle);
+            handle = NULL;
+            current_alsa_device = NULL;
+            return;
+        }
 #endif
         snd_pcm_drain(handle);
 #ifdef AUDIOHW_MUTE_ON_STOP
@@ -779,6 +805,11 @@ static void open_hwdev(const char *device, snd_pcm_stream_t mode)
     close_hwdev();
 
 #if defined(HIBY_LINUX)
+    /* bluealsa takes one client per headset: let the last one go first
+       (a codec switch), but not for ever (it went away for good) */
+    for (int i = 0; i < 40 && hiby_pcm_is_bluealsa_device(device)
+                    && __sync_fetch_and_add(&hiby_pcm_closing, 0); i++)
+        usleep(50000);
     /* a blocking write to a headset that just went away never returns, and
        the pump holds pcm_mtx while it waits: everything else freezes */
     if ((err = snd_pcm_open(&handle, device, mode,
@@ -791,6 +822,7 @@ static void open_hwdev(const char *device, snd_pcm_stream_t mode)
     }
     last_sample_rate = 0;
 #if defined(HIBY_LINUX)
+    hiby_debug_log("pcm: opened %s", device);
     hiby_pcm_start_poll_thread();
 #else
     pthread_mutexattr_t attr;
