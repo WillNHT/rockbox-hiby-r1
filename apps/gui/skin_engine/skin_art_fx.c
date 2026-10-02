@@ -47,6 +47,8 @@
 #include "skin_art_fx.h"
 #include "skin_display.h"
 #include "skin_engine.h"
+#include "skin_layer.h"
+#include "system.h" /* container_of */
 #include "wps_internals.h"
 #include "core_alloc.h"
 #include "misc.h"
@@ -683,7 +685,10 @@ bool skin_art_vinyl(struct gui_wps *gwps, struct viewport *vp,
 
     canvas_vinyl(&fb, vp->x + v->cx, vp->y + v->cy, v->radius, angle,
                  bmp ? &art : NULL, v->label_pct,
-                 (canvas_px)v->accent, (canvas_px)vp->bg_pattern);
+                 (canvas_px)v->accent,
+                 /* vp is always a skin viewport's own */
+                 (canvas_px)skin_layer_bg(container_of(vp,
+                                    struct skin_viewport, vp)));
     return true;
 }
 

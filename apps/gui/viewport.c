@@ -57,6 +57,7 @@
 #include "language.h"
 #include "statusbar-skinned.h"
 #include "skin_engine/skin_engine.h"
+#include "skin_engine/skin_layer.h"
 #include "debug.h"
 
 #define VPSTACK_DEPTH 16
@@ -167,6 +168,9 @@ static void toggle_theme(enum screen_type screen, bool force)
 #endif
         screens[screen].scroll_stop();
         skinlist_set_cfg(screen, NULL);
+        /* Whatever takes the screen draws over it, not under the skin. */
+        if (screen == SCREEN_MAIN)
+            skin_layer_flatten();
     }
     /* let list initialize viewport in case viewport dimensions is changed. */
     send_event(GUI_EVENT_THEME_CHANGED, NULL);

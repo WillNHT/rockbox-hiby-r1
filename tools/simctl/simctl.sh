@@ -33,6 +33,12 @@ CONVERT=$(command -v convert-im6.q16 || command -v convert)
 
 rm -f $FIFO
 rm -f "$DISK"/dump*.bmp
+
+# A script can bring its own setup - a theme, a config - as foo.sh next to
+# foo.txt. It runs first, with the simdisk in $DISK.
+if [ -f "${SCRIPT%.txt}.sh" ]; then
+  DISK=$DISK sh "${SCRIPT%.txt}.sh"
+fi
 mkdir -p "$OUT"
 rm -f "$OUT"/*.png
 

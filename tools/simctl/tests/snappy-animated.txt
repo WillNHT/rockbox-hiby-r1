@@ -1,0 +1,109 @@
+# library.txt down to the WPS, on the Snappy Animated theme
+# (themes/Snappy Animated.cfg). Shots: the WPS, then a second and a half on,
+# after the time has redrawn underneath and the line has scrolled.
+sleep 3000
+# files
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 400
+up
+sleep 1500
+# Music
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 400
+up
+sleep 1500
+# blink-182
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 300
+up
+sleep 1200
+dump
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 400
+up
+sleep 1500
+dump
+# first album, first track
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 400
+up
+sleep 1500
+dump
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 400
+up
+sleep 1500
+sleep 3000
+dump
+sleep 1500
+dump

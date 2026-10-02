@@ -172,9 +172,29 @@ bool LCDFN(scroll_now)(struct scrollinfo *s)
     bg_pattern = s->vp->bg_pattern;
 #endif
     drawmode   = s->vp->drawmode;
+#if defined(MAIN_LCD) && defined(HAVE_LCD_LAYERS)
+    /* A line in a compositor surface (lcd-layers.c) clears to the
+     * surface's transparent key, and not from the backdrop: the backdrop
+     * is addressed relative to the framebuffer it was set against. */
+    fb_data *backdrop = NULL;
+    if (lcd_surface_from_fb(framebuf))
+    {
+        backdrop = lcd_get_backdrop();
+        lcd_set_backdrop(NULL);
+        s->vp->bg_pattern = LCD_LAYER_KEY;
+    }
+#endif
     s->scroll_func(s);
 
     LCDFN(update_viewport_rect)(s->x, s->y, s->width, s->height);
+#if defined(MAIN_LCD) && defined(HAVE_LCD_LAYERS)
+    if (backdrop)
+    {
+        struct viewport *vp = lcd_set_viewport_ex(NULL, 0);
+        lcd_set_backdrop(backdrop);
+        lcd_set_viewport_ex(vp, 0);
+    }
+#endif
 
 #if LCD_DEPTH > 1
     s->vp->fg_pattern = fg_pattern;
