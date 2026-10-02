@@ -20398,3 +20398,115 @@
     *: "Wired Sync Offset"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_WIFI
+  desc: Hiby Wi-Fi: menu title and the on/off line
+  user: core
+  <source>
+    *: "Wi-Fi"
+  </source>
+  <dest>
+    *: "Wi-Fi"
+  </dest>
+  <voice>
+    *: "Wi-Fi"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_WIFI_NETWORK
+  desc: Hiby Wi-Fi: the joined network, and the title of the network list
+  user: core
+  <source>
+    *: "Network"
+  </source>
+  <dest>
+    *: "Network"
+  </dest>
+  <voice>
+    *: "Network"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_WIFI_ADDRESS
+  desc: Hiby Wi-Fi: the address the network gave
+  user: core
+  <source>
+    *: "IP Address"
+  </source>
+  <dest>
+    *: "IP Address"
+  </dest>
+  <voice>
+    *: "IP Address"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_WIFI_SCAN
+  desc: Hiby Wi-Fi: first entry of the network list
+  user: core
+  <source>
+    *: "Scan again"
+  </source>
+  <dest>
+    *: "Scan again"
+  </dest>
+  <voice>
+    *: "Scan again"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_WIFI_SCANNING
+  desc: Hiby Wi-Fi: splash while looking for networks
+  user: core
+  <source>
+    *: "Scanning..."
+  </source>
+  <dest>
+    *: "Scanning..."
+  </dest>
+  <voice>
+    *: "Scanning..."
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_WIFI_UNAVAILABLE
+  desc: Hiby Wi-Fi: the radio did not come up
+  user: core
+  <source>
+    *: "Wi-Fi unavailable"
+  </source>
+  <dest>
+    *: "Wi-Fi unavailable"
+  </dest>
+  <voice>
+    *: "Wi-Fi unavailable"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_WIFI_CONNECT_FAILED
+  desc: Hiby Wi-Fi: joining a network failed
+  user: core
+  <source>
+    *: "Wi-Fi connect failed"
+  </source>
+  <dest>
+    *: "Wi-Fi connect failed"
+  </dest>
+  <voice>
+    *: "Wi-Fi connect failed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_WIFI_NO_ADDRESS
+  desc: Hiby Wi-Fi: joined, but no address came
+  user: core
+  <source>
+    *: "Connected, no IP address"
+  </source>
+  <dest>
+    *: "Connected, no IP address"
+  </dest>
+  <voice>
+    *: "Connected, no IP address"
+  </voice>
+</phrase>

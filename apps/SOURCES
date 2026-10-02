@@ -87,6 +87,7 @@ settings.c
 settings_list.c
 #if defined(HIBY_LINUX) && !defined(SIMULATOR)
 hiby_bluetooth.c
+hiby_wifi.c
 #endif
 shortcuts.c
 status.c
