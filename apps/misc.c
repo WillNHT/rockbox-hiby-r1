@@ -98,6 +98,7 @@
 
 #if defined(HAVE_HIBY_BLUETOOTH)
 #include "hiby_bluetooth.h"
+#include "pcm.h"
 const char *hiby_pcm_get_bt_mac(void);
 bool bt_is_enabled_fast(void);
 bool bt_disconnect(void);
@@ -778,15 +779,18 @@ long default_event_handler_ex(long event, void (*callback)(void *), void *parame
         if (bt_can_autoconnect() && hiby_pcm_get_bt_mac() != NULL)
         {
             hiby_debug_log("bt unplugged: pausing");
+            /* The switch is only safe with the stream stopped. A fade
+             * makes audio_pause() return with the music still going (the
+             * pause lands when the fade ends), so no fade - there is no
+             * one left to hear it - and stop the PCM before switching */
+            bool fade = global_settings.fade_on_stop;
+            global_settings.fade_on_stop = false;
             audio_pause();
+            global_settings.fade_on_stop = fade;
+            pcm_play_stop();
             hiby_debug_log("bt unplugged: routing to local");
-            //This works only with stopped playback, otherwise it will cause a crash
-            //But with active playback we are f**ed anyway 
-            //(we are just deferring it... pcm threading code needs some looking into)
-            //if ((audio_status() & (AUDIO_STATUS_PLAY | AUDIO_STATUS_PAUSE)) == 0)
-            {
-                bt_route_to_local();
-            }
+            bt_route_to_local();
+            hiby_debug_log("bt unplugged: done");
         }
         return SYS_BT_UNPLUGGED;
 #endif

@@ -130,7 +130,7 @@ PRELOAD = """%Fl(2,24-GeistMono-SemiBold.fnt)
 %Fl(5,58-GeistMono-SemiBold.fnt)
 %xl(B,batt_wps.bmp,2,0,2)
 %xl(O,off_on.bmp,48,0,2)
-%xl(bt,bt.bmp,0,0,3)
+%xl(bt,bt.bmp,0,0,4)
 %xl(vb,vb.bmp)
 %xl(vb_track,vb_track.bmp)
 %xl(bb,bb.bmp)
@@ -894,8 +894,9 @@ print("wrote SnappyV2.wps, SnappyVinyl.wps, SnappyAnimated.wps, SnappyGauge.wps,
       " SnappyCanvas.wps, SnappyRadio.wps")
 
 
-# bt.bmp: the Bluetooth indicator, %xd(bt,%BT). Three 21x22 frames stacked,
-# the Bluetooth rune: grey off, white on, blue connected. Colour, so 24-bit
+# bt.bmp: the Bluetooth indicator, %xd(bt,%BT). Four 21x22 frames stacked,
+# the Bluetooth rune: grey off, white on, blue connected, and a light grey
+# that blinks against the off grey while it starts. Colour, so 24-bit
 # on the transparent magenta, not off_on's 1-bit.
 def bt_bmp():
     fw, fh = 21, 22
@@ -903,7 +904,8 @@ def bt_bmp():
     strokes = [((9, 1), (9, 20)), ((9, 1), (15, 6)), ((15, 6), (4, 15)),
                ((9, 20), (15, 15)), ((15, 15), (4, 6))]
     rows = []
-    for colour in ((0x80, 0x80, 0x80), (0xef, 0xeb, 0xe7), (0x33, 0x99, 0xff)):
+    for colour in ((0x80, 0x80, 0x80), (0xef, 0xeb, 0xe7), (0x33, 0x99, 0xff),
+                   (0xb8, 0xb8, 0xb8)):
         f = [[(0xff, 0x00, 0xff)] * fw for _ in range(fh)]
         for (x0, y0), (x1, y1) in strokes:
             n = max(abs(x1 - x0), abs(y1 - y0))

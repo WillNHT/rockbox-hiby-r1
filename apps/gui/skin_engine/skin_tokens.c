@@ -1374,11 +1374,13 @@ const char *get_token_value(struct gui_wps *gwps,
             return NULL;
 
         case SKIN_TOKEN_BLUETOOTH:
-            /* %?BT<off|on|connected> */
+            /* %?BT<off|on|connected|starting> */
             numeric_ret = 1;
 #if defined(HIBY_LINUX) && !defined(SIMULATOR)
-            if (bt_is_starting_fast())  /* blink off/on while it comes up */
-                numeric_ret = 1 + (current_tick / (HZ/2)) % 2;
+            /* blink off/starting while it comes up, a quarter second each;
+               lists only redraw once a second, so bt_boot_init() wakes them */
+            if (bt_is_starting_fast())
+                numeric_ret = (current_tick / (HZ/4)) % 2 ? 4 : 1;
             else if (bt_is_connected_fast())
                 numeric_ret = 3;
             else if (bt_is_enabled_fast())

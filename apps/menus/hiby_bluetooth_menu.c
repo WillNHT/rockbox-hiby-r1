@@ -23,9 +23,14 @@
 #if defined(HIBY_LINUX) && !defined(SIMULATOR)
 
 #include "menu.h"
+#include "lang.h"
+#include "settings.h"
 #include "hiby_bluetooth.h"
+#include "hiby_wifi.h"
 
 MENUITEM_FUNCTION(hiby_bluetooth_root_item, 0, "Bluetooth",
                   hiby_bluetooth_menu, NULL, Icon_Submenu);
+MENUITEM_FUNCTION(hiby_wifi_root_item, 0, ID2P(LANG_WIFI),
+                  hiby_wifi_menu, NULL, Icon_Submenu);
 
 #endif /* HIBY_LINUX */

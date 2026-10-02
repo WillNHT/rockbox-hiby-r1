@@ -41,6 +41,7 @@ Grab a build from the [releases page](https://github.com/WillNHT/rockbox-hiby-r1
 
 * [Bootloader changes](mods/hiby-bootloader-changes.md)
 * [Bluetooth](mods/bluetooth-hiby-x1600.md)
+* [Wi-Fi](mods/wifi.md)
 * [Battery charge limit](mods/battery-protection-hiby-x1600.md)
 
 ## Contributing

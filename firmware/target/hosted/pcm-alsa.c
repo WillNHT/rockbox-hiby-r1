@@ -121,22 +121,26 @@ static void pcm_pump_locked(snd_pcm_t *handle);
  * the codec and the delay the headset reports, so that is the target.
  * The two clocks are not locked: a small drift is taken up by skipping or
  * repeating one frame per period, a large one (the target moved) by padding
- * with silence or rewinding. Bluetooth sets the pace. */
+ * with silence or leaving frames out. Bluetooth sets the pace. */
 #define HIBY_MIRROR_DEVICE "plughw:0,0"
-#define HIBY_MIRROR_SLACK  (pcm_sampr / 50)   /* +-20 ms before nudging */
-#define HIBY_MIRROR_JUMP   (pcm_sampr / 10)   /* past 100 ms, jump at once */
+/* pcm_sampr is unsigned long: everything here is signed and goes negative */
+#define HIBY_SAMPR         ((snd_pcm_sframes_t)pcm_sampr)
+#define HIBY_MIRROR_SLACK  (HIBY_SAMPR / 50)  /* +-20 ms before nudging */
+#define HIBY_MIRROR_JUMP   (HIBY_SAMPR / 25)  /* past 40 ms, jump at once */
 static snd_pcm_t *hiby_mirror = NULL;
 static long hiby_mirror_retry;
 static snd_pcm_sframes_t hiby_bt_delay;       /* smoothed bluealsa delay */
 
 static snd_pcm_sframes_t hiby_pcm_mirror_target(void)
 {
-    snd_pcm_sframes_t d;
+    snd_pcm_sframes_t d, t;
     if (snd_pcm_delay(handle, &d) == 0)
         hiby_bt_delay += (d - hiby_bt_delay) / 16;
     /* bt_wired_offset: the user's trim for what the headset adds unreported */
-    return hiby_bt_delay
-           + (snd_pcm_sframes_t)global_settings.bt_wired_offset * pcm_sampr / 1000;
+    t = hiby_bt_delay
+        + (snd_pcm_sframes_t)global_settings.bt_wired_offset * HIBY_SAMPR / 1000;
+    /* the jack is fed a period at a time: with less queued it runs dry */
+    return t < 2 * period_size ? 2 * period_size : t;
 }
 
 static void hiby_pcm_mirror_close(void)
@@ -190,7 +194,7 @@ static void hiby_pcm_mirror_open(void)
         snd_pcm_sw_params(hiby_mirror, sw);
     if (snd_pcm_delay(handle, &hiby_bt_delay) < 0)
         hiby_bt_delay = 0;
-    hiby_pcm_mirror_pad(hiby_pcm_mirror_target());
+    hiby_pcm_mirror_pad(hiby_pcm_mirror_target() - period_size);
 }
 
 static void hiby_pcm_mirror_write(const sample_t *buf, snd_pcm_uframes_t count)
@@ -218,18 +222,28 @@ static void hiby_pcm_mirror_write(const sample_t *buf, snd_pcm_uframes_t count)
         delay = 0;
     }
 
-    diff = target - delay;
+    /* compared as it will be once this period is in, like the target */
+    diff = target - delay - (snd_pcm_sframes_t)count;
     if (diff > HIBY_MIRROR_JUMP)
         hiby_pcm_mirror_pad(diff);
     else if (diff < -HIBY_MIRROR_JUMP)
-        snd_pcm_rewind(hiby_mirror, -diff);
+    {
+        /* jack far behind: leave frames out rather than rewind, which the
+           plug device does not honour */
+        snd_pcm_uframes_t skip = -diff < (snd_pcm_sframes_t)count
+                                 ? (snd_pcm_uframes_t)-diff : count;
+        buf += skip * channels;
+        count -= skip;
+        if (count == 0)
+            return;
+    }
     else if (diff < -HIBY_MIRROR_SLACK)
         count--;    /* jack too far behind: skip one frame */
 
     if (snd_pcm_writei(hiby_mirror, buf, count) == -EPIPE)
     {
         snd_pcm_prepare(hiby_mirror);
-        hiby_pcm_mirror_pad(target);
+        hiby_pcm_mirror_pad(target - (snd_pcm_sframes_t)count);
         snd_pcm_writei(hiby_mirror, buf, count);
     }
     else if (diff > HIBY_MIRROR_SLACK && diff <= HIBY_MIRROR_JUMP)
@@ -692,6 +706,21 @@ static void async_callback(snd_async_handler_t *ahandler)
     pthread_mutex_unlock(&pcm_mtx);
 }
 
+#if defined(HIBY_LINUX)
+void hiby_debug_log(const char *format, ...);
+
+static int hiby_pcm_closing;    /* headset handles still being closed */
+
+static void *hiby_pcm_close_fn(void *h)
+{
+    snd_pcm_drop(h);
+    snd_pcm_close(h);
+    __sync_fetch_and_sub(&hiby_pcm_closing, 1);
+    hiby_debug_log("pcm: headset closed");
+    return NULL;
+}
+#endif
+
 static void close_hwdev(void)
 {
     logf("closedev (%p)", handle);
@@ -701,10 +730,21 @@ static void close_hwdev(void)
 
     if (handle) {
 #if defined(HIBY_LINUX)
-        /* draining a headset that just went away blocks for good */
+        /* a headset that just went away can block drop and close for good:
+           a thread of their own waits on them, and playback carries on */
         if (hiby_pcm_bt_active())
-            snd_pcm_drop(handle);
-        else
+        {
+            pthread_t closer;
+            hiby_debug_log("pcm: closing %s", current_alsa_device);
+            __sync_fetch_and_add(&hiby_pcm_closing, 1);
+            if (pthread_create(&closer, NULL, hiby_pcm_close_fn, handle) == 0)
+                pthread_detach(closer);
+            else
+                hiby_pcm_close_fn(handle);
+            handle = NULL;
+            current_alsa_device = NULL;
+            return;
+        }
 #endif
         snd_pcm_drain(handle);
 #ifdef AUDIOHW_MUTE_ON_STOP
@@ -765,10 +805,32 @@ static void open_hwdev(const char *device, snd_pcm_stream_t mode)
     close_hwdev();
 
 #if defined(HIBY_LINUX)
+    /* bluealsa takes one client per headset: let the last one go first
+       (a codec switch), but not for ever (it went away for good) */
+    for (int i = 0; i < 40 && hiby_pcm_is_bluealsa_device(device)
+                    && __sync_fetch_and_add(&hiby_pcm_closing, 0); i++)
+        usleep(50000);
+    /* Opened non-blocking: a blocking open of a busy device waits for ever,
+       and something takes the jack for a moment when a headset leaves.
+       Wait for it here, 5 s at most, logging who has it. */
+    hiby_debug_log("pcm: opening %s", device);
+    for (int i = 0; (err = snd_pcm_open(&handle, device, mode, SND_PCM_NONBLOCK)) == -EBUSY
+                    && i < 100; i++)
+    {
+        if (i == 0)
+        {
+            hiby_debug_log("pcm: %s busy, held by:", device);
+            system("for p in /proc/[0-9]*; do ls -l $p/fd 2>/dev/null | grep -q /dev/snd/pcm"
+                   " && echo \"  $p $(cat $p/comm)\"; done >> /data/mnt/sd_0/rockbox-bt-debug.log");
+        }
+        usleep(50000);
+    }
     /* a blocking write to a headset that just went away never returns, and
-       the pump holds pcm_mtx while it waits: everything else freezes */
-    if ((err = snd_pcm_open(&handle, device, mode,
-                            hiby_pcm_is_bluealsa_device(device) ? SND_PCM_NONBLOCK : 0)) < 0)
+       the pump holds pcm_mtx while it waits: everything else freezes; the
+       jack keeps writing the way it always has */
+    if (err >= 0 && !hiby_pcm_is_bluealsa_device(device))
+        snd_pcm_nonblock(handle, 0);
+    if (err < 0)
 #else
     if ((err = snd_pcm_open(&handle, device, mode, 0)) < 0)
 #endif
@@ -777,6 +839,7 @@ static void open_hwdev(const char *device, snd_pcm_stream_t mode)
     }
     last_sample_rate = 0;
 #if defined(HIBY_LINUX)
+    hiby_debug_log("pcm: opened %s", device);
     hiby_pcm_start_poll_thread();
 #else
     pthread_mutexattr_t attr;

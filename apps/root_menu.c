@@ -665,6 +665,7 @@ static struct menu_table menu_table[] = {
     { "playlists", &playlists },
 #if defined(HIBY_LINUX) && !defined(SIMULATOR)
     { "bluetooth", &hiby_bluetooth_root_item },
+    { "wifi", &hiby_wifi_root_item },
 #endif
     { "plugins", &rocks_browser },
     { "system_menu", &system_menu_ },

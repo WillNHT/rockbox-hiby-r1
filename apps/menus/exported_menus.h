@@ -45,6 +45,7 @@ extern const struct menu_item_ex
         radio_settings_menu,        /* radio_menu.c     */
 #if defined(HIBY_LINUX) && !defined(SIMULATOR)
         hiby_bluetooth_root_item,   /* hiby_bluetooth_menu.c */
+        hiby_wifi_root_item,        /* hiby_bluetooth_menu.c */
 #endif
         main_menu_layout_item,      /* main_menu_layout.c */
         main_menu_title_item,       /* main_menu_layout.c */

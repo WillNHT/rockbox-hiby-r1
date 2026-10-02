@@ -36,6 +36,7 @@
 #include "kernel.h"
 #include "audio.h"
 #include "action.h"
+#include "button.h"
 #include "button-devinput.h"
 #include "menu.h"
 #include "misc.h"
@@ -1017,6 +1018,17 @@ bool bt_is_enabled_fast(void)
     return bt_powered && !bt_is_suspended_fast();
 }
 
+/* Lists sleep a second between redraws: wake them often enough to show
+ * the rune's quarter-second blink, for as long as it blinks */
+static int bt_blink_wake(struct timeout *tmo)
+{
+    (void)tmo;
+    if (!bt_is_starting_fast())
+        return 0;
+    button_queue_post(BUTTON_NONE, 0);
+    return HZ/8;
+}
+
 /* Bluetooth comes back the way it was left: rb_bt_on.txt is kept while it
  * is on (the bootloader then skips bt_suspend), so power the adapter up
  * again without waiting on bluetoothd. */
@@ -1034,6 +1046,8 @@ void bt_boot_init(void)
            "bluetoothctl power on; sleep 1; i=$((i+1)); done; "
            "rm -f " BT_STARTING_FILE ") >>" BT_DEBUG_LOG_FILE " 2>&1 &");
     bt_powered = true;
+    static struct timeout blink;
+    timeout_register(&blink, bt_blink_wake, HZ/8, 0);
 }
 
 /* Still coming up after boot: the skin's %BT blinks */
@@ -1104,7 +1118,7 @@ static void bt_show_codec_picker(const char *mac)
     data.items = codecs;
     data.count = count;
 
-    simplelist_info_init(&info, ID2P(LANG_BT_SELECT_CODEC), count, &data);
+    simplelist_info_init(&info, (char *)str(LANG_BT_SELECT_CODEC), count, &data);
     info.get_name = bt_strlist_name_cb;
     info.action_callback = bt_simplelist_ok_cancel;
     info.selection = -1;
@@ -1149,6 +1163,27 @@ bool bt_autoconnection_route_to_bluetooth(char* active_mac, bool bt_on)
 
     is_busy = true;
     bool bt_connected = bt_on && bt_get_active_mac(active_mac, 18);
+    static long bt_nudge_tick;
+    hiby_debug_log("bt plugged: audio %s", bt_connected ? active_mac : "none");
+    if (bt_on && !bt_connected && bt_selected_mac[0] && bt_is_connected_fast()
+        && TIME_AFTER(current_tick, bt_nudge_tick))
+    {
+        /* Back for its buttons only: earbuds out of the case leave A2DP
+         * to the player, and nothing asked for it. A connect does, the
+         * way the menu's always has; then wait for its audio */
+        char cmd[64];
+        bt_nudge_tick = current_tick + 10*HZ;
+        hiby_debug_log("bt plugged: no audio yet, connecting %s", bt_selected_mac);
+        splash(0, ID2P(LANG_BT_CONNECTING));
+        snprintf(cmd, sizeof(cmd), "bluetoothctl connect %s >/dev/null 2>&1 &",
+                 bt_selected_mac);
+        system(cmd);
+        if (bt_wait_for_bluealsa_pcm(bt_selected_mac, HZ * 6))
+        {
+            strcpy(active_mac, bt_selected_mac);
+            bt_connected = true;
+        }
+    }
     bool active_mac_changed = bt_connected && (strcmp(bt_selected_mac, active_mac) != 0);
     /* Auto-route to BT if headphone is connected but output is still local (connected by Hiby OS) */
     if (bt_connected && 

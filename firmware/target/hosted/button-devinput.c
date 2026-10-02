@@ -239,7 +239,7 @@ int button_read_device(BDATA)
 #endif
 
     /* check if there are any events pending and process them */
-    while(poll(poll_fds, num_devices, 0)) {
+    while(poll(poll_fds, num_devices, 0) > 0) {
         for(int i = 0; i < num_devices; i++) {
             /* read only if non-blocking */
             if(poll_fds[i].revents & POLLIN) {
@@ -369,8 +369,10 @@ int button_read_device(BDATA)
                     }
                 }
             }
-            /* device was removed/disconnected — close it to stop poll returning POLLHUP forever */
-            else if (poll_fds[i].revents & (POLLERR | POLLHUP)) {
+            /* device was removed/disconnected — close it to stop poll returning POLLHUP forever.
+             * Not an else: a headset that goes away with events still queued
+             * reports POLLIN too, and its read fails, so this loop never ends */
+            if (poll_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL)) {
                 button_remove_input_device(i);
             }
         }
