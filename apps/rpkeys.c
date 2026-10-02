@@ -795,6 +795,24 @@ bool rpkeys_handle(int button, int *action)
     if (bare & BUTTON_POWER)
         return handle_power(bare, repeat, release, action);
 
+    /* A headset's next/prev is a track, never a seek: earbuds only tap,
+     * and they work with the player locked in a pocket */
+    if (bare & (BUTTON_NEXT | BUTTON_PREV))
+    {
+        if (!repeat && !release)
+        {
+            int dir = (bare & BUTTON_NEXT) ? 1 : -1;
+            seek_forget();
+            if (pradio_skip(dir))
+                ;
+            else if (dir > 0)
+                audio_next();
+            else
+                audio_prev();
+        }
+        return true;
+    }
+
     /* Locked: everything but POWER is swallowed, which is what locked
      * means. POWER is handled above, so a 3 s hold still unlocks. */
     if (locked)
@@ -804,15 +822,14 @@ bool rpkeys_handle(int button, int *action)
         return handle_volume(bare, repeat, release);
 
     /* The physical Next key, and the physical Play/Pause key standing in
-     * for a prev key the device does not have. BUTTON_NEXT/BUTTON_PREV are
-     * the Bluetooth remote's, and get the same treatment. */
+     * for a prev key the device does not have. */
     /* The physical "Next" key is the one under the thumb going backwards
      * on this body, so it is prev; Play/Pause is next. Named for where
      * they are, not for what the silkscreen says. */
-    if (bare & (BUTTON_RIGHT | BUTTON_PREV))
+    if (bare & BUTTON_RIGHT)
         return handle_skip(0, -1, repeat, release);
 
-    if (bare & (BUTTON_LEFT | BUTTON_NEXT))
+    if (bare & BUTTON_LEFT)
         return handle_skip(1, +1, repeat, release);
 
     return false;
