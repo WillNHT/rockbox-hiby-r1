@@ -205,14 +205,14 @@ static FILE *bt_popen(const char *cmd)
                 n += snprintf(sim_out + n, sizeof(sim_out) - n, "Device %s %s\n",
                               sim_dev[i].mac, sim_dev[i].name);
     }
-    else if (strstr(cmd, "list-pcms") && sim_link[0])
+    else if (strstr(cmd, "list-pcms"))
     {
         char u[18];
         for (i = 0; i < 17; i++)
             u[i] = sim_link[i] == ':' ? '_' : sim_link[i];
         u[17] = '\0';
-        snprintf(sim_out, sizeof(sim_out),
-                 "/org/bluealsa/hci0/dev_%s/a2dpsrc/sink\n", u);
+        snprintf(sim_out, sizeof(sim_out), sim_link[0] ?
+                 "/org/bluealsa/hci0/dev_%s/a2dpsrc/sink\nrc=0\n" : "rc=0\n", u);
     }
     else if (strstr(cmd, "bluealsa-cli info"))
         strcpy(sim_out, "Sampling: 96000 Hz\nAvailable codecs: SBC AAC LDAC\n"
@@ -313,26 +313,31 @@ static void bt_pcm_path(const char *mac, char *path, size_t len)
     snprintf(path, len, "/org/bluealsa/hci0/dev_%s/a2dpsrc/sink", u);
 }
 
-/* The headset bluealsa has an A2DP sink for, "" if none */
-static void bt_sink_mac(char *mac)
+/* The headset bluealsa has an A2DP sink for, "" if none. False when
+ * bluealsa did not answer - busy streaming, say - which says nothing
+ * about the headset. */
+static bool bt_sink_mac(char *mac)
 {
     char line[256];
-    FILE *fp = bt_popen("bluealsa-cli list-pcms 2>/dev/null");
+    FILE *fp = bt_popen("bluealsa-cli list-pcms 2>/dev/null; echo rc=$?");
+    bool answered = false;
     char *p;
 
     mac[0] = '\0';
     while (fp && fgets(line, sizeof(line), fp))
     {
-        if (!strstr(line, "/a2dpsrc/sink") || !(p = strstr(line, "/dev_"))
+        if (!strncmp(line, "rc=0", 4))
+            answered = true;
+        if (mac[0] || !strstr(line, "/a2dpsrc/sink") || !(p = strstr(line, "/dev_"))
             || strlen(p) < 5 + 17)
             continue;
         for (int i = 0; i < 17; i++)
             mac[i] = p[5 + i] == '_' ? ':' : toupper((unsigned char)p[5 + i]);
         mac[17] = '\0';
-        break;
     }
     if (fp)
         bt_pclose(fp);
+    return answered;
 }
 
 static bool bt_wait_sink(const char *mac, int ms)
@@ -868,7 +873,7 @@ static void bt_run_job(enum bt_job job, const char *mac, const char *arg)
 static void bt_poll_link(void)
 {
     static long next_check, next_nudge;
-    static int nudges;
+    static int nudges, misses;
     char mac[18];
     long now = current_tick;
 
@@ -887,7 +892,15 @@ static void bt_poll_link(void)
         return;
     next_check = now + (bt_linked ? 15*HZ : 3*HZ);
 
-    bt_sink_mac(mac);
+    if (!bt_sink_mac(mac))
+        return;
+    /* a live link is only given up when it is missing twice running */
+    if (!mac[0] && bt_linked && ++misses < 2)
+    {
+        next_check = now + 2*HZ;
+        return;
+    }
+    misses = 0;
     bt_set_link(mac);
     if (!mac[0] && bt.last[0] && nudges < 3 && TIME_AFTER(now, next_nudge))
     {
@@ -1326,9 +1339,21 @@ static const char *bt_row_name(int i, void *data, char *buf, size_t len)
 static enum themable_icons bt_row_icon(int i, void *data)
 {
     (void)data;
-    if (i >= 0 && i < nrows && rows[i].kind == ROW_DEVICE
-        && !strcmp(snap.dev[rows[i].dev].mac, snap.link))
-        return Icon_Audio;
+    if (i < 0 || i >= nrows)
+        return Icon_NOICON;
+    switch (rows[i].kind)
+    {
+        /* devices apart from the screen's own lines: the one playing
+           gets a note, the rest a speaker */
+        case ROW_DEVICE:
+            return strcmp(snap.dev[rows[i].dev].mac, snap.link)
+                   ? Icon_Voice : Icon_Audio;
+        case ROW_POWER:
+        case ROW_OFFSET:
+            return Icon_Menu_setting;
+        case ROW_FORGET_ALL:
+            return Icon_Menu_functioncall;
+    }
     return Icon_NOICON;
 }
 
