@@ -757,7 +757,8 @@ static void bt_power_on(void)
     bt_changed();
     /* the stock bootloader suspends the stack: services gone, driver out */
     if (access(BT_HCI, F_OK) != 0)
-        bt_cmd("/usr/bin/bt_resume 2>&1", NULL);
+        /* not into our pipe: the daemons it starts would hold it open */
+        bt_cmd("/usr/bin/bt_resume >/dev/null 2>&1", NULL);
     /* HiBy's bt_init brings the stack up at boot and leaves it off */
     for (i = 0; i < 30 && bt_cmd("pgrep -f '[b]t_init'", NULL); i++)
         usleep(1000000);
