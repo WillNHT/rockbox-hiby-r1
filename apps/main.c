@@ -144,9 +144,9 @@
 #ifdef HAVE_MULTIVOLUME
 #include "pathfuncs.h" /* for init_volume_names */
 #endif
-#if defined(HAVE_HIBY_BLUETOOTH) && !defined(SIMULATOR)
-#include "hiby_bluetooth.h"
 #endif
+#ifdef HAVE_HIBY_BLUETOOTH
+#include "hiby_bluetooth.h"
 #endif
 
 #if (CONFIG_PLATFORM & PLATFORM_SDL)
@@ -484,7 +484,7 @@ static void init(void)
 #ifdef HAVE_VIDEO
     screensaver_init();
 #endif
-#if defined(HAVE_HIBY_BLUETOOTH) && !defined(SIMULATOR)
+#ifdef HAVE_HIBY_BLUETOOTH
     bt_boot_init();
 #endif
 

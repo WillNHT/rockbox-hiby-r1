@@ -69,6 +69,10 @@ SHF%xd(O,%ps)
 %V(280,28,21,22,-)
 %xd(bt,%BT)
 #
+# The jack playing beside the headset, under the rune
+%V(280,58,21,22,-)
+%?Bw<%xd(wired)|>
+#
 # Battery bar
 %V(-168,26,-30,18,-)
 %bl(0,0,138,18,bb,backdrop,bb_backdrop)
@@ -131,6 +135,7 @@ PRELOAD = """%Fl(2,24-GeistMono-SemiBold.fnt)
 %xl(B,batt_wps.bmp,2,0,2)
 %xl(O,off_on.bmp,48,0,2)
 %xl(bt,bt.bmp,0,0,4)
+%xl(wired,wired.bmp,0,0)
 %xl(vb,vb.bmp)
 %xl(vb_track,vb_track.bmp)
 %xl(bb,bb.bmp)
@@ -923,8 +928,34 @@ def bt_bmp():
     return head + pix
 
 
+# wired.bmp: %?Bw, the jack playing beside a Bluetooth headset (dual
+# output). A speaker in the rune's white, 21x22 like it, so the two sit
+# side by side or one under the other.
+def wired_bmp():
+    fw, fh = 21, 22
+    f = [[(0xff, 0x00, 0xff)] * fw for _ in range(fh)]
+    ink = (0xef, 0xeb, 0xe7)
+    for y in range(8, 14):                      # the magnet
+        for x in range(2, 6):
+            f[y][x] = ink
+    for x in range(6, 12):                      # the cone, widening
+        for y in range(11 - (x - 4), 11 + (x - 4)):
+            f[y][x] = ink
+    for r, (a, b) in ((4, (8, 14)), (7, (6, 16))):   # two sound waves
+        for y in range(a, b):
+            f[y][13 + r - int(abs(y - 10.5) // 3)] = ink
+    pad = (4 - fw * 3 % 4) % 4
+    pix = b"".join(bytes(c for p in r for c in p[::-1]) + b"\0" * pad
+                   for r in reversed(f))
+    head = b"BM" + struct.pack("<IHHI", 54 + len(pix), 0, 0, 54)
+    head += struct.pack("<IiiHHIIiiII", 40, fw, fh, 1, 24, 0,
+                        len(pix), 2835, 2835, 0, 0)
+    return head + pix
+
+
 for skin in ("SnappyV2", "SnappyVinyl", "SnappyAnimated", "SnappyGauge",
              "SnappyLyricsLines", "SnappyLyricsMeter", "SnappyCanvas",
              "SnappyRadio"):
     io.open("themes/wps/%s/bt.bmp" % skin, "wb").write(bt_bmp())
-print("wrote bt.bmp")
+    io.open("themes/wps/%s/wired.bmp" % skin, "wb").write(wired_bmp())
+print("wrote bt.bmp, wired.bmp")

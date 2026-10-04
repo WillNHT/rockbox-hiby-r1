@@ -43,6 +43,9 @@
 #include "debug.h"
 #include "shortcuts.h"
 #include "appevents.h"
+#ifdef HAVE_HIBY_BLUETOOTH
+#include "hiby_bluetooth.h"
+#endif
 
  /* 1 top, 1 bottom, 2 on either side, 1 for the icons
   * if enough space, top and bottom have 2 lines */
@@ -116,7 +119,14 @@ static const struct qs_page qs_page_sound = {
         [QUICKSCREEN_TOP]    = { .cfgname = "volume" },
         [QUICKSCREEN_LEFT]   = { .cfgname = "bass" },
         [QUICKSCREEN_RIGHT]  = { .cfgname = "treble" },
+#ifdef HAVE_HIBY_BLUETOOTH
+        /* where the sound goes: a phone keeps this a swipe away too */
+        [QUICKSCREEN_BOTTOM] = { .lang_id = LANG_BT_BLUETOOTH,
+                                 .act = bt_toggle_power,
+                                 .val = bt_qs_val },
+#else
         [QUICKSCREEN_BOTTOM] = { .cfgname = "balance" },
+#endif
     },
 };
 

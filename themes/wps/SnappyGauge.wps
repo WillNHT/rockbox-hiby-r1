@@ -34,6 +34,7 @@
 %xl(B,batt_wps.bmp,2,0,2)
 %xl(O,off_on.bmp,48,0,2)
 %xl(bt,bt.bmp,0,0,4)
+%xl(wired,wired.bmp,0,0)
 %xl(vb,vb.bmp)
 %xl(vb_track,vb_track.bmp)
 %xl(bb,bb.bmp)
@@ -269,6 +270,10 @@ SHF%xd(O,%ps)
 # Bluetooth: grey off, white on, blue connected
 %V(280,28,21,22,-)
 %xd(bt,%BT)
+#
+# The jack playing beside the headset, under the rune
+%V(280,58,21,22,-)
+%?Bw<%xd(wired)|>
 #
 # Battery bar
 %V(-168,26,-30,18,-)

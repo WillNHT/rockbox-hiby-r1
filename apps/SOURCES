@@ -85,8 +85,10 @@ root_menu.c
 screens.c
 settings.c
 settings_list.c
-#if defined(HIBY_LINUX) && !defined(SIMULATOR)
+#ifdef HAVE_HIBY_BLUETOOTH
 hiby_bluetooth.c
+#endif
+#if defined(HIBY_LINUX) && !defined(SIMULATOR)
 hiby_wifi.c
 #endif
 shortcuts.c

@@ -64,7 +64,7 @@ Available in the [Development Build](#development-builds):
 *   **[Bluetooth Integration](docs/mods/bluetooth-hiby-x1600.md):** Built upon bidhata's [HiBy R1 patches](https://github.com/bidhata/hiby-r1-rockbox-bt) with major features and stability improvements:
     *   Reliable connection and discovery handling by replacing the glitchy proprietary HiBy `sys_server` with `bluetoothctl`
     *   Added support for Bluetooth headset media buttons.
-    *   Added direct Bluetooth management in the Status menu (enable/disable, codec switching, reconnection).
+    *   One phone-style Bluetooth screen: on/off, paired and nearby devices, a page per device (codec, battery, forget), and a quickscreen toggle.
 *   **Additional Community Patches** *(Note: Most of these are now integrated into the official Rockbox release and are retained here primarily for functional reference)*:
     *   [USB DAC](https://gerrit.rockbox.org/r/c/rockbox/+/7674)
     *   [Touchscreen Keyboard](https://gerrit.rockbox.org/r/c/rockbox/+/7695)

@@ -125,11 +125,15 @@ static void pcm_pump_locked(snd_pcm_t *handle);
 #define HIBY_MIRROR_DEVICE "plughw:0,0"
 /* pcm_sampr is unsigned long: everything here is signed and goes negative */
 #define HIBY_SAMPR         ((snd_pcm_sframes_t)pcm_sampr)
-#define HIBY_MIRROR_SLACK  (HIBY_SAMPR / 50)  /* +-20 ms before nudging */
-#define HIBY_MIRROR_JUMP   (HIBY_SAMPR / 25)  /* past 40 ms, jump at once */
+#define HIBY_MIRROR_SLACK  (HIBY_SAMPR / 50)  /* +-20 ms, averaged, before nudging */
+/* past 150 ms the target really moved (start, seek, offset): jump. Below
+   that it is noise - the jack is fed a Bluetooth period (46 ms and up) at a
+   time, so one reading swings by that much - and only the average counts */
+#define HIBY_MIRROR_JUMP   (HIBY_SAMPR * 3 / 20)
 static snd_pcm_t *hiby_mirror = NULL;
 static long hiby_mirror_retry;
 static snd_pcm_sframes_t hiby_bt_delay;       /* smoothed bluealsa delay */
+static snd_pcm_sframes_t hiby_mirror_err;     /* smoothed jack - target */
 
 static snd_pcm_sframes_t hiby_pcm_mirror_target(void)
 {
@@ -141,6 +145,11 @@ static snd_pcm_sframes_t hiby_pcm_mirror_target(void)
         + (snd_pcm_sframes_t)global_settings.bt_wired_offset * HIBY_SAMPR / 1000;
     /* the jack is fed a period at a time: with less queued it runs dry */
     return t < 2 * period_size ? 2 * period_size : t;
+}
+
+bool hiby_pcm_mirror_active(void)
+{
+    return hiby_mirror != NULL;
 }
 
 static void hiby_pcm_mirror_close(void)
@@ -194,6 +203,7 @@ static void hiby_pcm_mirror_open(void)
         snd_pcm_sw_params(hiby_mirror, sw);
     if (snd_pcm_delay(handle, &hiby_bt_delay) < 0)
         hiby_bt_delay = 0;
+    hiby_mirror_err = 0;
     hiby_pcm_mirror_pad(hiby_pcm_mirror_target() - period_size);
 }
 
@@ -224,6 +234,13 @@ static void hiby_pcm_mirror_write(const sample_t *buf, snd_pcm_uframes_t count)
 
     /* compared as it will be once this period is in, like the target */
     diff = target - delay - (snd_pcm_sframes_t)count;
+    if (diff > HIBY_MIRROR_JUMP || diff < -HIBY_MIRROR_JUMP)
+        hiby_mirror_err = 0;
+    else
+    {
+        hiby_mirror_err += (diff - hiby_mirror_err) / 8;
+        diff = hiby_mirror_err;
+    }
     if (diff > HIBY_MIRROR_JUMP)
         hiby_pcm_mirror_pad(diff);
     else if (diff < -HIBY_MIRROR_JUMP)
@@ -820,10 +837,20 @@ static void open_hwdev(const char *device, snd_pcm_stream_t mode)
         if (i == 0)
         {
             hiby_debug_log("pcm: %s busy, held by:", device);
-            system("for p in /proc/[0-9]*; do ls -l $p/fd 2>/dev/null | grep -q /dev/snd/pcm"
+            system("[ -f /data/mnt/sd_0/rockbox-bt-debug.log ] && "
+                   "for p in /proc/[0-9]*; do ls -l $p/fd 2>/dev/null | grep -q /dev/snd/pcm"
                    " && echo \"  $p $(cat $p/comm)\"; done >> /data/mnt/sd_0/rockbox-bt-debug.log");
         }
         usleep(50000);
+    }
+    /* a headset that went away between its check and here: the jack plays
+       instead, and the cleared MAC tells Bluetooth it was not routed */
+    if (err < 0 && hiby_pcm_is_bluealsa_device(device))
+    {
+        hiby_debug_log("pcm: %s failed: %s, back to the jack", device, snd_strerror(err));
+        hiby_pcm_set_bt_mac(NULL);
+        device = playback_dev = HIBY_MIRROR_DEVICE;
+        err = snd_pcm_open(&handle, device, mode, SND_PCM_NONBLOCK);
     }
     /* a blocking write to a headset that just went away never returns, and
        the pump holds pcm_mtx while it waits: everything else freezes; the

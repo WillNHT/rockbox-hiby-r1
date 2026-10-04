@@ -1421,8 +1421,8 @@ const struct settings_list settings[] = {
                 MAX_FILES_IN_DIR_STEP,
                 NULL, NULL, NULL),
 #ifdef HAVE_HIBY_BLUETOOTH
-    INT_SETTING(0, bt_wired_offset, LANG_BT_WIRED_OFFSET, 0,
-                "bluetooth wired offset", UNIT_MS, -500, 500, 10,
+    INT_SETTING(0, bt_wired_offset, LANG_BT_WIRED_OFFSET, 470,
+                "bluetooth wired offset", UNIT_MS, -500, 1000, 10,
                 NULL, NULL, NULL),
 #endif
 #if defined(HAVE_HIBY_LINUX_POWER_CHARGE_LIMIT) && !defined(SIMULATOR)

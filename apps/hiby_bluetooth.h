@@ -2,17 +2,20 @@
 #define __HIBY_BLUETOOTH_H__
 
 #include <stdbool.h>
+#include <stddef.h>
 
 int hiby_bluetooth_menu(void);
 void hiby_debug_log(const char *format, ...);
 
-bool bt_is_enabled_fast(void);
 void bt_boot_init(void);
+bool bt_is_enabled_fast(void);
 bool bt_is_starting_fast(void);
-bool bt_disable(void);
-bool bt_enable(void);
 bool bt_is_connected_fast(void);
-bool bt_autoconnection_route_to_bluetooth(char active_mac[18], bool bt_on);
-void bt_route_to_local(void);
+bool bt_is_dual_fast(void);
+int bt_pending_event(void);
+void bt_sync(void);
+void bt_unroute(bool resume_later);
+void bt_toggle_power(void);
+const char *bt_qs_val(char *buf, size_t len);
 
 #endif /* __HIBY_BLUETOOTH_H__ */

@@ -38,7 +38,10 @@
 
 #include "logf.h"
 
+#include <limits.h>
+#include <poll.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -139,6 +142,10 @@ out:
 /* Bluetooth at the same volume step is much louder than the jack */
 #define HIBY_BT_VOL_PCT 85
 
+/* What the player last set the headset to, so the watcher below can tell
+ * the player's own change from one the headset made */
+static volatile long hiby_bt_mixer_set = -1;
+
 /* Set every bluealsa A2DP playback volume (0..127) straight through the
  * ALSA mixer: no fork per key press, so it keeps up with the volume keys.
  * The headset's own buttons still move the same control. */
@@ -160,13 +167,88 @@ static bool hiby_bluealsa_set_volume(long step)
             if (!snd_mixer_selem_has_playback_volume(elem))
                 continue;
             snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-            snd_mixer_selem_set_playback_volume_all(elem,
-                min + (max - min) * step / HIBY_ABSVOL_MAX);
+            hiby_bt_mixer_set = min + (max - min) * step / HIBY_ABSVOL_MAX;
+            snd_mixer_selem_set_playback_volume_all(elem, hiby_bt_mixer_set);
             set = true;
         }
     }
     snd_mixer_close(mixer);
     return set;
+}
+
+/* The headset's own volume buttons (AVRCP absolute volume) move bluealsa's
+ * control. The Bluetooth worker polls these while a headset is connected
+ * and hands what it reads back to the player's volume. */
+static snd_mixer_t *bt_watch;
+
+void hiby_bt_mixer_close(void)
+{
+    if (bt_watch)
+        snd_mixer_close(bt_watch);
+    bt_watch = NULL;
+}
+
+int hiby_bt_mixer_fds(struct pollfd *pfd, int max)
+{
+    int n;
+
+    if (!bt_watch)
+    {
+        if (snd_mixer_open(&bt_watch, 0) < 0)
+        {
+            bt_watch = NULL;
+            return 0;
+        }
+        if (snd_mixer_attach(bt_watch, "bluealsa") < 0
+            || snd_mixer_selem_register(bt_watch, NULL, NULL) < 0
+            || snd_mixer_load(bt_watch) < 0)
+        {
+            hiby_bt_mixer_close();
+            return 0;
+        }
+    }
+    n = snd_mixer_poll_descriptors(bt_watch, pfd, max);
+    return n < 0 ? 0 : n;
+}
+
+/* After poll(): the player volume the headset asked for, INT_MIN if none */
+int hiby_bt_mixer_remote_volume(struct pollfd *pfd, int n)
+{
+    snd_mixer_elem_t *elem;
+    unsigned short revents;
+    long v, min, max, step;
+    int pct, min_vol, max_vol, vol;
+
+    if (!bt_watch || snd_mixer_poll_descriptors_revents(bt_watch, pfd, n, &revents) < 0)
+        return INT_MIN;
+    if (revents & (POLLERR | POLLHUP | POLLNVAL))
+    {
+        hiby_bt_mixer_close();  /* bluealsa went: opened again later */
+        return INT_MIN;
+    }
+    if (!(revents & POLLIN) || snd_mixer_handle_events(bt_watch) < 0)
+        return INT_MIN;
+
+    for (elem = snd_mixer_first_elem(bt_watch); elem; elem = snd_mixer_elem_next(elem))
+        if (snd_mixer_selem_has_playback_volume(elem))
+            break;
+    if (!elem)
+        return INT_MIN;
+    snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+    snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_FRONT_LEFT, &v);
+    if (max <= min || labs(v - hiby_bt_mixer_set) <= 1)
+        return INT_MIN;
+    hiby_bt_mixer_set = v;
+
+    /* hiby_notify_bt_absvol() backwards */
+    step = (v - min) * HIBY_ABSVOL_MAX / (max - min) * 100 / HIBY_BT_VOL_PCT;
+    if (step > HIBY_ABSVOL_MAX)
+        step = HIBY_ABSVOL_MAX;
+    pct = (step * 100 + HIBY_ABSVOL_MAX / 2) / HIBY_ABSVOL_MAX;
+    min_vol = sound_min(SOUND_VOLUME);
+    max_vol = sound_max(SOUND_VOLUME);
+    vol = min_vol + (max_vol - min_vol) * pct / 100;
+    return vol - (vol - min_vol) % sound_steps(SOUND_VOLUME);
 }
 
 static void hiby_notify_bt_absvol(int volume_cb)
