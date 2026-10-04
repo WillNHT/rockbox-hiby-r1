@@ -125,11 +125,15 @@ static void pcm_pump_locked(snd_pcm_t *handle);
 #define HIBY_MIRROR_DEVICE "plughw:0,0"
 /* pcm_sampr is unsigned long: everything here is signed and goes negative */
 #define HIBY_SAMPR         ((snd_pcm_sframes_t)pcm_sampr)
-#define HIBY_MIRROR_SLACK  (HIBY_SAMPR / 50)  /* +-20 ms before nudging */
-#define HIBY_MIRROR_JUMP   (HIBY_SAMPR / 25)  /* past 40 ms, jump at once */
+#define HIBY_MIRROR_SLACK  (HIBY_SAMPR / 50)  /* +-20 ms, averaged, before nudging */
+/* past 150 ms the target really moved (start, seek, offset): jump. Below
+   that it is noise - the jack is fed a Bluetooth period (46 ms and up) at a
+   time, so one reading swings by that much - and only the average counts */
+#define HIBY_MIRROR_JUMP   (HIBY_SAMPR * 3 / 20)
 static snd_pcm_t *hiby_mirror = NULL;
 static long hiby_mirror_retry;
 static snd_pcm_sframes_t hiby_bt_delay;       /* smoothed bluealsa delay */
+static snd_pcm_sframes_t hiby_mirror_err;     /* smoothed jack - target */
 
 static snd_pcm_sframes_t hiby_pcm_mirror_target(void)
 {
@@ -194,6 +198,7 @@ static void hiby_pcm_mirror_open(void)
         snd_pcm_sw_params(hiby_mirror, sw);
     if (snd_pcm_delay(handle, &hiby_bt_delay) < 0)
         hiby_bt_delay = 0;
+    hiby_mirror_err = 0;
     hiby_pcm_mirror_pad(hiby_pcm_mirror_target() - period_size);
 }
 
@@ -224,6 +229,13 @@ static void hiby_pcm_mirror_write(const sample_t *buf, snd_pcm_uframes_t count)
 
     /* compared as it will be once this period is in, like the target */
     diff = target - delay - (snd_pcm_sframes_t)count;
+    if (diff > HIBY_MIRROR_JUMP || diff < -HIBY_MIRROR_JUMP)
+        hiby_mirror_err = 0;
+    else
+    {
+        hiby_mirror_err += (diff - hiby_mirror_err) / 8;
+        diff = hiby_mirror_err;
+    }
     if (diff > HIBY_MIRROR_JUMP)
         hiby_pcm_mirror_pad(diff);
     else if (diff < -HIBY_MIRROR_JUMP)
