@@ -93,6 +93,7 @@
 int pcm_alsa_switch_playback_device(const char *device);
 void hiby_pcm_set_bt_mac(const char *mac);
 const char *hiby_pcm_get_bt_mac(void);
+bool hiby_pcm_mirror_active(void);
 /* hiby/hibylinux_codec.c */
 int hiby_bt_mixer_fds(struct pollfd *pfd, int max);
 int hiby_bt_mixer_remote_volume(struct pollfd *pfd, int n);
@@ -1070,6 +1071,16 @@ bool bt_is_starting_fast(void)
 bool bt_is_connected_fast(void)
 {
     return bt_linked;
+}
+
+/* The jack playing beside the headset; the simulator pretends it is */
+bool bt_is_dual_fast(void)
+{
+#ifdef SIMULATOR
+    return bt_linked;
+#else
+    return hiby_pcm_mirror_active();
+#endif
 }
 
 #ifndef SIMULATOR

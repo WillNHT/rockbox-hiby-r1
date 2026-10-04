@@ -28,6 +28,7 @@
 %xl(batt,batt_sbs.bmp,96,6,11)
 %xl(batt_chg,batt_sbs_chg.bmp,96,6)
 %xl(bt,bt.bmp,70,6,4)
+%xl(wired,wired.bmp,46,6)
 %xl(vb,vb.bmp)
 %xl(vb_backdrop,vb_backdrop.bmp)
 %xl(vb_too_loud,vb_too_loud.bmp)
@@ -58,7 +59,7 @@
 #
 # Battery text and icon, and the Bluetooth rune beside the battery
 %V(-240,30,-30,32,3)
-%ar%bl%%%?bp<%xd(batt_chg)|%xd(batt,%bl)>%xd(bt,%BT)
+%ar%bl%%%?bp<%xd(batt_chg)|%xd(batt,%bl)>%?Bw<%xd(wired)|>%xd(bt,%BT)
 #
 # Title
 %Vl(title, 30,62,-30,60,5)

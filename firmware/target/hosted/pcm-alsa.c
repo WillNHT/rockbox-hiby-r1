@@ -147,6 +147,11 @@ static snd_pcm_sframes_t hiby_pcm_mirror_target(void)
     return t < 2 * period_size ? 2 * period_size : t;
 }
 
+bool hiby_pcm_mirror_active(void)
+{
+    return hiby_mirror != NULL;
+}
+
 static void hiby_pcm_mirror_close(void)
 {
     if (!hiby_mirror)
