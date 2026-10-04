@@ -11,6 +11,9 @@ Everything is on one screen, **Main Menu → Bluetooth**, laid out like a phone'
 *   **Other Devices** - found while the screen is open (`Searching...`). Select one to pair and connect. A device that shows a code asks you to confirm it; one that wants a PIN gets `0000`.
 *   **Forget All Devices**, **Wired Sync Offset** - at the bottom.
 
+![The Bluetooth screen](screenshots/bluetooth-screen.png)
+![A connected headset's page](screenshots/bluetooth-device.png)
+
 A device's page shows its status, codec, sample rate and battery, and has **Connect/Disconnect** and **Forget This Device**. Select the codec to change it; playback pauses for the switch and carries on afterwards.
 
 The quickscreen's **Sound** page has a Bluetooth on/off toggle in its bottom slot.
