@@ -27,7 +27,6 @@
 
 #include <ctype.h>
 #include <fcntl.h>
-#include <glob.h>
 #include <limits.h>
 #include <poll.h>
 #include <pthread.h>
@@ -37,6 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/syscall.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -57,6 +57,7 @@
 #endif
 
 /* Pipes and processes here are the OS's, not Rockbox's files */
+#undef open
 #undef read
 #undef write
 #undef close
@@ -254,14 +255,23 @@ static int bt_acl_count(void)
 #define bt_scan_open() popen("bluetoothctl >/dev/null 2>&1", "w")
 #define bt_scan_close pclose
 
-/* One /sys/class/bluetooth/hci0:<handle> per link, audio or not: no fork */
+/* One /sys/class/bluetooth/hci0:<handle> per link, audio or not: no fork.
+ * Listed by hand: glob() needs glibc 2.27, newer than the player's, and
+ * opendir() here is Rockbox's own */
 static int bt_acl_count(void)
 {
-    glob_t g;
-    int n = 0;
-    if (glob("/sys/class/bluetooth/hci0:*", 0, NULL, &g) == 0)
-        n = g.gl_pathc;
-    globfree(&g);
+    char buf[1024];
+    int fd = open("/sys/class/bluetooth", O_RDONLY);
+    int n = 0, len, i;
+
+    if (fd < 0)
+        return 0;
+    /* struct linux_dirent64: reclen at 16, name at 19 */
+    while ((len = syscall(SYS_getdents64, fd, buf, sizeof(buf))) > 0)
+        for (i = 0; i < len; i += *(unsigned short *)(buf + i + 16))
+            if (!strncmp(buf + i + 19, "hci0:", 5))
+                n++;
+    close(fd);
     return n;
 }
 #endif
