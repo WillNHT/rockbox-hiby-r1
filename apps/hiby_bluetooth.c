@@ -1344,10 +1344,10 @@ static enum themable_icons bt_row_icon(int i, void *data)
     switch (rows[i].kind)
     {
         /* devices apart from the screen's own lines: the one playing
-           gets a note, the rest a speaker */
+           gets a note, the rest a device */
         case ROW_DEVICE:
             return strcmp(snap.dev[rows[i].dev].mac, snap.link)
-                   ? Icon_Voice : Icon_Audio;
+                   ? Icon_System_menu : Icon_Audio;
         case ROW_POWER:
         case ROW_OFFSET:
             return Icon_Menu_setting;
