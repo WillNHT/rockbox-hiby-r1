@@ -36,6 +36,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -182,6 +183,8 @@ static struct { const char *mac, *name; bool paired; } sim_dev[] = {
 };
 static char sim_link[18] = "00:1B:66:A1:B2:C3";
 static char sim_out[512];
+/* POSIX 2008; the simulator's feature macros leave it undeclared */
+FILE *fmemopen(void *buf, size_t size, const char *mode);
 
 static FILE *bt_popen(const char *cmd)
 {
