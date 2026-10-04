@@ -86,6 +86,7 @@
 #define BT_DIR           PIVOT_ROOT ROCKBOX_DIR
 #define BT_BOOT_FILE     BT_DIR "/rb_bt_on.txt"   /* the bootloader reads it too */
 #define BT_LAST_FILE     BT_DIR "/rb_bt_last.txt"
+#define BT_OFFSET_FILE   BT_DIR "/rb_bt_offsets.txt"  /* "<mac> <ms>" a line */
 #define BT_LOG_FILE      "/data/mnt/sd_0/rockbox-bt-debug.log"
 #define BT_LOG_MAX       (512*1024)
 
@@ -133,6 +134,7 @@ static struct
     int answer;             /* to the passkey: 1 yes, 0 no, -1 not yet */
     bool screen;            /* the Bluetooth screen is open: discover */
     bool scanning;
+    long scan_since;        /* tick discovery (re)started */
     enum bt_job job;        /* UI -> worker, one slot: the latest wins */
     char job_mac[18];
     char job_arg[BT_CODEC_LEN];
@@ -976,6 +978,14 @@ static void *bt_worker(void *arg)
         {
             fputs("scan on\n", scan);
             fflush(scan);
+            bt.scan_since = current_tick;
+        }
+        else if (scan && (fputs("\n", scan) == EOF || fflush(scan) == EOF))
+        {
+            /* its bluetoothctl went away: start another next time round */
+            hiby_debug_log("bt: discovery stopped, restarting");
+            bt_scan_close(scan);
+            scan = NULL;
         }
         else if ((!bt.screen || bt_power != BT_ON) && scan)
         {
@@ -1103,6 +1113,41 @@ int bt_pending_event(void)
     return 0;
 }
 
+/* The jack's offset is the headset's own latency, which bluealsa does not
+ * see: it differs from one headset (and codec) to the next, so each keeps
+ * its own. A headset never set inherits whatever is set now. */
+static void bt_offset_load(const char *mac)
+{
+    char line[40], m[18];
+    int ms;
+    FILE *fp = fopen(BT_OFFSET_FILE, "r");
+
+    while (fp && fgets(line, sizeof(line), fp))
+        if (sscanf(line, "%17s %d", m, &ms) == 2 && !strcmp(m, mac))
+            global_settings.bt_wired_offset = ms;
+    if (fp)
+        fclose(fp);
+}
+
+static void bt_offset_save(const char *mac, int ms)
+{
+    char lines[BT_MAX_DEVICES][40], line[40], m[18];
+    int n = 0, i;
+    FILE *fp = fopen(BT_OFFSET_FILE, "r");
+
+    while (fp && n < BT_MAX_DEVICES - 1 && fgets(line, sizeof(line), fp))
+        if (sscanf(line, "%17s", m) == 1 && strcmp(m, mac))
+            strcpy(lines[n++], line);
+    if (fp)
+        fclose(fp);
+    snprintf(lines[n++], sizeof(lines[0]), "%s %d\n", mac, ms);
+    fp = fopen(BT_OFFSET_FILE, "w");
+    for (i = 0; fp && i < n; i++)
+        fputs(lines[i], fp);
+    if (fp)
+        fclose(fp);
+}
+
 static void bt_route(const char *mac)
 {
     static char dev[2][64];
@@ -1124,6 +1169,7 @@ static void bt_route(const char *mac)
         return;
     }
     bt_input_attached = -2;
+    bt_offset_load(mac);
     /* the headset's own level from the player's */
     sound_set_volume(global_status.volume);
     if (playing)
@@ -1236,6 +1282,7 @@ static struct
     char codecs[BT_MAX_CODECS][BT_CODEC_LEN];
     int ncodecs, rate;
     bool scanning;
+    long scan_since;
     int gen;
 } snap;
 
@@ -1255,6 +1302,7 @@ static void bt_snapshot(void)
     snap.ncodecs = bt.ncodecs;
     snap.rate = bt.rate;
     snap.scanning = bt.scanning;
+    snap.scan_since = bt.scan_since;
     msg = bt.msg;
     bt.msg = 0;
     strcpy(passkey, bt.passkey);
@@ -1285,9 +1333,11 @@ static const char *bt_device_state(const struct bt_device *d, char *buf, size_t 
 }
 
 /* The one Bluetooth screen: the switch, paired devices, devices around */
-enum { ROW_POWER, ROW_PAIRED, ROW_OTHER, ROW_DEVICE, ROW_FORGET_ALL, ROW_OFFSET };
-static struct { unsigned char kind, dev; } rows[BT_MAX_DEVICES + 5];
+enum { ROW_POWER, ROW_PAIRED, ROW_OTHER, ROW_DEVICE, ROW_SEARCH, ROW_FORGET_ALL,
+       ROW_OFFSET };
+static struct { unsigned char kind, dev; } rows[BT_MAX_DEVICES + 6];
 static int nrows;
+static bool bt_found_other;
 
 static void bt_build_rows(void)
 {
@@ -1312,6 +1362,9 @@ static void bt_build_rows(void)
         }
         if (!other)
             rows[nrows++].kind = ROW_OTHER;
+        /* searching, found nothing yet, or stopped: always said */
+        rows[nrows++].kind = ROW_SEARCH;
+        bt_found_other = other;
         if (snap.count && snap.dev[0].paired)
             rows[nrows++].kind = ROW_FORGET_ALL;
     }
@@ -1331,10 +1384,16 @@ static const char *bt_row_name(int i, void *data, char *buf, size_t len)
         case ROW_PAIRED:
             return S(LANG_BT_PAIRED_DEVICES);
         case ROW_OTHER:
+            return S(LANG_BT_OTHER_DEVICES);
+        case ROW_SEARCH:
+        {
+            long secs = (current_tick - snap.scan_since) / HZ;
             if (!snap.scanning)
-                return S(LANG_BT_OTHER_DEVICES);
-            snprintf(buf, len, "%s (%s)", S(LANG_BT_OTHER_DEVICES), S(LANG_BT_SEARCHING));
+                return S(LANG_BT_SEARCH_STOPPED);
+            snprintf(buf, len, "%s (%lds)", S(!bt_found_other && secs >= 20
+                     ? LANG_BT_NOTHING_FOUND : LANG_BT_SEARCHING), secs);
             return buf;
+        }
         case ROW_DEVICE:
             return bt_device_state(&snap.dev[rows[i].dev], buf, len);
         case ROW_FORGET_ALL:
@@ -1373,6 +1432,8 @@ static bool bt_context;
 /* A long press is "open it"; the worker's news redraws the rows */
 static int bt_screen_cb(int action, struct gui_synclist *lists)
 {
+    static long last_sec;
+
     if (action == ACTION_STD_CONTEXT)
     {
         bt_context = true;
@@ -1383,6 +1444,11 @@ static int bt_screen_cb(int action, struct gui_synclist *lists)
         bt_snapshot();
         bt_build_rows();
         gui_synclist_set_nb_items(lists, nrows);
+        return ACTION_REDRAW;
+    }
+    if (snap.scanning && current_tick / HZ != last_sec)
+    {
+        last_sec = current_tick / HZ;
         return ACTION_REDRAW;
     }
     return action;
@@ -1561,6 +1627,9 @@ int hiby_bluetooth_menu(void)
                 }
                 break;
             }
+            case ROW_SEARCH:
+                bt_wake_worker();   /* a stopped search starts again */
+                break;
             case ROW_FORGET_ALL:
             {
                 const char *lines[] = { S(LANG_BT_FORGET_ALL) };
@@ -1576,9 +1645,13 @@ int hiby_bluetooth_menu(void)
                 /* + holds the jack back more, - less, when it plays
                    beside a headset */
                 set_int(S(LANG_BT_WIRED_OFFSET), "ms", UNIT_MS,
-                        &global_settings.bt_wired_offset, NULL, 10, -500, 500,
+                        &global_settings.bt_wired_offset, NULL, 10, -500, 1000,
                         NULL);
                 settings_save();
+#ifndef SIMULATOR
+                if (snap.link[0])   /* this headset's, from now on */
+                    bt_offset_save(snap.link, global_settings.bt_wired_offset);
+#endif
                 break;
         }
         bt_snapshot();
