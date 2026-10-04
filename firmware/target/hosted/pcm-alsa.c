@@ -820,10 +820,20 @@ static void open_hwdev(const char *device, snd_pcm_stream_t mode)
         if (i == 0)
         {
             hiby_debug_log("pcm: %s busy, held by:", device);
-            system("for p in /proc/[0-9]*; do ls -l $p/fd 2>/dev/null | grep -q /dev/snd/pcm"
+            system("[ -f /data/mnt/sd_0/rockbox-bt-debug.log ] && "
+                   "for p in /proc/[0-9]*; do ls -l $p/fd 2>/dev/null | grep -q /dev/snd/pcm"
                    " && echo \"  $p $(cat $p/comm)\"; done >> /data/mnt/sd_0/rockbox-bt-debug.log");
         }
         usleep(50000);
+    }
+    /* a headset that went away between its check and here: the jack plays
+       instead, and the cleared MAC tells Bluetooth it was not routed */
+    if (err < 0 && hiby_pcm_is_bluealsa_device(device))
+    {
+        hiby_debug_log("pcm: %s failed: %s, back to the jack", device, snd_strerror(err));
+        hiby_pcm_set_bt_mac(NULL);
+        device = playback_dev = HIBY_MIRROR_DEVICE;
+        err = snd_pcm_open(&handle, device, mode, SND_PCM_NONBLOCK);
     }
     /* a blocking write to a headset that just went away never returns, and
        the pump holds pcm_mtx while it waits: everything else freezes; the

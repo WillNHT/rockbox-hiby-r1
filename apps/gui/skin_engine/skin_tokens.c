@@ -47,7 +47,7 @@
 #include "albumart.h"
 #include "playlist.h"
 #include "pradio.h"
-#if defined(HIBY_LINUX) && !defined(SIMULATOR)
+#ifdef HAVE_HIBY_BLUETOOTH
 #include "hiby_bluetooth.h"
 #endif
 #include "playback.h"
@@ -1376,7 +1376,7 @@ const char *get_token_value(struct gui_wps *gwps,
         case SKIN_TOKEN_BLUETOOTH:
             /* %?BT<off|on|connected|starting> */
             numeric_ret = 1;
-#if defined(HIBY_LINUX) && !defined(SIMULATOR)
+#ifdef HAVE_HIBY_BLUETOOTH
             /* blink off/starting while it comes up, a quarter second each;
                lists only redraw once a second, so bt_boot_init() wakes them */
             if (bt_is_starting_fast())

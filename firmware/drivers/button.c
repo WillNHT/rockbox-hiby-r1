@@ -53,9 +53,7 @@
 #endif
 #if defined(HAVE_HIBY_BLUETOOTH) && !defined(SIMULATOR) && !defined(BOOTLOADER)
 #include "hiby_bluetooth.h"
-const char *hiby_pcm_get_bt_mac(void);
-bool bt_is_enabled_fast(void);
-bool bt_can_autoconnect(void);
+#include "pcm.h"
 #endif
 #ifndef BOOTLOADER
 #include "settings.h"
@@ -179,19 +177,13 @@ static void check_audio_peripheral_state(void)
     }
 #endif
 #if defined(HAVE_HIBY_BLUETOOTH) && !defined(SIMULATOR)
+    /* the Bluetooth worker's news, for bt_sync() and bt_unroute() */
     static long last_bt_event_check = 0;
-    if (bt_can_autoconnect() && TIME_BEFORE(current_tick, get_last_devices_event() + 5*HZ) && TIME_AFTER(current_tick, last_bt_event_check + HZ/2))
+    if (pcm_is_initialized() && TIME_AFTER(current_tick, last_bt_event_check + HZ/2))
     {
-        bool bt_connected = bt_is_connected_fast();
-        const char *bt_mac = hiby_pcm_get_bt_mac();
-        if (!bt_mac && bt_connected)
-        {
-            button_queue_post_remove_head(SYS_BT_PLUGGED, 0);
-        }
-        else if (bt_mac && !bt_connected)
-        {
-            button_queue_post_remove_head(SYS_BT_UNPLUGGED, 0);
-        }
+        int bt_event = bt_pending_event();
+        if (bt_event)
+            button_queue_post_remove_head(bt_event, 0);
         last_bt_event_check = current_tick;
     }
 #endif

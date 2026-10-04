@@ -23,6 +23,7 @@
 
 void button_close_device(void);
 bool button_add_input_device(int i);
+bool button_add_input_node(int i, int node);
 void button_remove_input_device(int i);
 
 #endif

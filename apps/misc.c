@@ -98,11 +98,6 @@
 
 #if defined(HAVE_HIBY_BLUETOOTH)
 #include "hiby_bluetooth.h"
-#include "pcm.h"
-const char *hiby_pcm_get_bt_mac(void);
-bool bt_is_enabled_fast(void);
-bool bt_disconnect(void);
-bool bt_can_autoconnect(void);
 #endif
 
 #ifdef BOOTFILE
@@ -769,29 +764,13 @@ long default_event_handler_ex(long event, void (*callback)(void *), void *parame
 #endif
 #if  defined(HAVE_HIBY_BLUETOOTH) && !defined(SIMULATOR)
     case SYS_BT_PLUGGED:
-        {
-            char active_mac[18];
-            bt_autoconnection_route_to_bluetooth(active_mac, true);
-            return SYS_BT_PLUGGED;
-        }
+        bt_sync();
+        return SYS_BT_PLUGGED;
 
     case SYS_BT_UNPLUGGED:
-        if (bt_can_autoconnect() && hiby_pcm_get_bt_mac() != NULL)
-        {
-            hiby_debug_log("bt unplugged: pausing");
-            /* The switch is only safe with the stream stopped. A fade
-             * makes audio_pause() return with the music still going (the
-             * pause lands when the fade ends), so no fade - there is no
-             * one left to hear it - and stop the PCM before switching */
-            bool fade = global_settings.fade_on_stop;
-            global_settings.fade_on_stop = false;
-            audio_pause();
-            global_settings.fade_on_stop = fade;
-            pcm_play_stop();
-            hiby_debug_log("bt unplugged: routing to local");
-            bt_route_to_local();
-            hiby_debug_log("bt unplugged: done");
-        }
+        /* still true by the time it is read: the headset went */
+        if (bt_pending_event() == SYS_BT_UNPLUGGED)
+            bt_unroute(false);
         return SYS_BT_UNPLUGGED;
 #endif
 #ifdef HAVE_HEADPHONE_DETECTION

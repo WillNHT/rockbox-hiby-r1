@@ -20510,3 +20510,115 @@
     *: "Connected, no IP address"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_BT_TURNING_ON
+  desc: Hiby Bluetooth: the adapter is being switched on
+  user: core
+  <source>
+    *: "Turning On..."
+  </source>
+  <dest>
+    *: "Turning On..."
+  </dest>
+  <voice>
+    *: "Turning On"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_SEARCHING
+  desc: Hiby Bluetooth: discovery is running
+  user: core
+  <source>
+    *: "Searching..."
+  </source>
+  <dest>
+    *: "Searching..."
+  </dest>
+  <voice>
+    *: "Searching"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_PAIRED_DEVICES
+  desc: Hiby Bluetooth: heading over the remembered devices
+  user: core
+  <source>
+    *: "Paired Devices"
+  </source>
+  <dest>
+    *: "Paired Devices"
+  </dest>
+  <voice>
+    *: "Paired Devices"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_OTHER_DEVICES
+  desc: Hiby Bluetooth: heading over devices found nearby
+  user: core
+  <source>
+    *: "Other Devices"
+  </source>
+  <dest>
+    *: "Other Devices"
+  </dest>
+  <voice>
+    *: "Other Devices"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_PAIR_CONFIRM
+  desc: Hiby Bluetooth: does the code on the other device match
+  user: core
+  <source>
+    *: "Pair if the code matches"
+  </source>
+  <dest>
+    *: "Pair if the code matches"
+  </dest>
+  <voice>
+    *: "Pair if the code matches"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_SAMPLE_RATE
+  desc: Hiby Bluetooth: sample rate of the headset stream
+  user: core
+  <source>
+    *: "Sample Rate"
+  </source>
+  <dest>
+    *: "Sample Rate"
+  </dest>
+  <voice>
+    *: "Sample Rate"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_CONNECT
+  desc: Hiby Bluetooth: connect to this device
+  user: core
+  <source>
+    *: "Connect"
+  </source>
+  <dest>
+    *: "Connect"
+  </dest>
+  <voice>
+    *: "Connect"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_FORGET
+  desc: Hiby Bluetooth: unpair this device
+  user: core
+  <source>
+    *: "Forget This Device"
+  </source>
+  <dest>
+    *: "Forget This Device"
+  </dest>
+  <voice>
+    *: "Forget This Device"
+  </voice>
+</phrase>

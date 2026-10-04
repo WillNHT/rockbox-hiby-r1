@@ -58,14 +58,15 @@
 static int num_devices = 0;
 static struct pollfd poll_fds[NR_POLL_DESC];
 
-bool button_add_input_device(int i)
+/* Poll slot i reads /dev/input/event<node> */
+bool button_add_input_node(int i, int node)
 {
     int fd = poll_fds[i].fd;
     if (fd >= 0)
         close(fd);
 
     char path[32];
-    snprintf(path, sizeof(path), "/dev/input/event%d", i);
+    snprintf(path, sizeof(path), "/dev/input/event%d", node);
     fd = open(path, O_RDONLY | O_CLOEXEC | O_NONBLOCK);
     poll_fds[i].fd = fd >= 0 ? fd : -1;
     if(fd >= 0)
@@ -76,6 +77,11 @@ bool button_add_input_device(int i)
             num_devices = i + 1;
     }
     return fd >= 0;
+}
+
+bool button_add_input_device(int i)
+{
+    return button_add_input_node(i, i);
 }
 
 void button_init_device(void)
