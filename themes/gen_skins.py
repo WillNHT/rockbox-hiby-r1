@@ -69,9 +69,9 @@ SHF%xd(O,%ps)
 %V(280,28,21,22,-)
 %xd(bt,%BT)
 #
-# The jack playing beside the headset, under the rune
+# The jack playing beside the headset, under the rune; else receiving
 %V(280,58,21,22,-)
-%?Bw<%xd(wired)|>
+%?Bw<%xd(wired)|%?Br<|%xd(rx,1)|%xd(rx,2)>>
 #
 # Battery bar
 %V(-168,26,-30,18,-)
@@ -136,6 +136,7 @@ PRELOAD = """%Fl(2,24-GeistMono-SemiBold.fnt)
 %xl(O,off_on.bmp,48,0,2)
 %xl(bt,bt.bmp,0,0,4)
 %xl(wired,wired.bmp,0,0)
+%xl(rx,rx.bmp,0,0,2)
 %xl(vb,vb.bmp)
 %xl(vb_track,vb_track.bmp)
 %xl(bb,bb.bmp)
@@ -953,9 +954,39 @@ def wired_bmp():
     return head + pix
 
 
+# rx.bmp: %?Br, Bluetooth receive. An arrow coming down into a tray, the
+# player taking a PC's audio in: grey while Receive Audio waits for a
+# sender, the rune's blue while one plays. Two 21x22 frames stacked.
+def rx_bmp():
+    fw, fh = 21, 22
+    rows = []
+    for ink in ((0x80, 0x80, 0x80), (0x33, 0x99, 0xff)):
+        f = [[(0xff, 0x00, 0xff)] * fw for _ in range(fh)]
+        for y in range(1, 13):                  # the stem
+            for x in range(9, 12):
+                f[y][x] = ink
+        for i in range(7):                      # the head, both sides
+            for t in range(3):
+                f[7 + i][3 + i + t] = ink
+                f[7 + i][17 - i - t] = ink
+        for x in range(2, 19):                  # the tray
+            f[19][x] = f[20][x] = ink
+        for y in range(15, 19):
+            f[y][2] = f[y][3] = f[y][17] = f[y][18] = ink
+        rows += f
+    pad = (4 - fw * 3 % 4) % 4
+    pix = b"".join(bytes(c for p in r for c in p[::-1]) + b"\0" * pad
+                   for r in reversed(rows))
+    head = b"BM" + struct.pack("<IHHI", 54 + len(pix), 0, 0, 54)
+    head += struct.pack("<IiiHHIIiiII", 40, fw, len(rows), 1, 24, 0,
+                        len(pix), 2835, 2835, 0, 0)
+    return head + pix
+
+
 for skin in ("SnappyV2", "SnappyVinyl", "SnappyAnimated", "SnappyGauge",
              "SnappyLyricsLines", "SnappyLyricsMeter", "SnappyCanvas",
              "SnappyRadio"):
     io.open("themes/wps/%s/bt.bmp" % skin, "wb").write(bt_bmp())
     io.open("themes/wps/%s/wired.bmp" % skin, "wb").write(wired_bmp())
-print("wrote bt.bmp, wired.bmp")
+    io.open("themes/wps/%s/rx.bmp" % skin, "wb").write(rx_bmp())
+print("wrote bt.bmp, wired.bmp, rx.bmp")
