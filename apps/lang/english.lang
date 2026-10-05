@@ -20650,3 +20650,31 @@
     *: "Not searching, select to retry"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_BT_RECEIVE
+  desc: Hiby Bluetooth: play what a paired PC or phone sends, under the music
+  user: core
+  <source>
+    *: "Receive Audio"
+  </source>
+  <dest>
+    *: "Receive Audio"
+  </dest>
+  <voice>
+    *: "Receive Audio"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_RECEIVING
+  desc: Hiby Bluetooth: a PC or phone is playing to the player
+  user: core
+  <source>
+    *: "Receiving"
+  </source>
+  <dest>
+    *: "Receiving"
+  </dest>
+  <voice>
+    *: "Receiving"
+  </voice>
+</phrase>

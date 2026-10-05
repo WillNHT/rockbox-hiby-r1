@@ -228,6 +228,8 @@ enum current_activity {
  * so a device sound is audible over it. Does nothing when audio
  * prioritisation is off. */
 void beep_duck(unsigned int duration, int percent);
+/* Step the music aside by 'percent' until called again with 0 */
+void beep_duck_hold(int percent);
 /* The music comes up from silence over duration ms. */
 void beep_fade_in(unsigned int duration);
 void beep_play(unsigned int frequency, unsigned int duration,

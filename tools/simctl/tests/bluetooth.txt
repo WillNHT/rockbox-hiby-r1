@@ -69,7 +69,15 @@ up
 sleep 1500
 sleep 2500
 dump
-# Sony WH-1000XM4, connected: its page
+# Sony WH-1000XM4, connected: its page (past Receive Audio)
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 300
+up
+sleep 1200
 down 240 500
 sleep 100
 move 240 480

@@ -52,9 +52,22 @@ static struct timeout fade_tmo;
 static int fade_depth;          /* 0 when not fading in */
 static int fade_step;
 
+/* Held by a caller for as long as it likes - Bluetooth receive, while the
+ * sender plays. Kept apart so a cue ending does not lift it. */
+static int hold_depth;
+
 static void duck_apply(void)
 {
-    pcmbuf_duck(MAX(duck_depth, fade_depth));
+    pcmbuf_duck(MAX(MAX(duck_depth, fade_depth), hold_depth));
+}
+
+void beep_duck_hold(int percent)
+{
+    if (percent != hold_depth)
+    {
+        hold_depth = percent;
+        duck_apply();
+    }
 }
 
 static int duck_release(struct timeout *tmo)
