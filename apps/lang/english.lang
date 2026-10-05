@@ -20683,12 +20683,12 @@
   desc: Hiby Bluetooth: how far the music drops while a PC plays to the player
   user: core
   <source>
-    *: "Duck Music While Receiving"
+    *: "Music Ducking"
   </source>
   <dest>
-    *: "Duck Music While Receiving"
+    *: "Music Ducking"
   </dest>
   <voice>
-    *: "Duck Music While Receiving"
+    *: "Music Ducking"
   </voice>
 </phrase>
