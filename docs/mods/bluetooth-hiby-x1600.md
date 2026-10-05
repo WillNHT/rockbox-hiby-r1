@@ -38,6 +38,8 @@ Headset buttons work as media keys, and the headset's own volume buttons move th
 
 Switching it restarts bluealsa, so a connected headset drops for a moment and reconnects.
 
+![Receive Audio on, with its duck depth](screenshots/bluetooth-receive.png)
+
 ## Debug log
 
 Nothing is logged by default. Create an empty `rockbox-bt-debug.log` at the root of the SD card to switch logging on; it is cut back once it passes 512 KB.
