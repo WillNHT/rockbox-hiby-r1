@@ -95,6 +95,7 @@ int pcm_alsa_switch_playback_device(const char *device);
 void hiby_pcm_set_bt_mac(const char *mac);
 const char *hiby_pcm_get_bt_mac(void);
 bool hiby_pcm_mirror_active(void);
+bool hiby_pcm_bt_lost(void);
 /* hiby/hibylinux_codec.c */
 int hiby_bt_mixer_fds(struct pollfd *pfd, int max);
 int hiby_bt_mixer_remote_volume(struct pollfd *pfd, int n);
@@ -148,6 +149,7 @@ static volatile int bt_power = BT_OFF;
 static volatile int bt_gen;         /* bumped on any change: screens redraw */
 static volatile int bt_link_gen;    /* the link changed, or wants routing again */
 static volatile bool bt_linked;
+static volatile bool bt_relink;     /* its PCM went: drop the link, find it again */
 static volatile int bt_input_node = -1;
 static volatile int bt_remote_vol = INT_MIN;
 
@@ -886,6 +888,12 @@ static void bt_poll_link(void)
         nudges = 0;
         return;
     }
+    if (bt_relink)
+    {
+        bt_relink = false;
+        bt_set_link("");
+        next_check = now;
+    }
     if (bt_linked && bt_input_node < 0)
     {
         struct bt_device *d = bt_find(bt.dev, bt.count, bt.link);
@@ -1104,7 +1112,8 @@ int bt_pending_event(void)
 {
     bool routed = hiby_pcm_get_bt_mac() != NULL;
 
-    if (routed && (!bt_linked || bt_link_gen != bt_routed_gen))
+    if (routed && (!bt_linked || bt_link_gen != bt_routed_gen
+                   || hiby_pcm_bt_lost()))
         return SYS_BT_UNPLUGGED;
     if ((bt_linked && bt_link_gen != bt_tried_gen)
         || (routed && bt_input_node != bt_input_attached)
@@ -1221,10 +1230,11 @@ void bt_unroute(bool resume_later)
 {
     int status = audio_status();
     bool fade = global_settings.fade_on_stop;
+    bool lost = hiby_pcm_bt_lost();
 
     if (!hiby_pcm_get_bt_mac())
         return;
-    hiby_debug_log("bt: unrouting");
+    hiby_debug_log("bt: unrouting%s", lost ? ", its audio went" : "");
     global_settings.fade_on_stop = false;
     audio_pause();
     global_settings.fade_on_stop = fade;
@@ -1233,8 +1243,15 @@ void bt_unroute(bool resume_later)
     bt_input_attached = -1;
     hiby_pcm_set_bt_mac(NULL);
     pcm_alsa_switch_playback_device(BT_LOCAL_PLAYBACK_DEVICE);
-    bt_resume_on_route = resume_later && (status & AUDIO_STATUS_PLAY)
+    bt_resume_on_route = (resume_later || lost) && (status & AUDIO_STATUS_PLAY)
                          && !(status & AUDIO_STATUS_PAUSE);
+    /* the link is still up and the headset will be back on it: the worker
+       sees it go and come again, and that routes it afresh */
+    if (lost)
+    {
+        bt_relink = true;
+        bt_wake_worker();
+    }
 }
 #else
 void bt_unroute(bool resume_later)
