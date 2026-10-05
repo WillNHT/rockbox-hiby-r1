@@ -1424,6 +1424,9 @@ const struct settings_list settings[] = {
     INT_SETTING(0, bt_wired_offset, LANG_BT_WIRED_OFFSET, 470,
                 "bluetooth wired offset", UNIT_MS, -500, 1000, 10,
                 NULL, NULL, NULL),
+    INT_SETTING(0, bt_rx_duck, LANG_BT_RX_DUCK, 70,
+                "bluetooth receive duck", UNIT_PERCENT, 0, 100, 5,
+                NULL, NULL, NULL),
 #endif
 #if defined(HAVE_HIBY_LINUX_POWER_CHARGE_LIMIT) && !defined(SIMULATOR)
     STRINGCHOICE_SETTING(F_CB_ON_SELECT_ONLY | F_CB_ONLY_IF_CHANGED , hiby_charge_limit_voltage, LANG_CHARGE_LIMIT_VOLTAGE,0,

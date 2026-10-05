@@ -28,10 +28,11 @@ Headset buttons work as media keys, and the headset's own volume buttons move th
 
 ## Receiving audio
 
-**Receive Audio: On** makes the player a Bluetooth speaker as well: a PC or phone can play to it, and its sound is mixed in with the music. While the sender plays, the music drops by 70%; it comes back over half a second once the sender has been quiet for a second.
+**Receive Audio: On** makes the player a Bluetooth speaker as well: a PC or phone can play to it, and its sound is mixed in with the music. While the sender plays, the music drops by **Duck Music While Receiving** (70% unless set otherwise, at the bottom of the screen); it comes back over half a second once the sender has been quiet for a second. The sender's own volume slider sets how loud it plays.
 
 *   To pair a PC, open the Bluetooth screen with Receive Audio on and pair from the PC. The player is visible and accepts the pairing while the screen is open, with no code to confirm.
-*   After that, the PC connects on its own. It shows as `(Receiving)` on the screen.
+*   After that, the PC connects on its own, and is heard within a few seconds. It shows as `(Receiving)` on the screen.
+*   Tapping a paired PC or phone on the screen connects it as a sender, turning Receive Audio on if it was off, and leaves a connected headset where it is.
 *   The sender's audio comes out wherever the music does: the jack, or the headset.
 *   Transmitting to a headset keeps working with Receive Audio on: bluealsa runs both profiles in one daemon. They share one radio, so receiving beside an LDAC headset may stutter; a lower codec on the headset helps.
 

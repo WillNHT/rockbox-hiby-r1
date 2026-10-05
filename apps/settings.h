@@ -791,6 +791,7 @@ struct user_settings
 #endif
 #ifdef HAVE_HIBY_BLUETOOTH
     int bt_wired_offset;     /* ms the jack is held back beyond Bluetooth */
+    int bt_rx_duck;          /* % the music drops while a PC plays to us */
 #endif
 #if ((CONFIG_BATTERY_MEASURE & VOLTAGE_MEASURE))
     int low_battery_poweroff_percent;

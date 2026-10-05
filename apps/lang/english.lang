@@ -20678,3 +20678,17 @@
     *: "Receiving"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_BT_RX_DUCK
+  desc: Hiby Bluetooth: how far the music drops while a PC plays to the player
+  user: core
+  <source>
+    *: "Duck Music While Receiving"
+  </source>
+  <dest>
+    *: "Duck Music While Receiving"
+  </dest>
+  <voice>
+    *: "Duck Music While Receiving"
+  </voice>
+</phrase>

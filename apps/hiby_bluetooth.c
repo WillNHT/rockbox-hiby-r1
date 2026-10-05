@@ -88,8 +88,6 @@
 #define BT_LAST_FILE     BT_DIR "/rb_bt_last.txt"
 #define BT_OFFSET_FILE   BT_DIR "/rb_bt_offsets.txt"  /* "<mac> <ms>" a line */
 #define BT_RX_FILE       BT_DIR "/rb_bt_rx.txt"   /* there while Receive Audio is on */
-/* ponytail: fixed duck depth for a PC playing to us; a setting if wanted */
-#define BT_RX_DUCK       70
 #define BT_LOG_FILE      "/data/mnt/sd_0/rockbox-bt-debug.log"
 #define BT_LOG_MAX       (512*1024)
 
@@ -320,14 +318,16 @@ static bool bt_ctl(const char *verb, const char *mac, const char *want)
     return bt_cmd(cmd, want);
 }
 
-static void bt_pcm_path(const char *mac, char *path, size_t len)
+/* The headset's PCM, or with rx the one a sender plays into */
+static void bt_pcm_path(const char *mac, char *path, size_t len, bool rx)
 {
     char u[18];
     int i;
     for (i = 0; i < 17 && mac[i]; i++)
         u[i] = mac[i] == ':' ? '_' : mac[i];
     u[i] = '\0';
-    snprintf(path, len, "/org/bluealsa/hci0/dev_%s/a2dpsrc/sink", u);
+    snprintf(path, len, "/org/bluealsa/hci0/dev_%s/%s", u,
+             rx ? "a2dpsnk/source" : "a2dpsrc/sink");
 }
 
 /* The device in a bluealsa PCM path, from its "/dev_" on */
@@ -367,13 +367,14 @@ static bool bt_sink_mac(char *mac, char *rx)
     return answered;
 }
 
-static bool bt_wait_sink(const char *mac, int ms)
+/* Until bluealsa has the headset's PCM, or with rx the sender's */
+static bool bt_wait_sink(const char *mac, bool rx, int ms)
 {
-    char now[18];
+    char now[18], from[18];
     for (; ms > 0; ms -= 250)
     {
-        bt_sink_mac(now, NULL);
-        if (!strcmp(now, mac))
+        bt_sink_mac(now, from);
+        if (!strcmp(rx ? from : now, mac))
             return true;
         usleep(250000);
     }
@@ -532,7 +533,7 @@ static void bt_refresh_info(const char *mac)
     FILE *fp;
     char *p, *save;
 
-    bt_pcm_path(mac, path, sizeof(path));
+    bt_pcm_path(mac, path, sizeof(path), false);
     snprintf(cmd, sizeof(cmd), "bluealsa-cli info '%s' 2>/dev/null", path);
     fp = bt_popen(cmd);
     while (fp && fgets(line, sizeof(line), fp))
@@ -633,6 +634,15 @@ static void bt_set_rx(const char *mac)
     if (!changed)
         return;
     hiby_debug_log("bt: receiving from %s", mac[0] ? mac : "none");
+    if (mac[0])
+    {
+        /* the sender's volume (its slider, sent over AVRCP) is applied by
+           bluealsa to what it hands us, not left for us to map */
+        char cmd[128], path[64];
+        bt_pcm_path(mac, path, sizeof(path), true);
+        snprintf(cmd, sizeof(cmd), "bluealsa-cli soft-volume '%s' on 2>&1", path);
+        bt_cmd(cmd, NULL);
+    }
     bt_rx_linked = mac[0] != '\0';
     bt_rx_gen++;
     bt_changed();
@@ -759,10 +769,18 @@ static bool bt_pair(const char *mac)
 
 /* ----------------------------------------------------------------- jobs */
 
+static void bt_set_receive(bool on);
+
+/* A PC or phone: it plays to us, it does not take our audio */
+static bool bt_is_sender(const char *mac)
+{
+    return bt_ctl("info", mac, "Audio Source") && !bt_ctl("info", mac, "Audio Sink");
+}
+
 static void bt_connect(const char *mac, bool quiet)
 {
     struct bt_device *d;
-    bool paired;
+    bool paired, sender = false;
     char link[18];
 
     pthread_mutex_lock(&bt_mtx);
@@ -773,10 +791,6 @@ static void bt_connect(const char *mac, bool quiet)
     pthread_mutex_unlock(&bt_mtx);
     bt_changed();
 
-    /* one headset at a time */
-    if (link[0] && strcmp(link, mac))
-        bt_ctl("disconnect", link, NULL);
-
     if (!paired && !bt_pair(mac))
     {
         if (!quiet)
@@ -784,15 +798,31 @@ static void bt_connect(const char *mac, bool quiet)
     }
     else
     {
+        sender = bt_is_sender(mac);
+        /* one headset at a time; a sender plays beside it */
+        if (!sender && link[0] && strcmp(link, mac))
+            bt_ctl("disconnect", link, NULL);
+        /* a sender needs bluealsa's a2dp-sink: picking one turns it on */
+        if (sender && !bt_rx_on)
+            bt_set_receive(true);
         bt_ctl("trust", mac, NULL);
         bt_ctl("connect", mac, "Connection successful");
-        if (bt_wait_sink(mac, 8000))
+        if (!bt_wait_sink(mac, sender, 8000))
+        {
+            if (!quiet)
+                bt_set_msg(LANG_BT_CONNECT_FAILED);
+        }
+        else if (sender)
+            bt_set_rx(mac);
+        else
             bt_set_link(mac);
-        else if (!quiet)
-            bt_set_msg(LANG_BT_CONNECT_FAILED);
         if (!paired)
             bt_refresh_devices();
     }
+    /* the UI took the PCM off the headset to connect: a sender leaves the
+       headset where it was, so put it back */
+    if (sender)
+        bt_link_gen++;
 
     pthread_mutex_lock(&bt_mtx);
     bt.busy[0] = '\0';
@@ -908,9 +938,9 @@ static void bt_set_codec(const char *mac, const char *codec)
 {
     char cmd[128], path[64];
 
-    bt_pcm_path(mac, path, sizeof(path));
+    bt_pcm_path(mac, path, sizeof(path), false);
     snprintf(cmd, sizeof(cmd), "bluealsa-cli codec '%s' %s 2>&1; echo rc=$?", path, codec);
-    if (bt_cmd(cmd, "rc=0") && bt_wait_sink(mac, 6000))
+    if (bt_cmd(cmd, "rc=0") && bt_wait_sink(mac, false, 6000))
     {
         /* asking bluealsa straight after a switch can hang it: trust it */
         pthread_mutex_lock(&bt_mtx);
@@ -970,11 +1000,20 @@ static void bt_run_job(enum bt_job job, const char *mac, const char *arg)
 static void bt_poll_link(void)
 {
     static long next_check, next_nudge;
-    static int nudges, misses;
+    static int nudges, misses, acl_last, quick;
     char mac[18], rx[18];
     long now = current_tick;
+    int acl = bt_acl_count();
 
-    if (bt_acl_count() == 0)
+    /* a link came or went (no fork to see it): look a few times, quickly,
+       for the PCM bluealsa brings up a moment later */
+    if (acl != acl_last)
+    {
+        acl_last = acl;
+        quick = 4;
+        next_check = now + HZ;
+    }
+    if (acl == 0)
     {
         bt_set_link("");
         bt_set_rx("");
@@ -994,7 +1033,7 @@ static void bt_poll_link(void)
     }
     if (TIME_BEFORE(now, next_check))
         return;
-    next_check = now + (bt_linked || bt_rx_linked ? 15*HZ : 3*HZ);
+    next_check = now + (quick ? (quick--, 2*HZ) : bt_linked || bt_rx_linked ? 15*HZ : 3*HZ);
 
     if (!bt_sink_mac(mac, rx))
         return;
@@ -1303,12 +1342,13 @@ static void bt_route(const char *mac)
 static int bt_rx_duck(struct timeout *tmo)
 {
     static int depth;
+    int full = global_settings.bt_rx_duck;
 
     (void)tmo;
     if (hiby_bt_rx_loud(HZ))
-        depth = BT_RX_DUCK;
+        depth = full;
     else
-        depth = MAX(depth - BT_RX_DUCK / 5, 0);
+        depth = MAX(depth - MAX(full / 5, 1), 0);
     beep_duck_hold(depth);
     return depth || bt_rx_linked ? HZ/10 : 0;
 }
@@ -1490,8 +1530,8 @@ static const char *bt_device_state(const struct bt_device *d, char *buf, size_t 
 
 /* The one Bluetooth screen: the switch, paired devices, devices around */
 enum { ROW_POWER, ROW_RECEIVE, ROW_PAIRED, ROW_OTHER, ROW_DEVICE, ROW_SEARCH,
-       ROW_FORGET_ALL, ROW_OFFSET };
-static struct { unsigned char kind, dev; } rows[BT_MAX_DEVICES + 7];
+       ROW_FORGET_ALL, ROW_OFFSET, ROW_RX_DUCK };
+static struct { unsigned char kind, dev; } rows[BT_MAX_DEVICES + 8];
 static int nrows;
 static bool bt_found_other;
 
@@ -1526,6 +1566,8 @@ static void bt_build_rows(void)
             rows[nrows++].kind = ROW_FORGET_ALL;
     }
     rows[nrows++].kind = ROW_OFFSET;
+    if (bt_rx_on)
+        rows[nrows++].kind = ROW_RX_DUCK;
 }
 
 static const char *bt_row_name(int i, void *data, char *buf, size_t len)
@@ -1563,6 +1605,10 @@ static const char *bt_row_name(int i, void *data, char *buf, size_t len)
             snprintf(buf, len, "%s: %d ms", S(LANG_BT_WIRED_OFFSET),
                      global_settings.bt_wired_offset);
             return buf;
+        case ROW_RX_DUCK:
+            snprintf(buf, len, "%s: %d%%", S(LANG_BT_RX_DUCK),
+                     global_settings.bt_rx_duck);
+            return buf;
     }
     return "";
 }
@@ -1578,10 +1624,12 @@ static enum themable_icons bt_row_icon(int i, void *data)
            gets a note, the rest a device */
         case ROW_DEVICE:
             return strcmp(snap.dev[rows[i].dev].mac, snap.link)
+                   && strcmp(snap.dev[rows[i].dev].mac, snap.rx)
                    ? Icon_System_menu : Icon_Audio;
         case ROW_POWER:
         case ROW_RECEIVE:
         case ROW_OFFSET:
+        case ROW_RX_DUCK:
             return Icon_Menu_setting;
         case ROW_FORGET_ALL:
             return Icon_Menu_functioncall;
@@ -1673,7 +1721,8 @@ static void bt_device_page(const char *mac)
     while (1)
     {
         const struct bt_device *d = bt_find(snap.dev, snap.count, mac);
-        bool linked = !strcmp(snap.link, mac), busy = !strcmp(snap.busy, mac);
+        bool headset = !strcmp(snap.link, mac), busy = !strcmp(snap.busy, mac);
+        bool linked = headset || !strcmp(snap.rx, mac);
         int n = 0;
 
         if (!d)
@@ -1685,7 +1734,7 @@ static void bt_device_page(const char *mac)
                            S(busy ? LANG_BT_CONNECTING :
                              linked ? LANG_BT_CONNECTED : LANG_BT_DISCONNECTED));
         kind[n++] = DET_STATUS;
-        if (linked)
+        if (headset)
         {
             simplelist_addline("%s: %s", S(LANG_BT_CODEC),
                                snap.codec[0] ? snap.codec : S(LANG_UNKNOWN));
@@ -1730,7 +1779,9 @@ static void bt_device_page(const char *mac)
                 bt_codec_picker();
                 break;
             case DET_CONNECT:
-                bt_unroute(!linked);
+                /* a sender going leaves the headset alone */
+                if (headset || !linked)
+                    bt_unroute(!linked);
                 bt_post(linked ? BT_JOB_DISCONNECT : BT_JOB_CONNECT, mac, NULL);
                 break;
             case DET_FORGET:
@@ -1785,7 +1836,7 @@ int hiby_bluetooth_menu(void)
                 char mac[18];
                 strcpy(mac, snap.dev[rows[sel].dev].mac);
                 /* a tap connects; a connected one, or a long press, opens */
-                if (bt_context || !strcmp(mac, snap.link))
+                if (bt_context || !strcmp(mac, snap.link) || !strcmp(mac, snap.rx))
                     bt_device_page(mac);
                 else if (strcmp(mac, snap.busy))
                 {
@@ -1819,6 +1870,11 @@ int hiby_bluetooth_menu(void)
                 if (snap.link[0])   /* this headset's, from now on */
                     bt_offset_save(snap.link, global_settings.bt_wired_offset);
 #endif
+                break;
+            case ROW_RX_DUCK:
+                set_int(S(LANG_BT_RX_DUCK), "%", UNIT_PERCENT,
+                        &global_settings.bt_rx_duck, NULL, 5, 0, 100, NULL);
+                settings_save();
                 break;
         }
         bt_snapshot();
