@@ -36,7 +36,10 @@ Headset buttons work as media keys, and the headset's own volume buttons move th
 *   The sender's audio comes out wherever the music does: the jack, or the headset.
 *   Transmitting to a headset keeps working with Receive Audio on: bluealsa runs both profiles in one daemon. They share one radio, so receiving beside an LDAC headset may stutter; a lower codec on the headset helps.
 
-Switching it restarts bluealsa, so a connected headset drops for a moment and reconnects.
+Switching it restarts bluealsa, which takes a few seconds: the row reads `Turning On...` / `Turning Off...` until it is done, and a connected headset drops for a moment and reconnects.
+
+*   **Levels:** quickscreen → Playback → **Bluetooth Mix** (where the sleep timer was). Up/down sets **PC Volume**, the sender's audio; right/left sets **Player Level**, the player's own audio, which the PC's never goes through.
+*   **Icon:** the Snappy skins show an arrow into a tray beside the rune: grey while Receive Audio waits for a sender, blue while one plays (`%?Br<off|waiting|receiving>`). In the WPS it sits under the rune, where the jack's speaker goes in dual output.
 
 ![Receive Audio on, with its duck depth](screenshots/bluetooth-receive.png)
 

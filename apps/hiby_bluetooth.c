@@ -106,6 +106,7 @@ void hiby_bt_rx_start(const char *mac);
 void hiby_bt_rx_stop(void);
 bool hiby_bt_rx_loud(long within);
 bool hiby_bt_rx_stalled(void);
+void hiby_bt_rx_volume(int percent);
 
 struct bt_device
 {
@@ -162,6 +163,10 @@ static volatile int bt_remote_vol = INT_MIN;
 static volatile bool bt_rx_on;      /* Receive Audio: bluealsa takes a2dp-sink too */
 static volatile bool bt_rx_linked;
 static volatile int bt_rx_gen;      /* the sender changed */
+static volatile int bt_rx_switching; /* Receive Audio going 1 on, 2 off */
+static volatile int bt_duck_now;    /* % the music is ducked under the sender */
+
+static void bt_mix_apply(void);
 
 /* --------------------------------------------------------------- logging */
 
@@ -771,10 +776,12 @@ static bool bt_pair(const char *mac)
 
 static void bt_set_receive(bool on);
 
-/* A PC or phone: it plays to us, it does not take our audio */
+/* A PC or phone: it plays to us. Going by its icon (its class of device):
+ * a Windows PC lists Audio Sink beside Audio Source, so its UUIDs do not
+ * tell it from a headset that can also send */
 static bool bt_is_sender(const char *mac)
 {
-    return bt_ctl("info", mac, "Audio Source") && !bt_ctl("info", mac, "Audio Sink");
+    return bt_ctl("info", mac, "Icon: computer") || bt_ctl("info", mac, "Icon: phone");
 }
 
 static void bt_connect(const char *mac, bool quiet)
@@ -857,14 +864,14 @@ static void bt_restart_bluealsa(bool rx)
     snprintf(cmd, sizeof(cmd),
              "p=$(pidof bluealsa); [ -n \"$p\" ] || exit 1; "
              "a=$(tr '\\0' ' ' </proc/$p/cmdline | sed 's/ -p [^ ]*//g'); "
-             "kill $p; for i in 1 2 3 4 5; do kill -0 $p 2>/dev/null || break; sleep 1; done; "
+             "kill $p; for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 $p 2>/dev/null || break; { usleep 200000 || sleep 1; } 2>/dev/null; done; "
              "$a -p a2dp-source%s </dev/null >/dev/null 2>&1 &",
              rx ? " -p a2dp-sink" : "");
     bt_set_link("");
     bt_set_rx("");
     bt_cmd(cmd, NULL);
-    for (i = 0; i < 20 && !bt_sink_mac(mac, NULL); i++)
-        usleep(250000);
+    for (i = 0; i < 40 && !bt_sink_mac(mac, NULL); i++)
+        usleep(100000);
 }
 
 static void bt_set_receive(bool on)
@@ -877,10 +884,13 @@ static void bt_set_receive(bool on)
         fclose(fp);
     else if (!on)
         unlink(BT_RX_FILE);
-    if (bt_power != BT_ON)
-        return;
-    bt_restart_bluealsa(on);
-    bt_reconnect();
+    if (bt_power == BT_ON)
+        bt_restart_bluealsa(on);
+    /* done as far as the screen goes: the headset reconnects on its own */
+    bt_rx_switching = 0;
+    bt_changed();
+    if (bt_power == BT_ON)
+        bt_reconnect();
 }
 
 static void bt_power_on(void)
@@ -1150,6 +1160,19 @@ static void *bt_worker(void *arg)
         }
         if (bt_power != BT_ON)
             continue;
+#ifndef SIMULATOR
+        if (bt_rx_linked)
+        {
+            /* the duck as the tick sees it, when it changes */
+            static int last_loud = -1, last_duck = -1;
+            int loud = hiby_bt_rx_loud(HZ);
+            if (loud != last_loud || bt_duck_now != last_duck)
+                hiby_debug_log("bt: sender %s, music ducked %d%%",
+                               loud ? "playing" : "quiet", bt_duck_now);
+            last_loud = loud;
+            last_duck = bt_duck_now;
+        }
+#endif
         bt_poll_link();
         if (bt.screen && TIME_AFTER(current_tick, next_refresh))
         {
@@ -1209,6 +1232,7 @@ void bt_boot_init(void)
     if (pthread_create(&worker, NULL, bt_worker, NULL) != 0)
         return;
     pthread_detach(worker);
+    bt_mix_apply();     /* Player Level holds from boot */
 #ifndef SIMULATOR
     if (access(BT_BOOT_FILE, F_OK) != 0)
         return;
@@ -1241,6 +1265,28 @@ bool bt_is_dual_fast(void)
 #else
     return hiby_pcm_mirror_active();
 #endif
+}
+
+/* For %?Br: 0 Receive Audio off, 1 on and waiting, 2 a sender is on */
+int bt_rx_state_fast(void)
+{
+    return bt_rx_linked ? 2 : bt_rx_on ? 1 : 0;
+}
+
+/* The player's own audio at Player Level, and lower by the duck while the
+ * sender plays; the sender's at its own volume. Tick-safe: factors only. */
+static void bt_mix_apply(void)
+{
+    beep_duck_hold(100 - global_settings.bt_player_level * (100 - bt_duck_now) / 100);
+#ifndef SIMULATOR
+    hiby_bt_rx_volume(global_settings.bt_rx_volume);
+#endif
+}
+
+void bt_mix_changed(int value)
+{
+    (void)value;
+    bt_mix_apply();
 }
 
 #ifndef SIMULATOR
@@ -1349,7 +1395,8 @@ static int bt_rx_duck(struct timeout *tmo)
         depth = full;
     else
         depth = MAX(depth - MAX(full / 5, 1), 0);
-    beep_duck_hold(depth);
+    bt_duck_now = depth;
+    bt_mix_apply();
     return depth || bt_rx_linked ? HZ/10 : 0;
 }
 
@@ -1582,7 +1629,9 @@ static const char *bt_row_name(int i, void *data, char *buf, size_t len)
             return buf;
         case ROW_RECEIVE:
             snprintf(buf, len, "%s: %s", S(LANG_BT_RECEIVE),
-                     S(bt_rx_on ? LANG_ON : LANG_OFF));
+                     S(bt_rx_switching == 1 ? LANG_BT_TURNING_ON :
+                       bt_rx_switching == 2 ? LANG_BT_TURNING_OFF :
+                       bt_rx_on ? LANG_ON : LANG_OFF));
             return buf;
         case ROW_PAIRED:
             return S(LANG_BT_PAIRED_DEVICES);
@@ -1827,8 +1876,11 @@ int hiby_bluetooth_menu(void)
                 bt_toggle_power();
                 break;
             case ROW_RECEIVE:
+                if (bt_rx_switching)
+                    break;
                 /* bluealsa restarts: the headset's PCM goes with it */
                 bt_unroute(true);
+                bt_rx_switching = bt_rx_on ? 2 : 1;
                 bt_post(BT_JOB_RECEIVE, NULL, bt_rx_on ? "0" : "1");
                 break;
             case ROW_DEVICE:

@@ -217,6 +217,9 @@ enum skin_token_type {
     SKIN_TOKEN_BLUETOOTH,
     /* "w" while the jack plays beside a Bluetooth headset, empty otherwise */
     SKIN_TOKEN_DUAL_OUTPUT,
+    /* Bluetooth receive: 1 off, 2 on and waiting for a sender, 3 a PC or
+     * phone is connected and playing to us */
+    SKIN_TOKEN_BT_RECEIVE,
     /* "dynamic" or "static" while a station is on air, empty otherwise. */
     SKIN_TOKEN_RADIO_KIND,
 

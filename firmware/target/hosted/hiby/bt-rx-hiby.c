@@ -56,6 +56,7 @@ static int16_t rx_ring[RX_RING_FRAMES * 2];
 static volatile unsigned int rx_head;   /* frames produced; pump only */
 static volatile unsigned int rx_tail;   /* frames consumed; mixer only */
 static volatile long rx_loud_tick;
+static unsigned int rx_amp = MIX_AMP_UNITY;
 static pthread_t rx_thread;
 static volatile bool rx_running;
 static char rx_dev[96];
@@ -104,7 +105,9 @@ static void *rx_pump(void *arg)
 {
     int16_t buf[RX_CHUNK_FRAMES * 2];
     snd_pcm_t *h = NULL;
-    unsigned int rate = 0;
+    unsigned int rate = 0, frames = 0;
+    int peak_seen = 0;
+    long next_log = current_tick + 10*HZ;
     (void)arg;
 
     while (rx_running)
@@ -170,6 +173,17 @@ static void *rx_pump(void *arg)
         rx_head = head + n;
         if (peak > RX_LOUD)
             rx_loud_tick = current_tick;
+        /* what the sender gives, for the debug log: is it loud enough
+           to duck the music under */
+        frames += n;
+        peak_seen = MAX(peak_seen, peak);
+        if (TIME_AFTER(current_tick, next_log))
+        {
+            hiby_debug_log("bt rx: %u frames in 10 s, peak %d (ducks over %d)",
+                           frames, peak_seen, RX_LOUD);
+            frames = peak_seen = 0;
+            next_log = current_tick + 10*HZ;
+        }
     }
     if (h)
         snd_pcm_close(h);
@@ -201,8 +215,16 @@ void hiby_bt_rx_start(const char *mac)
         }
         hiby_debug_log("bt rx: started %s", mac);
     }
-    mixer_channel_set_amplitude(PCM_MIXER_CHAN_BTRX, MIX_AMP_UNITY);
+    mixer_channel_set_amplitude(PCM_MIXER_CHAN_BTRX, rx_amp);
     mixer_channel_play_data(PCM_MIXER_CHAN_BTRX, rx_get_more, NULL, 0);
+}
+
+/* The PC's audio level, 0..100 %. Any context: it only sets a factor. */
+void hiby_bt_rx_volume(int percent)
+{
+    rx_amp = MIX_AMP_UNITY / 100 * MIN(percent, 100)
+             + (percent >= 100 ? MIX_AMP_UNITY % 100 : 0);
+    mixer_channel_set_amplitude(PCM_MIXER_CHAN_BTRX, rx_amp);
 }
 
 void hiby_bt_rx_stop(void)

@@ -74,6 +74,9 @@
 #include "lcd-transition.h"
 #include "gui/coverview.h"
 #include "lyrics.h"
+#ifdef HAVE_HIBY_BLUETOOTH
+#include "hiby_bluetooth.h"
+#endif
 #ifdef HAVE_VIDEO
 #include "video/video_art.h"
 #include "video/screensaver.h"
@@ -1427,6 +1430,12 @@ const struct settings_list settings[] = {
     INT_SETTING(0, bt_rx_duck, LANG_BT_RX_DUCK, 70,
                 "bluetooth receive duck", UNIT_PERCENT, 0, 100, 5,
                 NULL, NULL, NULL),
+    INT_SETTING_NOWRAP(0, bt_rx_volume, LANG_BT_RX_VOLUME, 100,
+                "bluetooth receive volume", UNIT_PERCENT, 0, 100, 5,
+                NULL, NULL, bt_mix_changed),
+    INT_SETTING_NOWRAP(0, bt_player_level, LANG_BT_PLAYER_LEVEL, 100,
+                "bluetooth player level", UNIT_PERCENT, 0, 100, 5,
+                NULL, NULL, bt_mix_changed),
 #endif
 #if defined(HAVE_HIBY_LINUX_POWER_CHARGE_LIMIT) && !defined(SIMULATOR)
     STRINGCHOICE_SETTING(F_CB_ON_SELECT_ONLY | F_CB_ONLY_IF_CHANGED , hiby_charge_limit_voltage, LANG_CHARGE_LIMIT_VOLTAGE,0,

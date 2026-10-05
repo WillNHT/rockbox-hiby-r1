@@ -1398,6 +1398,16 @@ const char *get_token_value(struct gui_wps *gwps,
 #endif
             return NULL;
 
+        case SKIN_TOKEN_BT_RECEIVE:
+            /* %?Br<off|waiting|receiving> */
+            numeric_ret = 1;
+#ifdef HAVE_HIBY_BLUETOOTH
+            numeric_ret += bt_rx_state_fast();
+#endif
+            itoa_buf(buf, buf_size, numeric_ret);
+            numeric_buf = buf;
+            goto gtv_ret_numeric_tag_info;
+
         case SKIN_TOKEN_RADIO_KIND:
             if (!state->id3 || !pradio_is_station_track(state->id3->path))
                 return NULL;

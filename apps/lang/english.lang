@@ -20692,3 +20692,59 @@
     *: "Music Ducking"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_BT_TURNING_OFF
+  desc: Hiby Bluetooth: a mode is being switched off
+  user: core
+  <source>
+    *: "Turning Off..."
+  </source>
+  <dest>
+    *: "Turning Off..."
+  </dest>
+  <voice>
+    *: "Turning Off..."
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_MIX
+  desc: Hiby Bluetooth: quickscreen page: the PC's audio against the player's
+  user: core
+  <source>
+    *: "Bluetooth Mix"
+  </source>
+  <dest>
+    *: "Bluetooth Mix"
+  </dest>
+  <voice>
+    *: "Bluetooth Mix"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_RX_VOLUME
+  desc: Hiby Bluetooth: level of the audio a PC plays to the player
+  user: core
+  <source>
+    *: "PC Volume"
+  </source>
+  <dest>
+    *: "PC Volume"
+  </dest>
+  <voice>
+    *: "PC Volume"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_PLAYER_LEVEL
+  desc: Hiby Bluetooth: level of the player's own audio, not the PC's
+  user: core
+  <source>
+    *: "Player Level"
+  </source>
+  <dest>
+    *: "Player Level"
+  </dest>
+  <voice>
+    *: "Player Level"
+  </voice>
+</phrase>
