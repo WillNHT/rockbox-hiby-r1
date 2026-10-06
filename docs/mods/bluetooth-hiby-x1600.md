@@ -70,7 +70,7 @@ The debug log's `bt rx:` line says how much the capture and the ring hold.
 
 ### Levels
 
-*   **Levels:** quickscreen → Playback → **Bluetooth** → **Bluetooth Mix**. Up/down sets **PC Volume**, the sender's audio; right/left sets **Player Level**, the player's own audio, which the PC's never goes through.
+*   **Levels:** quickscreen → Playback → **Bluetooth** → **Bluetooth Mix**. Up opens **PC Volume**, the sender's audio; right **Player Level**, the player's own audio, which the PC's never goes through; down **Wired Level**. Each opens a page of its own where up raises it and down lowers it; a tap in the middle goes back.
 *   **Icon:** the Snappy skins show an arrow into a tray beside the rune: grey while Receive Audio waits for a sender, blue while one plays (`%?Br<off|waiting|receiving>`). In the WPS it sits under the rune, where the jack's speaker goes in dual output.
 
 ![Receive Audio on, with its duck depth](screenshots/bluetooth-receive.png)
