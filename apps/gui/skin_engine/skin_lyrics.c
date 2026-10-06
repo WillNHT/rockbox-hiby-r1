@@ -238,7 +238,7 @@ void skin_lyrics_draw(struct gui_wps *gwps, struct skin_viewport *svp,
 
     active = vp->fg_pattern;
     inactive = ly->has_inactive ? (unsigned)ly->inactive
-                                : mix(vp->fg_pattern, vp->bg_pattern, 45);
+                                : mix(vp->fg_pattern, skin_layer_bg(svp), 45);
 
     display->set_viewport_ex(&box, VP_FLAG_VP_SET_CLEAN);
     display->set_drawmode(DRMODE_FG);

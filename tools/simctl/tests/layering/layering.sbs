@@ -1,0 +1,7 @@
+# Issue #42 in the status bar: a glass bar over a box, on every screen.
+%Vi(-,0,96,-,-,-)
+%V(0,0,-,90,-)%Vf(000000)%Vb(E0C040)
+STATUS BOX
+%V(0,40,-,44,-)%Vf(FFFFFF)%Vb(000000)
+%Vt(0)
+%acGLASS BAR OVER THE BOX

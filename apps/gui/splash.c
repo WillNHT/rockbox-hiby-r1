@@ -34,6 +34,7 @@
 #include "font.h"
 #ifndef BOOTLOADER
 #include "misc.h" /* get_current_activity */
+#include "skin_engine/skin_layer.h"
 #endif
 
 static long progress_next_tick, talked_tick;
@@ -149,6 +150,12 @@ static bool splash_internal(struct screen * screen, const char *fmt, va_list ap,
      * the text*/
 
     screen->scroll_stop();
+#ifndef BOOTLOADER
+    /* Skin surfaces are composed over the framebuffer a splash is drawn
+     * into, so they would cover it: bake them in first. */
+    if (screen->screen_type == SCREEN_MAIN)
+        skin_layer_flatten();
+#endif
 
     width = maxw + 2*RECT_SPACING;
     height = y + 2*RECT_SPACING;
