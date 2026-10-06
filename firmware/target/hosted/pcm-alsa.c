@@ -130,6 +130,8 @@ static void pcm_pump_locked(snd_pcm_t *handle);
    that it is noise - the jack is fed a Bluetooth period (46 ms and up) at a
    time, so one reading swings by that much - and only the average counts */
 #define HIBY_MIRROR_JUMP   (HIBY_SAMPR * 3 / 20)
+void hiby_debug_log(const char *format, ...);
+
 static snd_pcm_t *hiby_mirror = NULL;
 static long hiby_mirror_retry;
 static snd_pcm_sframes_t hiby_bt_delay;       /* smoothed bluealsa delay */
@@ -150,6 +152,24 @@ static snd_pcm_sframes_t hiby_pcm_mirror_target(void)
 bool hiby_pcm_mirror_active(void)
 {
     return hiby_mirror != NULL;
+}
+
+/* The headset's PCM went away under us - one earbud back in the case, say -
+ * while its link stayed up: nothing plays until it is opened again */
+static volatile bool hiby_pcm_lost;
+
+bool hiby_pcm_bt_lost(void)
+{
+    return hiby_pcm_lost;
+}
+
+static void hiby_pcm_mark_lost(const char *why, int err)
+{
+    if (!hiby_pcm_lost && hiby_pcm_bt_active())
+    {
+        hiby_pcm_lost = true;
+        hiby_debug_log("pcm: headset lost (%s: %s)", why, snd_strerror(err));
+    }
 }
 
 static void hiby_pcm_mirror_close(void)
@@ -599,6 +619,11 @@ static void pcm_pump_locked(snd_pcm_t *handle)
 #if defined(HIBY_LINUX)
     if (state == SND_PCM_STATE_OPEN || !hiby_pcm_params_ready())
         return;
+    if (state == SND_PCM_STATE_DISCONNECTED)
+    {
+        hiby_pcm_mark_lost("state", -ENODEV);
+        return;
+    }
 #endif
 
     if (state == SND_PCM_STATE_XRUN)
@@ -608,6 +633,9 @@ static void pcm_pump_locked(snd_pcm_t *handle)
         err = snd_pcm_recover(handle, -EPIPE, 0);
         if (err < 0) {
             logf("XRUN Recovery error: %s", snd_strerror(err));
+#if defined(HIBY_LINUX)
+            hiby_pcm_mark_lost("recover", err);
+#endif
             goto abort;
         }
     }
@@ -638,6 +666,9 @@ static void pcm_pump_locked(snd_pcm_t *handle)
                     err = snd_pcm_recover(handle, -EPIPE, 0);
                     if (err < 0) {
                        logf("XRUN Recovery error: %s", snd_strerror(err));
+#if defined(HIBY_LINUX)
+                       hiby_pcm_mark_lost("recover", err);
+#endif
                        goto abort;
                     }
                     goto retry;
@@ -645,6 +676,10 @@ static void pcm_pump_locked(snd_pcm_t *handle)
                 else if (err != period_size)
                 {
                     logf("Write error: written %i expected %li", err, period_size);
+#if defined(HIBY_LINUX)
+                    if (err < 0 && err != -EAGAIN)
+                        hiby_pcm_mark_lost("write", err);
+#endif
                     break;
                 }
 #if defined(HIBY_LINUX)
@@ -698,6 +733,9 @@ static void pcm_pump_locked(snd_pcm_t *handle)
         if (err < 0) {
             logf("cb start error: %s", snd_strerror(err));
             /* Depending on the error we might be SOL */
+#if defined(HIBY_LINUX)
+            hiby_pcm_mark_lost("start", err);
+#endif
         }
     }
 
@@ -724,8 +762,6 @@ static void async_callback(snd_async_handler_t *ahandler)
 }
 
 #if defined(HIBY_LINUX)
-void hiby_debug_log(const char *format, ...);
-
 static int hiby_pcm_closing;    /* headset handles still being closed */
 
 static void *hiby_pcm_close_fn(void *h)
@@ -867,6 +903,7 @@ static void open_hwdev(const char *device, snd_pcm_stream_t mode)
     last_sample_rate = 0;
 #if defined(HIBY_LINUX)
     hiby_debug_log("pcm: opened %s", device);
+    hiby_pcm_lost = false;
     hiby_pcm_start_poll_thread();
 #else
     pthread_mutexattr_t attr;

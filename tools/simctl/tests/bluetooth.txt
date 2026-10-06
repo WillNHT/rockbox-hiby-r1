@@ -1,7 +1,8 @@
 # The Bluetooth screen against the simulator's made up devices
 # (apps/hiby_bluetooth.c, SIMULATOR): main menu down to Bluetooth, the
 # screen, the connected headset's page, back, and a tap on the other
-# paired headset. Shots: the screen, the page, the screen after the switch.
+# paired headset, then Receive Audio on. Shots: the screen, the page, the
+# screen after the switch, the screen receiving.
 sleep 3000
 # Bluetooth is the seventh main menu entry
 down 240 500
@@ -69,7 +70,15 @@ up
 sleep 1500
 sleep 2500
 dump
-# Sony WH-1000XM4, connected: its page
+# Sony WH-1000XM4, connected: its page (past Receive Audio)
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 300
+up
+sleep 1200
 down 240 500
 sleep 100
 move 240 480
@@ -151,4 +160,38 @@ sleep 300
 up
 sleep 1500
 sleep 4000
+dump
+# up past Paired Devices to Receive Audio: on, with its duck row
+down 240 500
+sleep 100
+move 240 520
+sleep 100
+move 240 540
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 240 520
+sleep 100
+move 240 540
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 100
+sleep 300
+up
+sleep 1500
+sleep 3000
 dump

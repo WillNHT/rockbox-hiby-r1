@@ -20650,3 +20650,101 @@
     *: "Not searching, select to retry"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_BT_RECEIVE
+  desc: Hiby Bluetooth: play what a paired PC or phone sends, under the music
+  user: core
+  <source>
+    *: "Receive Audio"
+  </source>
+  <dest>
+    *: "Receive Audio"
+  </dest>
+  <voice>
+    *: "Receive Audio"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_RECEIVING
+  desc: Hiby Bluetooth: a PC or phone is playing to the player
+  user: core
+  <source>
+    *: "Receiving"
+  </source>
+  <dest>
+    *: "Receiving"
+  </dest>
+  <voice>
+    *: "Receiving"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_RX_DUCK
+  desc: Hiby Bluetooth: how far the music drops while a PC plays to the player
+  user: core
+  <source>
+    *: "Music Ducking"
+  </source>
+  <dest>
+    *: "Music Ducking"
+  </dest>
+  <voice>
+    *: "Music Ducking"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_TURNING_OFF
+  desc: Hiby Bluetooth: a mode is being switched off
+  user: core
+  <source>
+    *: "Turning Off..."
+  </source>
+  <dest>
+    *: "Turning Off..."
+  </dest>
+  <voice>
+    *: "Turning Off..."
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_MIX
+  desc: Hiby Bluetooth: quickscreen page: the PC's audio against the player's
+  user: core
+  <source>
+    *: "Bluetooth Mix"
+  </source>
+  <dest>
+    *: "Bluetooth Mix"
+  </dest>
+  <voice>
+    *: "Bluetooth Mix"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_RX_VOLUME
+  desc: Hiby Bluetooth: level of the audio a PC plays to the player
+  user: core
+  <source>
+    *: "PC Volume"
+  </source>
+  <dest>
+    *: "PC Volume"
+  </dest>
+  <voice>
+    *: "PC Volume"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_PLAYER_LEVEL
+  desc: Hiby Bluetooth: level of the player's own audio, not the PC's
+  user: core
+  <source>
+    *: "Player Level"
+  </source>
+  <dest>
+    *: "Player Level"
+  </dest>
+  <voice>
+    *: "Player Level"
+  </voice>
+</phrase>

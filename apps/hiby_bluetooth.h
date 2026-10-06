@@ -12,6 +12,8 @@ bool bt_is_enabled_fast(void);
 bool bt_is_starting_fast(void);
 bool bt_is_connected_fast(void);
 bool bt_is_dual_fast(void);
+int bt_rx_state_fast(void);
+void bt_mix_changed(int value);
 int bt_pending_event(void);
 void bt_sync(void);
 void bt_unroute(bool resume_later);

@@ -88,6 +88,19 @@ struct qs_page
     struct qs_entry items[QUICKSCREEN_ITEM_COUNT];
 };
 
+#ifdef HAVE_HIBY_BLUETOOTH
+/* The PC's audio against the player's own, while one plays to us: up on
+ * top and right, down on the bottom and left, like the rest of the screen */
+static const struct qs_page qs_page_bt_mix = {
+    .lang_id = LANG_BT_MIX,
+    .items = {
+        [QUICKSCREEN_TOP]    = { .cfgname = "bluetooth receive volume" },
+        [QUICKSCREEN_BOTTOM] = { .cfgname = "bluetooth receive volume" },
+        [QUICKSCREEN_RIGHT]  = { .cfgname = "bluetooth player level" },
+        [QUICKSCREEN_LEFT]   = { .cfgname = "bluetooth player level" },
+    },
+};
+#else
 static void qs_act_sleeptimer(void)
 {
     toggle_sleeptimer();
@@ -99,15 +112,21 @@ static const char *qs_val_sleeptimer(char *buf, size_t len)
     int secs = get_sleep_timer();
     return format_sleeptimer(buf, len, (secs + 10) / 60, NULL);
 }
+#endif
 
 static const struct qs_page qs_page_playback = {
     .lang_id = LANG_PLAYBACK,
     .items = {
         [QUICKSCREEN_TOP]    = { .cfgname = "shuffle" },
         [QUICKSCREEN_LEFT]   = { .cfgname = "repeat" },
+#ifdef HAVE_HIBY_BLUETOOTH
+        [QUICKSCREEN_RIGHT]  = { .lang_id = LANG_BT_MIX,
+                                 .page = &qs_page_bt_mix },
+#else
         [QUICKSCREEN_RIGHT]  = { .lang_id = LANG_SLEEP_TIMER,
                                  .act = qs_act_sleeptimer,
                                  .val = qs_val_sleeptimer },
+#endif
         [QUICKSCREEN_BOTTOM] = { .lang_id = LANG_VIEW_DYNAMIC_PLAYLIST,
                                  .leave = QUICKSCREEN_GOTO_QUEUE },
     },

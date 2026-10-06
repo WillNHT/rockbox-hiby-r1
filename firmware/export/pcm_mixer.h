@@ -77,6 +77,9 @@ enum pcm_mixer_channel
 #ifndef HAVE_HARDWARE_BEEP
     PCM_MIXER_CHAN_BEEP,
 #endif
+#if defined(HAVE_HIBY_BLUETOOTH) && !defined(SIMULATOR)
+    PCM_MIXER_CHAN_BTRX,    /* Bluetooth receive: a PC playing to us */
+#endif
     /* Add new channel indexes above this line */
     PCM_MIXER_NUM_CHANNELS,
 };

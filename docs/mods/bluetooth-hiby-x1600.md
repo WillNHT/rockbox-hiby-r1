@@ -26,6 +26,23 @@ Headset buttons work as media keys, and the headset's own volume buttons move th
 *   When the headset goes away (switched off, out of range), playback pauses and the jack takes over, as on a phone. A headset that disappears in the middle of a route falls back to the jack instead of crashing.
 *   Bluetooth comes back on after a reboot if it was on. The stock bootloader suspends the stack at boot; turning Bluetooth on resumes it, so the custom bootloader is no longer required, only faster.
 
+## Receiving audio
+
+**Receive Audio: On** makes the player a Bluetooth speaker as well: a PC or phone can play to it, and its sound is mixed in with the music. While the sender plays, the music drops by **Music Ducking** (70% unless set otherwise, at the bottom of the screen); it comes back over half a second once the sender has been quiet for a second. The sender's own volume slider sets how loud it plays.
+
+*   To pair a PC, open the Bluetooth screen with Receive Audio on and pair from the PC. The player is visible and accepts the pairing while the screen is open, with no code to confirm.
+*   After that, the PC connects on its own, and is heard within a few seconds. It shows as `(Receiving)` on the screen.
+*   Tapping a paired PC or phone on the screen connects it as a sender, turning Receive Audio on if it was off, and leaves a connected headset where it is.
+*   The sender's audio comes out wherever the music does: the jack, or the headset.
+*   Transmitting to a headset keeps working with Receive Audio on: bluealsa runs both profiles in one daemon. They share one radio, so receiving beside an LDAC headset may stutter; a lower codec on the headset helps.
+
+Switching it restarts bluealsa, which takes a few seconds: the row reads `Turning On...` / `Turning Off...` until it is done, and a connected headset drops for a moment and reconnects.
+
+*   **Levels:** quickscreen → Playback → **Bluetooth Mix** (where the sleep timer was). Up/down sets **PC Volume**, the sender's audio; right/left sets **Player Level**, the player's own audio, which the PC's never goes through.
+*   **Icon:** the Snappy skins show an arrow into a tray beside the rune: grey while Receive Audio waits for a sender, blue while one plays (`%?Br<off|waiting|receiving>`). In the WPS it sits under the rune, where the jack's speaker goes in dual output.
+
+![Receive Audio on, with its duck depth](screenshots/bluetooth-receive.png)
+
 ## Debug log
 
 Nothing is logged by default. Create an empty `rockbox-bt-debug.log` at the root of the SD card to switch logging on; it is cut back once it passes 512 KB.
