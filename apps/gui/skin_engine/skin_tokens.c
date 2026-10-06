@@ -1408,6 +1408,33 @@ const char *get_token_value(struct gui_wps *gwps,
             numeric_buf = buf;
             goto gtv_ret_numeric_tag_info;
 
+        case SKIN_TOKEN_BT_VIEW:
+            /* %?Bm<player|receiver|both> */
+        case SKIN_TOKEN_BT_RX_STATUS:
+            /* %?Bs<stopped|playing|paused> */
+            numeric_ret = 1;
+#ifdef HAVE_HIBY_BLUETOOTH
+            numeric_ret += token->type == SKIN_TOKEN_BT_VIEW ?
+                           bt_view_fast() : bt_rx_status_fast();
+#endif
+            itoa_buf(buf, buf_size, numeric_ret);
+            numeric_buf = buf;
+            goto gtv_ret_numeric_tag_info;
+
+        case SKIN_TOKEN_BT_RX_TITLE:
+        case SKIN_TOKEN_BT_RX_ARTIST:
+        case SKIN_TOKEN_BT_RX_ALBUM:
+        case SKIN_TOKEN_BT_RX_NAME:
+        case SKIN_TOKEN_BT_RX_VOLUME:
+        case SKIN_TOKEN_BT_RX_ELAPSED:
+        case SKIN_TOKEN_BT_RX_DURATION:
+#ifdef HAVE_HIBY_BLUETOOTH
+            return bt_rx_info("talnved"[token->type - SKIN_TOKEN_BT_RX_TITLE],
+                              buf, buf_size);
+#else
+            return NULL;
+#endif
+
         case SKIN_TOKEN_RADIO_KIND:
             if (!state->id3 || !pradio_is_station_track(state->id3->path))
                 return NULL;

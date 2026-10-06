@@ -49,6 +49,14 @@ void hiby_debug_log(const char *format, ...);
 /* Ring of S16 stereo frames. A power of two so head/tail wrap cleanly. */
 #define RX_RING_FRAMES   8192  /* ~186 ms at 44.1 kHz */
 #define RX_CHUNK_FRAMES  512   /* mixer buffer granularity */
+/* The ring is kept under this (~70 ms at 44.1 kHz): the sender's clock is
+ * not ours, and what it gets ahead by would otherwise pile up as delay
+ * until the ring is full. A frame a chunk is let go above it, which is
+ * not heard; a pile far over it (the channel started late) goes at once. */
+#define RX_KEEP_FRAMES   3072
+/* What the capture holds, in us. The pump reads as soon as there is any,
+ * so this is only slack for a pump that was held up. */
+#define RX_CAPTURE_US    50000
 /* a peak over this (about -36 dBFS) is the sender playing, not its hiss */
 #define RX_LOUD          512
 
@@ -61,14 +69,21 @@ static pthread_t rx_thread;
 static volatile bool rx_running;
 static char rx_dev[96];
 
-/* Mixer callback: the next chunk, silence where the ring ran dry */
+/* Mixer callback: the next chunk, or silence while the ring fills again -
+ * a whole chunk or none, not a scrap and a gap */
 static void rx_get_more(const void **start, size_t *size)
 {
     static int16_t out[2][RX_CHUNK_FRAMES * 2];
     static int which;
     int16_t *buf = out[which ^= 1];
-    unsigned int tail = rx_tail;
-    unsigned int avail = MIN(rx_head - tail, RX_CHUNK_FRAMES);
+    unsigned int head = rx_head, tail = rx_tail;
+    unsigned int avail;
+
+    if (head - tail > 2 * RX_KEEP_FRAMES)
+        tail = head - RX_KEEP_FRAMES;
+    else if (head - tail > RX_KEEP_FRAMES)
+        tail++;
+    avail = head - tail >= RX_CHUNK_FRAMES ? RX_CHUNK_FRAMES : 0;
 
     for (unsigned int i = 0; i < avail; i++)
     {
@@ -90,7 +105,7 @@ static snd_pcm_t *rx_open(unsigned int rate)
     if (snd_pcm_open(&h, rx_dev, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK) < 0)
         return NULL;
     if (snd_pcm_set_params(h, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED,
-                           2, rate, 1, 200000) < 0)
+                           2, rate, 1, RX_CAPTURE_US) < 0)
     {
         snd_pcm_close(h);
         return NULL;
@@ -179,8 +194,12 @@ static void *rx_pump(void *arg)
         peak_seen = MAX(peak_seen, peak);
         if (TIME_AFTER(current_tick, next_log))
         {
-            hiby_debug_log("bt rx: %u frames in 10 s, peak %d (ducks over %d)",
-                           frames, peak_seen, RX_LOUD);
+            snd_pcm_sframes_t held = 0;
+            snd_pcm_delay(h, &held);
+            hiby_debug_log("bt rx: %u frames in 10 s, peak %d (ducks over %d), "
+                           "delay: capture %ld ms, ring %u ms",
+                           frames, peak_seen, RX_LOUD, (long)held * 1000 / rate,
+                           (rx_head - rx_tail) * 1000 / rate);
             frames = peak_seen = 0;
             next_log = current_tick + 10*HZ;
         }

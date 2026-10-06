@@ -14,7 +14,7 @@ A Rockbox fork for the HiBy R1, built on top of [bahusoid's Rockbox Audiobook Mo
 ## Added in this fork
 
 *   **[Rockpocket Stick](docs/mods/rockpocket-stick.md):** a relative virtual stick that turns a thumb gesture anywhere on the panel into the key presses the R1's keypad would make. Drag to scroll (with kinetic coasting), flick for actions, hold for the volume dial.
-*   **Physical keys:** POWER tap = play/pause, hold = lock, long hold = shutdown; volume shown as 0-100%.
+*   **Physical keys:** POWER tap = play/pause; hold and let go at 0.5 s = touch lock, at 2 s = screen off (LED blinks while playing, POWER wakes it); hold 4 s = shutdown; volume shown as 0-100%.
 *   **Display:** vsynced page flipping, and a compositor (`apps/canvas.c`) with blur, shadows, gradients and reflections.
 *   **Skin engine:**
     *   `%Cb` blurred album-art backdrop and `%Cm` reflection.

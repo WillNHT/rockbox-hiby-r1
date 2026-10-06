@@ -47,8 +47,8 @@ static inline void rpkeys_chirp_step(int s, int t, bool r)
  * though a real POWER press no longer reaches the keymap. */
 bool rpkeys_handle(int button, int *action);
 
-/* True while input is locked. Everything except the unlock hold is
- * swallowed. */
+/* True while the touchscreen is locked out: by the lock, or by the screen
+ * having been turned off. The physical keys work either way. */
 bool rpkeys_locked(void);
 
 /* True while the full-screen lock countdown owns the display. The skin

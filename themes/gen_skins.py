@@ -123,6 +123,48 @@ LOCKBAR = """#
 %Vs(invert)%ac%?mh<LOCKED|>"""
 
 BATT_BAR = "%bl(0,0,138,18,bb,backdrop,bb_backdrop)"
+
+# Receiving: a PC or phone playing to the player (%Bm, docs/mods/
+# bluetooth-hiby-x1600.md). The receiver view (2) is the sender's screen,
+# where the cover and the track were: its name, its track as its AVRCP
+# player reports it, and its volume, which the keys move. Both (3) keeps
+# the player's screen and gives the band to the sender. A sender with no
+# player to report (a PC with nothing that tells it) shows its name.
+RX_ENABLES = ("%?if(%Bm,=,2)<%Vd(rxfrom)%Vd(rxstate)%Vd(rxtitle)%Vd(rxartist)"
+              "%Vd(rxalbum)%Vd(rxtime)%Vd(rxvol)>"
+              "%?if(%Bm,=,3)<%Vd(rxs1)%Vd(rxs2)>")
+
+RX_VIEWS = """#
+# Receiving
+# =========
+%Vl(rxfrom,30,170,-30,30,2)
+%Vf(""" + ACCENT + """)
+%al%sFROM %Bn
+#
+%Vl(rxstate,30,206,-30,30,2)
+%al%?Bs<STOPPED|PLAYING|PAUSED>
+#
+%Vl(rxtitle,30,300,-30,70,5)
+%al%s%?Bt<%Bt|%Bn>
+#
+%Vl(rxartist,30,380,-30,40,3)
+%al%s%?Ba<%Ba|>
+#
+%Vl(rxalbum,30,426,-30,30,2)
+%al%s%?Bl<%Bl|>
+#
+%Vl(rxtime,30,688,-30,40,3)
+%al%?Be<%Be|>%ar%?Bd<%Bd|>
+#
+%Vl(rxvol,30,768,-30,30,2)
+%alPC VOLUME%ar%?Bv<%Bv%%|-->
+#
+%Vl(rxs1,30,580,-30,30,2)
+%Vf(""" + ACCENT + """)
+%al%sFROM %Bn%ar%?Bs<|PLAYING|PAUSED>
+#
+%Vl(rxs2,30,612,-30,36,3)
+%al%s%?Bt<%Bt%?Ba< - %Ba|>|receiving>"""
 # Snappy Lyrics Lines gives the band to the lyrics, so one bar of the peak
 # meter takes the battery bar's rectangle: the level is in the percentage
 # under it anyway.
@@ -358,13 +400,34 @@ def snappy_v2(vinyl=False):
 #
 %wd""")
     o.append(PRELOAD)
+    # The player's own screen in the player and both views; the receiver
+    # view takes the cover, the band and the track (RX_VIEWS), and both
+    # gives the band to the sender.
     if vinyl:
         # The record is there with or without a cover.
-        o.append("%Vd(aa)")
+        o.append("%?if(%Bm,!=,2)<%Vd(aa)>")
     else:
-        o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
-    o.append("%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>")
+        o.append("%?if(%Bm,!=,2)<%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>>")
+    o.append("%?if(%Bm,=,1)<%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>>")
     o.append("%Vd(volbar)%?mh<|%Vd(plname)>")
+    the_band, enables = gate(band(574, 70, 74), "bd", "%%?if(%%Bm,=,1)<%s>")
+    o += enables
+    track, enables = gate("""#
+# Track
+# -----
+%V(30,688,-30,30,2)
+%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>%?id< - %id|>
+#
+%V(30,720,-30,46,4)
+%al%s%?it<%it|%fn>
+#
+# Footer
+# ======
+%V(30,768,-30,30,2)
+%Vt(0)
+%al%pc/%pt%ar%pp/%pe""", "tf", "%%?if(%%Bm,!=,2)<%s>")
+    o += enables
+    o.append(RX_ENABLES)
     o += dial_border(30, 26, 138, 18)
     o.append(HEADER)
     if vinyl:
@@ -403,21 +466,9 @@ def snappy_v2(vinyl=False):
 #
 %Vl(noartlabel,40,340,400,40,2)
 %ac%s%?id<%id|%?ia<%ia|no cover>>""")
-    o.append(band(574, 70, 74))
-    o.append("""#
-# Track
-# -----
-%V(30,688,-30,30,2)
-%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>%?id< - %id|>
-#
-%V(30,720,-30,46,4)
-%al%s%?it<%it|%fn>
-#
-# Footer
-# ======
-%V(30,768,-30,30,2)
-%Vt(0)
-%al%pc/%pt%ar%pp/%pe""")
+    o.append(the_band)
+    o.append(track)
+    o.append(RX_VIEWS)
     o.append(LOCKBAR)
     o.append(PLNAME)
     return "\n".join(o) + "\n"

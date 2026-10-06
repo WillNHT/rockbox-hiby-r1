@@ -220,6 +220,19 @@ enum skin_token_type {
     /* Bluetooth receive: 1 off, 2 on and waiting for a sender, 3 a PC or
      * phone is connected and playing to us */
     SKIN_TOKEN_BT_RECEIVE,
+    /* The Now Playing layout: 1 the player's, 2 a sender's, 3 both */
+    SKIN_TOKEN_BT_VIEW,
+    /* The sender's player: 1 stopped or none, 2 playing, 3 paused */
+    SKIN_TOKEN_BT_RX_STATUS,
+    /* The sender's track, name and volume; in this order (see
+     * bt_rx_info()), empty when it does not say */
+    SKIN_TOKEN_BT_RX_TITLE,
+    SKIN_TOKEN_BT_RX_ARTIST,
+    SKIN_TOKEN_BT_RX_ALBUM,
+    SKIN_TOKEN_BT_RX_NAME,
+    SKIN_TOKEN_BT_RX_VOLUME,
+    SKIN_TOKEN_BT_RX_ELAPSED,
+    SKIN_TOKEN_BT_RX_DURATION,
     /* "dynamic" or "static" while a station is on air, empty otherwise. */
     SKIN_TOKEN_RADIO_KIND,
 

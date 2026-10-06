@@ -20748,3 +20748,59 @@
     *: "Player Level"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_BT_VIEW
+  desc: Hiby Bluetooth: which Now Playing layout, the player's, a sender's, or both
+  user: core
+  <source>
+    *: "Bluetooth View"
+  </source>
+  <dest>
+    *: "Bluetooth View"
+  </dest>
+  <voice>
+    *: "Bluetooth View"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_VIEW_PLAYER
+  desc: Hiby Bluetooth: Bluetooth View showing the player's own music
+  user: core
+  <source>
+    *: "Player"
+  </source>
+  <dest>
+    *: "Player"
+  </dest>
+  <voice>
+    *: "Player"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_VIEW_RECEIVER
+  desc: Hiby Bluetooth: Bluetooth View showing what a PC or phone plays to the player
+  user: core
+  <source>
+    *: "Receiver"
+  </source>
+  <dest>
+    *: "Receiver"
+  </dest>
+  <voice>
+    *: "Receiver"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BT_VIEW_BOTH
+  desc: Hiby Bluetooth: Bluetooth View showing the player's music and the sender's
+  user: core
+  <source>
+    *: "Both"
+  </source>
+  <dest>
+    *: "Both"
+  </dest>
+  <voice>
+    *: "Both"
+  </voice>
+</phrase>

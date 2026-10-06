@@ -129,6 +129,11 @@ static int backlight_timer SHAREDBSS_ATTR;
  * woke the screen - and keep swallowing for as long as the answer stayed
  * stale. */
 static bool backlight_wake_pending = false;
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+/* The user turned the screen off: dark, not dimmed, and nothing but
+ * backlight_screen_off(false) lights it again. */
+static bool backlight_screen_is_off = false;
+#endif
 static int backlight_timeout_normal = 5*HZ;
 #if CONFIG_CHARGING
 static int backlight_timeout_plugged = 5*HZ;
@@ -576,6 +581,17 @@ void backlight_set_locked(bool locked)
     backlight_set_dim_brightness(backlight_dim_level);
 }
 
+void backlight_screen_off(bool off)
+{
+    backlight_screen_is_off = off;
+    queue_post(&backlight_queue, off ? BACKLIGHT_OFF : BACKLIGHT_ON, 0);
+}
+
+bool backlight_is_screen_off(void)
+{
+    return backlight_screen_is_off;
+}
+
 #endif
 
 static void do_backlight_blank(void);
@@ -780,10 +796,25 @@ void backlight_thread(void)
 
             case BACKLIGHT_TMO_CHANGED:
             case BACKLIGHT_ON:
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+                if (backlight_screen_is_off)
+                    break;
+#endif
                 backlight_update_state();
                 break;
 
             case BACKLIGHT_OFF:
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+                if (backlight_screen_is_off)
+                {
+                    /* straight to dark: no dim level on the way */
+                    backlight_timer = 0;
+                    backlight_dimmed = false;
+                    backlight_dim_timer = 0;
+                    do_backlight_blank();
+                    break;
+                }
+#endif
                 do_backlight_off();
                 break;
 #ifdef HAVE_BACKLIGHT_BRIGHTNESS
@@ -986,7 +1017,11 @@ void backlight_close(void)
 
 void backlight_on(void)
 {
-    if(!ignore_backlight_on)
+    if(!ignore_backlight_on
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+       && !backlight_screen_is_off
+#endif
+      )
     {
         backlight_wake_pending = true;
         queue_remove_from_head(&backlight_queue, BACKLIGHT_ON);
@@ -1031,6 +1066,13 @@ bool is_backlight_on(bool ignore_always_off)
 {
     if (backlight_timer > 0)   /* countdown */
         return true;
+
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+    /* Turned off on purpose: the keys still work in the dark, so none of
+     * them is swallowed to wake it. Only the power key brings it back. */
+    if (backlight_screen_is_off)
+        return true;
+#endif
 
 #ifdef HAVE_BACKLIGHT_DIM_IDLE
     /* Dimmed is on. The panel is readable and the LCD is awake, so no

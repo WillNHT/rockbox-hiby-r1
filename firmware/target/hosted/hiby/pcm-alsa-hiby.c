@@ -41,6 +41,16 @@ bool hiby_pcm_is_bluealsa_device(const char *device)
     return device && strstr(device, "bluealsa:") != NULL;
 }
 
+/* Receiving from a PC while a headset plays: what the PC plays is heard
+ * through every buffer on the way, so the headset's is halved (about
+ * 93 ms at 44.1 kHz, not 186). Taken at the next open of the device. */
+static bool hiby_pcm_low_latency;
+
+void hiby_pcm_set_low_latency(bool on)
+{
+    hiby_pcm_low_latency = on;
+}
+
 void hiby_pcm_adjust_bt_buffering(snd_pcm_sframes_t *period_size,
                                   snd_pcm_sframes_t *buffer_size,
                                   bool bluealsa_active)
@@ -48,9 +58,12 @@ void hiby_pcm_adjust_bt_buffering(snd_pcm_sframes_t *period_size,
     if (!bluealsa_active || !period_size || !buffer_size)
         return;
 
-    *period_size *= 2;
-    if (*period_size < 2048)
-        *period_size = 2048;
+    if (!hiby_pcm_low_latency)
+    {
+        *period_size *= 2;
+        if (*period_size < 2048)
+            *period_size = 2048;
+    }
     *buffer_size = *period_size * 4;
 }
 

@@ -100,6 +100,18 @@ static const struct qs_page qs_page_bt_mix = {
         [QUICKSCREEN_LEFT]   = { .cfgname = "bluetooth player level" },
     },
 };
+
+/* Which Now Playing layout, forwards on top and back on the bottom, and
+ * the levels a page further */
+static const struct qs_page qs_page_bt = {
+    .lang_id = LANG_BT_BLUETOOTH,
+    .items = {
+        [QUICKSCREEN_TOP]    = { .cfgname = "bluetooth view" },
+        [QUICKSCREEN_BOTTOM] = { .cfgname = "bluetooth view" },
+        [QUICKSCREEN_RIGHT]  = { .lang_id = LANG_BT_MIX,
+                                 .page = &qs_page_bt_mix },
+    },
+};
 #else
 static void qs_act_sleeptimer(void)
 {
@@ -120,8 +132,8 @@ static const struct qs_page qs_page_playback = {
         [QUICKSCREEN_TOP]    = { .cfgname = "shuffle" },
         [QUICKSCREEN_LEFT]   = { .cfgname = "repeat" },
 #ifdef HAVE_HIBY_BLUETOOTH
-        [QUICKSCREEN_RIGHT]  = { .lang_id = LANG_BT_MIX,
-                                 .page = &qs_page_bt_mix },
+        [QUICKSCREEN_RIGHT]  = { .lang_id = LANG_BT_BLUETOOTH,
+                                 .page = &qs_page_bt },
 #else
         [QUICKSCREEN_RIGHT]  = { .lang_id = LANG_SLEEP_TIMER,
                                  .act = qs_act_sleeptimer,

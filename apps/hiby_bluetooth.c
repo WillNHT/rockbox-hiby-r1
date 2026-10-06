@@ -94,6 +94,7 @@
 /* hiby/pcm-alsa-hiby.c and pcm-alsa.c */
 int pcm_alsa_switch_playback_device(const char *device);
 void hiby_pcm_set_bt_mac(const char *mac);
+void hiby_pcm_set_low_latency(bool on);
 const char *hiby_pcm_get_bt_mac(void);
 bool hiby_pcm_mirror_active(void);
 bool hiby_pcm_bt_lost(void);
@@ -114,6 +115,16 @@ struct bt_device
     char name[BT_NAME_LEN];
     bool paired;
     signed char battery;    /* percent, -1 if the headset does not say */
+};
+
+/* What the sender is playing, as its AVRCP player says */
+struct bt_now
+{
+    char title[BT_NAME_LEN], artist[BT_NAME_LEN], album[BT_NAME_LEN];
+    int status;             /* 0 stopped, 1 playing, 2 paused */
+    unsigned long pos, dur; /* ms, pos as it was at tick 'at' */
+    long at;
+    int vol;                /* AVRCP 0..127, -1 if it does not say */
 };
 
 enum { BT_OFF, BT_STARTING, BT_ON };
@@ -147,7 +158,11 @@ static struct
     enum bt_job job;        /* UI -> worker, one slot: the latest wins */
     char job_mac[18];
     char job_arg[BT_CODEC_LEN];
-} bt;
+    struct bt_now now;      /* the sender's track */
+    char rx_name[BT_NAME_LEN]; /* and the sender's name */
+    char rx_cmd[12];        /* UI -> worker: a MediaPlayer1 method */
+    int rx_vol;             /* UI -> worker: its volume to set, -1 none */
+} bt = { .now.vol = -1, .rx_vol = -1 };
 
 static pthread_mutex_t bt_mtx = PTHREAD_MUTEX_INITIALIZER;
 static int bt_wake[2] = { -1, -1 };
@@ -201,9 +216,14 @@ static struct { const char *mac, *name; bool paired; } sim_dev[] = {
     { "7C:2E:BD:10:20:30", "Galaxy Buds2 Pro", true  },
     { "F8:DF:15:40:50:60", "JBL Flip 5",       false },
     { "34:88:5D:70:80:90", "Car Audio",        false },
+    { "AC:DE:48:00:11:22", "Desktop PC",       true  },
 };
 static char sim_link[18] = "00:1B:66:A1:B2:C3";
-static char sim_out[512];
+static char sim_out[1024];
+/* RB_SIM_BT_RX=1 in the environment: a PC plays to us as well */
+#define SIM_RX "AC_DE_48_00_11_22"
+static bool sim_rx_paused;
+static int sim_rx_vol = 96;
 /* POSIX 2008; the simulator's feature macros leave it undeclared */
 FILE *fmemopen(void *buf, size_t size, const char *mode);
 
@@ -217,7 +237,24 @@ static FILE *bt_popen(const char *cmd)
     if (c && c - cmd >= 2)
         snprintf(mac, sizeof(mac), "%.17s", c - 2);
     sim_out[0] = '\0';
-    if (strstr(cmd, "paired-devices") || strstr(cmd, "devices"))
+    if (strstr(cmd, "GetManagedObjects"))
+        strcpy(sim_out, "dev_" SIM_RX "/fd0\ndev_" SIM_RX "/player0\n");
+    else if (strstr(cmd, "MediaPlayer1.P"))
+        sim_rx_paused = strstr(cmd, "Pause") != NULL;
+    else if (strstr(cmd, "string:Volume variant"))
+        sim_rx_vol = atoi(strstr(cmd, "uint16:") + 7);
+    else if (strstr(cmd, "GetAll"))
+        snprintf(sim_out, sizeof(sim_out),
+                 "method return\n string \"Status\"\n variant string \"%s\"\n"
+                 " string \"Position\"\n variant uint32 83000\n"
+                 " string \"Track\"\n variant array [\n"
+                 " string \"Title\"\n variant string \"Weightless\"\n"
+                 " string \"Artist\"\n variant string \"Marconi Union\"\n"
+                 " string \"Album\"\n variant string \"Ambient Transmissions\"\n"
+                 " string \"Duration\"\n variant uint32 480000\n ]\n"
+                 "method return\n variant uint16 %d\n",
+                 sim_rx_paused ? "paused" : "playing", sim_rx_vol);
+    else if (strstr(cmd, "paired-devices") || strstr(cmd, "devices"))
     {
         bool paired_only = strstr(cmd, "aired") != NULL;
         for (i = 0; i < sizeof(sim_dev)/sizeof(sim_dev[0]); i++)
@@ -232,13 +269,22 @@ static FILE *bt_popen(const char *cmd)
             u[i] = sim_link[i] == ':' ? '_' : sim_link[i];
         u[17] = '\0';
         snprintf(sim_out, sizeof(sim_out), sim_link[0] ?
-                 "/org/bluealsa/hci0/dev_%s/a2dpsrc/sink\nrc=0\n" : "rc=0\n", u);
+                 "/org/bluealsa/hci0/dev_%s/a2dpsrc/sink\n" : "", u);
+        if (getenv("RB_SIM_BT_RX"))
+            strcat(sim_out, "/org/bluealsa/hci0/dev_" SIM_RX "/a2dpsnk/source\n");
+        strcat(sim_out, "rc=0\n");
     }
     else if (strstr(cmd, "bluealsa-cli info"))
         strcpy(sim_out, "Sampling: 96000 Hz\nAvailable codecs: SBC AAC LDAC\n"
                         "Selected codec: LDAC\n");
     else if (strstr(cmd, "bluetoothctl info") && !strcmp(mac, sim_link))
         strcpy(sim_out, "\tBattery Percentage: 0x50 (80)\n");
+    else if (strstr(cmd, "bluetoothctl info"))
+    {
+        for (i = 0; i < sizeof(sim_dev)/sizeof(sim_dev[0]); i++)
+            if (!strcmp(sim_dev[i].mac, mac))
+                snprintf(sim_out, sizeof(sim_out), "\tName: %s\n", sim_dev[i].name);
+    }
     else if (strstr(cmd, "power"))
         strcpy(sim_out, "Changing power succeeded\n");
     else if (strstr(cmd, "bluetoothctl connect"))
@@ -630,14 +676,183 @@ static void bt_set_link(const char *mac)
     }
 }
 
+/* ------------------------------------------------- the sender's player */
+
+/* BlueZ's objects for the sender: its AVRCP player (MediaPlayer1) and its
+ * A2DP transport, whose Volume is the sender's slider. bluetoothctl here
+ * has no player menu, so they are reached with dbus-send. Worker only. */
+static char rx_player[112], rx_fd[112];
+static long rx_next_poll;
+
+#define BT_DBUS "dbus-send --system --print-reply --dest=org.bluez "
+
+static void bt_rx_paths(const char *mac)
+{
+    char cmd[192], line[96], u[18], *p;
+    FILE *fp;
+    int i;
+
+    for (i = 0; i < 17 && mac[i]; i++)
+        u[i] = mac[i] == ':' ? '_' : mac[i];
+    u[i] = '\0';
+    snprintf(cmd, sizeof(cmd), BT_DBUS "/ org.freedesktop.DBus.ObjectManager"
+             ".GetManagedObjects 2>/dev/null | grep -o 'dev_%s/[a-z]*[0-9]*'", u);
+    fp = bt_popen(cmd);
+    while (fp && fgets(line, sizeof(line), fp))
+    {
+        line[strcspn(line, "\n")] = '\0';
+        if (!(p = strchr(line, '/')))
+            continue;
+        p++;
+        if (!strncmp(p, "player", 6) && !rx_player[0])
+            snprintf(rx_player, sizeof(rx_player), "/org/bluez/hci0/%s", line);
+        else if (!strncmp(p, "fd", 2) && !rx_fd[0])
+            snprintf(rx_fd, sizeof(rx_fd), "/org/bluez/hci0/%s", line);
+    }
+    if (fp)
+        bt_pclose(fp);
+    hiby_debug_log("bt: sender player '%s', transport '%s'", rx_player, rx_fd);
+
+    if (bt.rx_name[0])
+        return;
+    snprintf(cmd, sizeof(cmd), "bluetoothctl info %s 2>/dev/null", mac);
+    fp = bt_popen(cmd);
+    while (fp && fgets(line, sizeof(line), fp))
+        if ((p = strstr(line, "Name: ")))
+        {
+            p[6 + strcspn(p + 6, "\n")] = '\0';
+            pthread_mutex_lock(&bt_mtx);
+            snprintf(bt.rx_name, sizeof(bt.rx_name), "%s", p + 6);
+            pthread_mutex_unlock(&bt_mtx);
+            break;
+        }
+    if (fp)
+        bt_pclose(fp);
+}
+
+/* dbus-send --print-reply's dump of the player's properties, then of the
+ * transport's Volume: a key line (string "Title") and, a line on, its
+ * value (variant string "..." or variant uint32 N) */
+static bool bt_rx_parse(FILE *fp, struct bt_now *np)
+{
+    char line[256], key[16] = "", *v, *q, *end;
+    bool player = false;
+
+    while (fgets(line, sizeof(line), fp))
+    {
+        if (!strncmp(line, "method return", 13))
+        {
+            key[0] = '\0';
+            continue;
+        }
+        if (!(v = strstr(line, "variant")))
+        {
+            if ((q = strstr(line, "string \"")))
+                snprintf(key, sizeof(key), "%.*s", (int)strcspn(q + 8, "\""), q + 8);
+            continue;
+        }
+        if ((q = strstr(v, "string \"")) && (end = strrchr(q + 8, '"')))
+        {
+            *end = '\0';
+            q += 8;
+            if (!strcmp(key, "Status"))
+            {
+                player = true;
+                np->status = !strcmp(q, "paused") ? 2 :
+                             !strcmp(q, "stopped") || !strcmp(q, "error") ? 0 : 1;
+            }
+            else if (!strcmp(key, "Title"))
+                snprintf(np->title, sizeof(np->title), "%s", q);
+            else if (!strcmp(key, "Artist"))
+                snprintf(np->artist, sizeof(np->artist), "%s", q);
+            else if (!strcmp(key, "Album"))
+                snprintf(np->album, sizeof(np->album), "%s", q);
+        }
+        else if ((q = strstr(v, "uint")) && (q = strchr(q, ' ')))
+        {
+            unsigned long n = strtoul(q, NULL, 10);
+            if (!strcmp(key, "Position"))
+                np->pos = n;
+            else if (!strcmp(key, "Duration"))
+                np->dur = n;
+            else if (!key[0])
+                np->vol = n;
+        }
+    }
+    return player;
+}
+
+/* What the UI asked of the sender, then what it is playing now: every
+ * couple of seconds, at once after a command */
+static void bt_rx_service(const char *mac)
+{
+    char cmd[512], ctl[12];
+    struct bt_now np = { .vol = -1 };
+    int vol;
+    FILE *fp;
+
+    pthread_mutex_lock(&bt_mtx);
+    snprintf(ctl, sizeof(ctl), "%s", bt.rx_cmd);
+    bt.rx_cmd[0] = '\0';
+    vol = bt.rx_vol;
+    bt.rx_vol = -1;
+    pthread_mutex_unlock(&bt_mtx);
+
+    if (!ctl[0] && vol < 0 && TIME_BEFORE(current_tick, rx_next_poll))
+        return;
+    /* a sender with no player (nothing that reports to it playing) is
+       looked for again now and then, not every time */
+    if (!rx_player[0] || !rx_fd[0])
+        bt_rx_paths(mac);
+    rx_next_poll = current_tick + (rx_player[0] ? 2*HZ : 10*HZ);
+    if (ctl[0] && rx_player[0])
+    {
+        snprintf(cmd, sizeof(cmd), BT_DBUS "%s org.bluez.MediaPlayer1.%s 2>&1",
+                 rx_player, ctl);
+        bt_cmd(cmd, NULL);
+    }
+    if (vol >= 0 && rx_fd[0])
+    {
+        snprintf(cmd, sizeof(cmd), BT_DBUS "%s org.freedesktop.DBus.Properties.Set"
+                 " string:org.bluez.MediaTransport1 string:Volume variant:uint16:%d 2>&1",
+                 rx_fd, vol);
+        bt_cmd(cmd, NULL);
+    }
+
+    snprintf(cmd, sizeof(cmd),
+             BT_DBUS "%s org.freedesktop.DBus.Properties.GetAll string:org.bluez.MediaPlayer1 2>&1; "
+             BT_DBUS "%s org.freedesktop.DBus.Properties.Get string:org.bluez.MediaTransport1 string:Volume 2>&1",
+             rx_player[0] ? rx_player : "/", rx_fd[0] ? rx_fd : "/");
+    if (!(fp = bt_popen(cmd)))
+        return;
+    /* no player, or it went (the sender's app closed): find it next time */
+    if (!bt_rx_parse(fp, &np))
+        rx_player[0] = '\0';
+    bt_pclose(fp);
+    np.at = current_tick;
+
+    pthread_mutex_lock(&bt_mtx);
+    bt.now = np;
+    pthread_mutex_unlock(&bt_mtx);
+    bt_changed();
+}
+
 static void bt_set_rx(const char *mac)
 {
     pthread_mutex_lock(&bt_mtx);
     bool changed = strcmp(bt.rx, mac) != 0;
     snprintf(bt.rx, sizeof(bt.rx), "%s", mac);
+    if (changed)
+    {
+        memset(&bt.now, 0, sizeof(bt.now));
+        bt.now.vol = -1;
+        bt.rx_name[0] = '\0';
+    }
     pthread_mutex_unlock(&bt_mtx);
     if (!changed)
         return;
+    rx_player[0] = rx_fd[0] = '\0';
+    rx_next_poll = current_tick;
     hiby_debug_log("bt: receiving from %s", mac[0] ? mac : "none");
     if (mac[0])
     {
@@ -1097,7 +1312,7 @@ static void *bt_worker(void *arg)
         else
             hiby_bt_mixer_close();
 #endif
-        timeout = bt_power == BT_OFF ? -1 : bt.screen ? 1000 : 3000;
+        timeout = bt_power == BT_OFF ? -1 : bt.screen || bt_rx_linked ? 1000 : 3000;
         if (poll(pfd, n, timeout) > 0)
         {
             if (pfd[0].revents & POLLIN)
@@ -1174,6 +1389,13 @@ static void *bt_worker(void *arg)
         }
 #endif
         bt_poll_link();
+        if (bt_rx_linked)
+        {
+            pthread_mutex_lock(&bt_mtx);
+            snprintf(mac, sizeof(mac), "%s", bt.rx);
+            pthread_mutex_unlock(&bt_mtx);
+            bt_rx_service(mac);
+        }
         if (bt.screen && TIME_AFTER(current_tick, next_refresh))
         {
             next_refresh = current_tick + 2*HZ;
@@ -1271,6 +1493,117 @@ bool bt_is_dual_fast(void)
 int bt_rx_state_fast(void)
 {
     return bt_rx_linked ? 2 : bt_rx_on ? 1 : 0;
+}
+
+/* For %?Bs: 0 stopped (or no sender), 1 playing, 2 paused */
+int bt_rx_status_fast(void)
+{
+    return bt_rx_linked ? bt.now.status : 0;
+}
+
+/* Which WPS layout: Bluetooth View if set, else what is playing. With
+ * nothing playing the last one stays, so a pause does not swap screens. */
+int bt_view_fast(void)
+{
+    static int last = BT_VIEW_PLAYER;
+    int status = audio_status();
+    bool local = (status & AUDIO_STATUS_PLAY) && !(status & AUDIO_STATUS_PAUSE);
+    bool rx = bt_rx_linked && (bt.now.status == 1
+#ifndef SIMULATOR
+                               || hiby_bt_rx_loud(2*HZ)
+#endif
+                              );
+
+    if (global_settings.bt_view)
+        return global_settings.bt_view - 1;
+    if (rx)
+        last = local ? BT_VIEW_BOTH : BT_VIEW_RX;
+    else if (local || !bt_rx_linked)
+        last = BT_VIEW_PLAYER;
+    return last;
+}
+
+/* For the skin: the sender's 't'itle, 'a'rtist, a'l'bum, 'n'ame,
+ * 'v'olume (%), 'e'lapsed and 'd'uration. NULL when there is none. */
+const char *bt_rx_info(int what, char *buf, size_t len)
+{
+    struct bt_now np;
+    unsigned long ms;
+
+    if (!bt_rx_linked)
+        return NULL;
+    pthread_mutex_lock(&bt_mtx);
+    np = bt.now;
+    snprintf(buf, len, "%s", bt.rx_name[0] ? bt.rx_name : bt.rx);
+    pthread_mutex_unlock(&bt_mtx);
+    switch (what)
+    {
+        case 'n':
+            break;
+        case 't':
+            snprintf(buf, len, "%s", np.title);
+            break;
+        case 'a':
+            snprintf(buf, len, "%s", np.artist);
+            break;
+        case 'l':
+            snprintf(buf, len, "%s", np.album);
+            break;
+        case 'v':
+            if (np.vol < 0)
+                return NULL;
+            snprintf(buf, len, "%d", (np.vol * 100 + 63) / 127);
+            break;
+        case 'e':
+            ms = np.pos;
+            if (np.status == 1)
+                ms += (current_tick - np.at) * (1000 / HZ);
+            if (np.dur && ms > np.dur)
+                ms = np.dur;
+            format_time(buf, len, ms);
+            break;
+        case 'd':
+            if (!np.dur)
+                return NULL;
+            format_time(buf, len, np.dur);
+            break;
+        default:
+            return NULL;
+    }
+    return buf[0] ? buf : NULL;
+}
+
+/* The sender's transport, from the keys. Shown at once rather than when
+ * the sender confirms it, so a second tap undoes the first. */
+void bt_rx_play_pause(void)
+{
+    pthread_mutex_lock(&bt_mtx);
+    if (bt.now.status == 1)
+        bt.now.pos += (current_tick - bt.now.at) * (1000 / HZ);
+    bt.now.at = current_tick;
+    bt.now.status = bt.now.status == 1 ? 2 : 1;
+    snprintf(bt.rx_cmd, sizeof(bt.rx_cmd), bt.now.status == 1 ? "Play" : "Pause");
+    pthread_mutex_unlock(&bt_mtx);
+    bt_wake_worker();
+}
+
+void bt_rx_skip(int dir)
+{
+    pthread_mutex_lock(&bt_mtx);
+    snprintf(bt.rx_cmd, sizeof(bt.rx_cmd), dir > 0 ? "Next" : "Previous");
+    pthread_mutex_unlock(&bt_mtx);
+    bt_wake_worker();
+}
+
+/* The sender's own volume (AVRCP absolute volume, 0..127): its slider
+ * moves with it. A step is about 3%. */
+void bt_rx_volume_step(int steps)
+{
+    pthread_mutex_lock(&bt_mtx);
+    bt.now.vol = MIN(MAX((bt.now.vol < 0 ? 127 : bt.now.vol) + steps * 4, 0), 127);
+    bt.rx_vol = bt.now.vol;
+    pthread_mutex_unlock(&bt_mtx);
+    bt_wake_worker();
 }
 
 /* The player's own audio at Player Level, and lower by the duck while the
@@ -1431,16 +1764,27 @@ void bt_sync(void)
     if (bt_rx_gen != bt_rx_synced_gen || hiby_bt_rx_stalled())
     {
         static struct timeout duck;
+        char rx[18];
+        bool changed = bt_rx_gen != bt_rx_synced_gen;
 
-        if (bt_rx_gen != bt_rx_synced_gen)
+        if (changed)
             hiby_bt_rx_stop();
         bt_rx_synced_gen = bt_rx_gen;
         pthread_mutex_lock(&bt_mtx);
-        snprintf(link, sizeof(link), "%s", bt.rx);
+        snprintf(rx, sizeof(rx), "%s", bt.rx);
+        snprintf(link, sizeof(link), "%s", bt.link);
         pthread_mutex_unlock(&bt_mtx);
-        if (link[0])
+        /* a sender came or went: the headset's buffer to match, by opening
+           it again */
+        if (changed)
         {
-            hiby_bt_rx_start(link);
+            hiby_pcm_set_low_latency(rx[0] != '\0');
+            if (hiby_pcm_get_bt_mac() && link[0])
+                bt_route(link);
+        }
+        if (rx[0])
+        {
+            hiby_bt_rx_start(rx);
             timeout_register(&duck, bt_rx_duck, HZ/10, 0);
         }
     }
