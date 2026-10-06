@@ -161,8 +161,7 @@ static struct
     struct bt_now now;      /* the sender's track */
     char rx_name[BT_NAME_LEN]; /* and the sender's name */
     char rx_cmd[12];        /* UI -> worker: a MediaPlayer1 method */
-    int rx_vol;             /* UI -> worker: its volume to set, -1 none */
-} bt = { .now.vol = -1, .rx_vol = -1 };
+} bt = { .now.vol = -1 };
 
 static pthread_mutex_t bt_mtx = PTHREAD_MUTEX_INITIALIZER;
 static int bt_wake[2] = { -1, -1 };
@@ -220,10 +219,11 @@ static struct { const char *mac, *name; bool paired; } sim_dev[] = {
 };
 static char sim_link[18] = "00:1B:66:A1:B2:C3";
 static char sim_out[1024];
-/* RB_SIM_BT_RX=1 in the environment: a PC plays to us as well */
+/* RB_SIM_BT_RX=1 in the environment: a PC plays to us as well; =paused,
+ * it starts paused, so the keys are the player's until it plays */
 #define SIM_RX "AC_DE_48_00_11_22"
-static bool sim_rx_paused;
-static int sim_rx_vol = 96;
+static bool sim_rx_paused, sim_started;
+static const int sim_rx_vol = 96;
 /* POSIX 2008; the simulator's feature macros leave it undeclared */
 FILE *fmemopen(void *buf, size_t size, const char *mode);
 
@@ -237,12 +237,16 @@ static FILE *bt_popen(const char *cmd)
     if (c && c - cmd >= 2)
         snprintf(mac, sizeof(mac), "%.17s", c - 2);
     sim_out[0] = '\0';
+    if (!sim_started)
+    {
+        sim_started = true;
+        sim_rx_paused = getenv("RB_SIM_BT_RX")
+                        && !strcmp(getenv("RB_SIM_BT_RX"), "paused");
+    }
     if (strstr(cmd, "GetManagedObjects"))
         strcpy(sim_out, "dev_" SIM_RX "/fd0\ndev_" SIM_RX "/player0\n");
     else if (strstr(cmd, "MediaPlayer1.P"))
         sim_rx_paused = strstr(cmd, "Pause") != NULL;
-    else if (strstr(cmd, "string:Volume variant"))
-        sim_rx_vol = atoi(strstr(cmd, "uint16:") + 7);
     else if (strstr(cmd, "GetAll"))
         snprintf(sim_out, sizeof(sim_out),
                  "method return\n string \"Status\"\n variant string \"%s\"\n"
@@ -788,17 +792,14 @@ static void bt_rx_service(const char *mac)
 {
     char cmd[512], ctl[12];
     struct bt_now np = { .vol = -1 };
-    int vol;
     FILE *fp;
 
     pthread_mutex_lock(&bt_mtx);
     snprintf(ctl, sizeof(ctl), "%s", bt.rx_cmd);
     bt.rx_cmd[0] = '\0';
-    vol = bt.rx_vol;
-    bt.rx_vol = -1;
     pthread_mutex_unlock(&bt_mtx);
 
-    if (!ctl[0] && vol < 0 && TIME_BEFORE(current_tick, rx_next_poll))
+    if (!ctl[0] && TIME_BEFORE(current_tick, rx_next_poll))
         return;
     /* a sender with no player (nothing that reports to it playing) is
        looked for again now and then, not every time */
@@ -809,13 +810,6 @@ static void bt_rx_service(const char *mac)
     {
         snprintf(cmd, sizeof(cmd), BT_DBUS "%s org.bluez.MediaPlayer1.%s 2>&1",
                  rx_player, ctl);
-        bt_cmd(cmd, NULL);
-    }
-    if (vol >= 0 && rx_fd[0])
-    {
-        snprintf(cmd, sizeof(cmd), BT_DBUS "%s org.freedesktop.DBus.Properties.Set"
-                 " string:org.bluez.MediaTransport1 string:Volume variant:uint16:%d 2>&1",
-                 rx_fd, vol);
         bt_cmd(cmd, NULL);
     }
 
@@ -1501,9 +1495,10 @@ int bt_rx_status_fast(void)
     return bt_rx_linked ? bt.now.status : 0;
 }
 
-/* Which WPS layout: Bluetooth View if set, else what is playing. With
- * nothing playing the last one stays, so a pause does not swap screens. */
-int bt_view_fast(void)
+/* What is playing: the receiver while only a sender plays, both while both
+ * do. With nothing playing the last one stays, so a pause does not swap
+ * screens, and the keys stay with whoever was playing. */
+static int bt_auto_view(void)
 {
     static int last = BT_VIEW_PLAYER;
     int status = audio_status();
@@ -1514,13 +1509,25 @@ int bt_view_fast(void)
 #endif
                               );
 
-    if (global_settings.bt_view)
-        return global_settings.bt_view - 1;
     if (rx)
         last = local ? BT_VIEW_BOTH : BT_VIEW_RX;
     else if (local || !bt_rx_linked)
         last = BT_VIEW_PLAYER;
     return last;
+}
+
+/* Which WPS layout: Bluetooth View if set, else what is playing */
+int bt_view_fast(void)
+{
+    int view = bt_auto_view();
+    return global_settings.bt_view ? global_settings.bt_view - 1 : view;
+}
+
+/* The keys work the sender: it plays and the player does not, whatever
+ * the screen shows */
+bool bt_rx_keys_fast(void)
+{
+    return bt_rx_linked && bt_auto_view() == BT_VIEW_RX;
 }
 
 /* For the skin: the sender's 't'itle, 'a'rtist, a'l'bum, 'n'ame,
@@ -1591,17 +1598,6 @@ void bt_rx_skip(int dir)
 {
     pthread_mutex_lock(&bt_mtx);
     snprintf(bt.rx_cmd, sizeof(bt.rx_cmd), dir > 0 ? "Next" : "Previous");
-    pthread_mutex_unlock(&bt_mtx);
-    bt_wake_worker();
-}
-
-/* The sender's own volume (AVRCP absolute volume, 0..127): its slider
- * moves with it. A step is about 3%. */
-void bt_rx_volume_step(int steps)
-{
-    pthread_mutex_lock(&bt_mtx);
-    bt.now.vol = MIN(MAX((bt.now.vol < 0 ? 127 : bt.now.vol) + steps * 4, 0), 127);
-    bt.rx_vol = bt.now.vol;
     pthread_mutex_unlock(&bt_mtx);
     bt_wake_worker();
 }

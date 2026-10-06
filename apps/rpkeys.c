@@ -145,12 +145,13 @@ bool rpkeys_locked(void)
     return locked || screen_is_off();
 }
 
-/* A PC or phone plays to us and nothing of our own does: the keys work
- * the sender - its play/pause, tracks and volume - over AVRCP */
+/* A PC or phone plays to us and nothing of our own does: play/pause and
+ * the tracks work the sender over AVRCP. Volume stays the player's, which
+ * is the sender's too, as it plays through us. */
 static bool keys_to_sender(void)
 {
 #ifdef HAVE_HIBY_BLUETOOTH
-    return bt_view_fast() == BT_VIEW_RX && bt_rx_state_fast() == 2;
+    return bt_rx_keys_fast();
 #else
     return false;
 #endif
@@ -210,6 +211,29 @@ static void cue(void)
 {
     if (keyclick_enabled(KEYCLICK_SRC_BUTTON))
         system_sound_play(SOUND_KEYCLICK);
+}
+
+/* The POWER tap, and a headset's play key */
+static void play_pause(void)
+{
+    /* PAUSE first, and not PLAY. audio_status() keeps
+     * AUDIO_STATUS_PLAY set while paused - paused is a *kind* of
+     * playing, with AUDIO_STATUS_PAUSE on top - so testing PLAY
+     * meant the second tap paused an already-paused track and
+     * resume was unreachable. */
+    if (keys_to_sender())
+        bt_rx_play_pause();
+    else if (audio_status() & AUDIO_STATUS_PAUSE)
+    {
+        /* a station played on while it was paused */
+        pradio_pause(false);
+        audio_resume();
+    }
+    else if (audio_status() & AUDIO_STATUS_PLAY)
+    {
+        audio_pause();
+        pradio_pause(true);
+    }
 }
 
 /* Two chirps, one rising and one falling, for the state changes that are
@@ -664,24 +688,7 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
              * one meaning is what makes the rest of the key legible, since
              * everything else on it is a hold. */
             cue();
-            /* PAUSE first, and not PLAY. audio_status() keeps
-             * AUDIO_STATUS_PLAY set while paused - paused is a *kind* of
-             * playing, with AUDIO_STATUS_PAUSE on top - so testing PLAY
-             * meant the second tap paused an already-paused track and
-             * resume was unreachable. */
-            if (keys_to_sender())
-                bt_rx_play_pause();
-            else if (audio_status() & AUDIO_STATUS_PAUSE)
-            {
-                /* a station played on while it was paused */
-                pradio_pause(false);
-                audio_resume();
-            }
-            else if (audio_status() & AUDIO_STATUS_PLAY)
-            {
-                audio_pause();
-                pradio_pause(true);
-            }
+            play_pause();
         }
         return true;
     }
@@ -792,10 +799,7 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
  * curve has nothing left to correct and direct is the honest mode. */
 static void volume_step(int steps)
 {
-    if (keys_to_sender())
-        bt_rx_volume_step(steps);
-    else
-        adjust_volume_ex(steps, VOLUME_ADJUST_DIRECT);
+    adjust_volume_ex(steps, VOLUME_ADJUST_DIRECT);
 }
 
 static bool handle_volume(int button, bool repeat, bool release)
@@ -922,6 +926,15 @@ bool rpkeys_handle(int button, int *action)
 
     if (bare & BUTTON_POWER)
         return handle_power(bare, repeat, release, action);
+
+    /* A headset's play key works the sender while it is the one playing;
+     * otherwise the keymap has it, as before */
+    if ((bare & BUTTON_PLAY) && keys_to_sender())
+    {
+        if (!repeat && !release)
+            play_pause();
+        return true;
+    }
 
     /* A headset's next/prev is a track, never a seek: earbuds only tap,
      * and they work with the player locked in a pocket */
