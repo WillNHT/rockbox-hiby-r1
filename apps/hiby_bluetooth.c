@@ -161,8 +161,7 @@ static struct
     struct bt_now now;      /* the sender's track */
     char rx_name[BT_NAME_LEN]; /* and the sender's name */
     char rx_cmd[12];        /* UI -> worker: a MediaPlayer1 method */
-    int rx_vol;             /* UI -> worker: its volume to set, -1 none */
-} bt = { .now.vol = -1, .rx_vol = -1 };
+} bt = { .now.vol = -1 };
 
 static pthread_mutex_t bt_mtx = PTHREAD_MUTEX_INITIALIZER;
 static int bt_wake[2] = { -1, -1 };
@@ -220,10 +219,11 @@ static struct { const char *mac, *name; bool paired; } sim_dev[] = {
 };
 static char sim_link[18] = "00:1B:66:A1:B2:C3";
 static char sim_out[1024];
-/* RB_SIM_BT_RX=1 in the environment: a PC plays to us as well */
+/* RB_SIM_BT_RX=1 in the environment: a PC plays to us as well; =paused,
+ * it starts paused, so the keys are the player's until it plays */
 #define SIM_RX "AC_DE_48_00_11_22"
-static bool sim_rx_paused;
-static int sim_rx_vol = 96;
+static bool sim_rx_paused, sim_started;
+static const int sim_rx_vol = 96;
 /* POSIX 2008; the simulator's feature macros leave it undeclared */
 FILE *fmemopen(void *buf, size_t size, const char *mode);
 
@@ -237,12 +237,16 @@ static FILE *bt_popen(const char *cmd)
     if (c && c - cmd >= 2)
         snprintf(mac, sizeof(mac), "%.17s", c - 2);
     sim_out[0] = '\0';
+    if (!sim_started)
+    {
+        sim_started = true;
+        sim_rx_paused = getenv("RB_SIM_BT_RX")
+                        && !strcmp(getenv("RB_SIM_BT_RX"), "paused");
+    }
     if (strstr(cmd, "GetManagedObjects"))
         strcpy(sim_out, "dev_" SIM_RX "/fd0\ndev_" SIM_RX "/player0\n");
     else if (strstr(cmd, "MediaPlayer1.P"))
         sim_rx_paused = strstr(cmd, "Pause") != NULL;
-    else if (strstr(cmd, "string:Volume variant"))
-        sim_rx_vol = atoi(strstr(cmd, "uint16:") + 7);
     else if (strstr(cmd, "GetAll"))
         snprintf(sim_out, sizeof(sim_out),
                  "method return\n string \"Status\"\n variant string \"%s\"\n"
@@ -788,17 +792,14 @@ static void bt_rx_service(const char *mac)
 {
     char cmd[512], ctl[12];
     struct bt_now np = { .vol = -1 };
-    int vol;
     FILE *fp;
 
     pthread_mutex_lock(&bt_mtx);
     snprintf(ctl, sizeof(ctl), "%s", bt.rx_cmd);
     bt.rx_cmd[0] = '\0';
-    vol = bt.rx_vol;
-    bt.rx_vol = -1;
     pthread_mutex_unlock(&bt_mtx);
 
-    if (!ctl[0] && vol < 0 && TIME_BEFORE(current_tick, rx_next_poll))
+    if (!ctl[0] && TIME_BEFORE(current_tick, rx_next_poll))
         return;
     /* a sender with no player (nothing that reports to it playing) is
        looked for again now and then, not every time */
@@ -809,13 +810,6 @@ static void bt_rx_service(const char *mac)
     {
         snprintf(cmd, sizeof(cmd), BT_DBUS "%s org.bluez.MediaPlayer1.%s 2>&1",
                  rx_player, ctl);
-        bt_cmd(cmd, NULL);
-    }
-    if (vol >= 0 && rx_fd[0])
-    {
-        snprintf(cmd, sizeof(cmd), BT_DBUS "%s org.freedesktop.DBus.Properties.Set"
-                 " string:org.bluez.MediaTransport1 string:Volume variant:uint16:%d 2>&1",
-                 rx_fd, vol);
         bt_cmd(cmd, NULL);
     }
 
@@ -1501,9 +1495,10 @@ int bt_rx_status_fast(void)
     return bt_rx_linked ? bt.now.status : 0;
 }
 
-/* Which WPS layout: Bluetooth View if set, else what is playing. With
- * nothing playing the last one stays, so a pause does not swap screens. */
-int bt_view_fast(void)
+/* What is playing: the receiver while only a sender plays, both while both
+ * do. With nothing playing the last one stays, so a pause does not swap
+ * screens, and the keys stay with whoever was playing. */
+static int bt_auto_view(void)
 {
     static int last = BT_VIEW_PLAYER;
     int status = audio_status();
@@ -1514,13 +1509,25 @@ int bt_view_fast(void)
 #endif
                               );
 
-    if (global_settings.bt_view)
-        return global_settings.bt_view - 1;
     if (rx)
         last = local ? BT_VIEW_BOTH : BT_VIEW_RX;
     else if (local || !bt_rx_linked)
         last = BT_VIEW_PLAYER;
     return last;
+}
+
+/* Which WPS layout: Bluetooth View if set, else what is playing */
+int bt_view_fast(void)
+{
+    int view = bt_auto_view();
+    return global_settings.bt_view ? global_settings.bt_view - 1 : view;
+}
+
+/* The keys work the sender: it plays and the player does not, whatever
+ * the screen shows */
+bool bt_rx_keys_fast(void)
+{
+    return bt_rx_linked && bt_auto_view() == BT_VIEW_RX;
 }
 
 /* For the skin: the sender's 't'itle, 'a'rtist, a'l'bum, 'n'ame,
@@ -1591,17 +1598,6 @@ void bt_rx_skip(int dir)
 {
     pthread_mutex_lock(&bt_mtx);
     snprintf(bt.rx_cmd, sizeof(bt.rx_cmd), dir > 0 ? "Next" : "Previous");
-    pthread_mutex_unlock(&bt_mtx);
-    bt_wake_worker();
-}
-
-/* The sender's own volume (AVRCP absolute volume, 0..127): its slider
- * moves with it. A step is about 3%. */
-void bt_rx_volume_step(int steps)
-{
-    pthread_mutex_lock(&bt_mtx);
-    bt.now.vol = MIN(MAX((bt.now.vol < 0 ? 127 : bt.now.vol) + steps * 4, 0), 127);
-    bt.rx_vol = bt.now.vol;
     pthread_mutex_unlock(&bt_mtx);
     bt_wake_worker();
 }
@@ -1919,12 +1915,14 @@ static const char *bt_device_state(const struct bt_device *d, char *buf, size_t 
     return buf;
 }
 
-/* The one Bluetooth screen: the switch, paired devices, devices around */
-enum { ROW_POWER, ROW_RECEIVE, ROW_PAIRED, ROW_OTHER, ROW_DEVICE, ROW_SEARCH,
-       ROW_FORGET_ALL, ROW_OFFSET, ROW_RX_DUCK };
+/* The Bluetooth screen: the switches and levels, and the devices, paired
+ * and around, a page of their own */
+enum { ROW_POWER, ROW_RECEIVE, ROW_DEVICES, ROW_PAIRED, ROW_OTHER, ROW_DEVICE,
+       ROW_SEARCH, ROW_FORGET_ALL, ROW_OFFSET, ROW_DUAL_WIRED, ROW_RX_DUCK };
 static struct { unsigned char kind, dev; } rows[BT_MAX_DEVICES + 8];
 static int nrows;
 static bool bt_found_other;
+static bool bt_devices;     /* the devices page is open */
 
 static void bt_build_rows(void)
 {
@@ -1932,10 +1930,21 @@ static void bt_build_rows(void)
     int i;
 
     nrows = 0;
-    rows[nrows++].kind = ROW_POWER;
-    if (bt_power == BT_ON)
+    if (!bt_devices)
     {
-        rows[nrows++].kind = ROW_RECEIVE;
+        rows[nrows++].kind = ROW_POWER;
+        if (bt_power == BT_ON)
+        {
+            rows[nrows++].kind = ROW_RECEIVE;
+            rows[nrows++].kind = ROW_DEVICES;
+        }
+        rows[nrows++].kind = ROW_OFFSET;
+        rows[nrows++].kind = ROW_DUAL_WIRED;
+        if (bt_rx_on)
+            rows[nrows++].kind = ROW_RX_DUCK;
+    }
+    else if (bt_power == BT_ON)
+    {
         for (i = 0; i < snap.count; i++)
         {
             if (i == 0 && snap.dev[i].paired)
@@ -1956,9 +1965,6 @@ static void bt_build_rows(void)
         if (snap.count && snap.dev[0].paired)
             rows[nrows++].kind = ROW_FORGET_ALL;
     }
-    rows[nrows++].kind = ROW_OFFSET;
-    if (bt_rx_on)
-        rows[nrows++].kind = ROW_RX_DUCK;
 }
 
 static const char *bt_row_name(int i, void *data, char *buf, size_t len)
@@ -1977,6 +1983,16 @@ static const char *bt_row_name(int i, void *data, char *buf, size_t len)
                        bt_rx_switching == 2 ? LANG_BT_TURNING_OFF :
                        bt_rx_on ? LANG_ON : LANG_OFF));
             return buf;
+        case ROW_DEVICES:
+        {
+            /* what is connected, so the page need not be opened to see */
+            const struct bt_device *d = bt_find(snap.dev, snap.count, snap.link);
+            const struct bt_device *r = bt_find(snap.dev, snap.count, snap.rx);
+            snprintf(buf, len, "%s%s%s%s%s", S(LANG_BT_DEVICES),
+                     d || r ? ": " : "", d ? d->name : "",
+                     d && r ? ", " : "", r ? r->name : "");
+            return buf;
+        }
         case ROW_PAIRED:
             return S(LANG_BT_PAIRED_DEVICES);
         case ROW_OTHER:
@@ -1997,6 +2013,10 @@ static const char *bt_row_name(int i, void *data, char *buf, size_t len)
         case ROW_OFFSET:
             snprintf(buf, len, "%s: %d ms", S(LANG_BT_WIRED_OFFSET),
                      global_settings.bt_wired_offset);
+            return buf;
+        case ROW_DUAL_WIRED:
+            snprintf(buf, len, "%s: %d%%", S(LANG_BT_DUAL_WIRED),
+                     global_settings.bt_dual_wired);
             return buf;
         case ROW_RX_DUCK:
             snprintf(buf, len, "%s: %d%%", S(LANG_BT_RX_DUCK),
@@ -2019,9 +2039,12 @@ static enum themable_icons bt_row_icon(int i, void *data)
             return strcmp(snap.dev[rows[i].dev].mac, snap.link)
                    && strcmp(snap.dev[rows[i].dev].mac, snap.rx)
                    ? Icon_System_menu : Icon_Audio;
+        case ROW_DEVICES:
+            return Icon_Submenu;
         case ROW_POWER:
         case ROW_RECEIVE:
         case ROW_OFFSET:
+        case ROW_DUAL_WIRED:
         case ROW_RX_DUCK:
             return Icon_Menu_setting;
         case ROW_FORGET_ALL:
@@ -2042,6 +2065,9 @@ static int bt_screen_cb(int action, struct gui_synclist *lists)
         bt_context = true;
         return ACTION_STD_OK;
     }
+    /* switched off: no devices to show */
+    if (bt_devices && bt_power != BT_ON)
+        return ACTION_STD_CANCEL;
     if (snap.gen != bt_gen)
     {
         bt_snapshot();
@@ -2191,18 +2217,18 @@ static void bt_device_page(const char *mac)
     }
 }
 
-int hiby_bluetooth_menu(void)
+/* The main page, or with devices set the devices page */
+static void bt_list(bool devices)
 {
     struct simplelist_info info;
     int sel = 0;
 
-    bt.screen = true;
-    bt_wake_worker();
-    bt_snapshot();
     while (1)
     {
+        bt_devices = devices;
         bt_build_rows();
-        simplelist_info_init(&info, (char *)S(LANG_BT_BLUETOOTH), nrows, NULL);
+        simplelist_info_init(&info, (char *)S(devices ? LANG_BT_DEVICES :
+                                              LANG_BT_BLUETOOTH), nrows, NULL);
         info.get_name = bt_row_name;
         info.get_icon = bt_row_icon;
         info.action_callback = bt_screen_cb;
@@ -2218,6 +2244,14 @@ int hiby_bluetooth_menu(void)
         {
             case ROW_POWER:
                 bt_toggle_power();
+                break;
+            case ROW_DEVICES:
+                bt_list(true);
+                break;
+            case ROW_DUAL_WIRED:
+                set_int(S(LANG_BT_DUAL_WIRED), "%", UNIT_PERCENT,
+                        &global_settings.bt_dual_wired, NULL, 5, 0, 100, NULL);
+                settings_save();
                 break;
             case ROW_RECEIVE:
                 if (bt_rx_switching)
@@ -2275,6 +2309,14 @@ int hiby_bluetooth_menu(void)
         }
         bt_snapshot();
     }
+}
+
+int hiby_bluetooth_menu(void)
+{
+    bt.screen = true;
+    bt_wake_worker();
+    bt_snapshot();
+    bt_list(false);
     bt.screen = false;
     bt_wake_worker();
     return 0;

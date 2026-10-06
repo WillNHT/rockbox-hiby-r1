@@ -68,6 +68,11 @@
  *   page      - a nested page
  *   act       - something done on the spot, with val() showing its state
  *   leave     - something that needs the whole screen, so we close first
+ *
+ * A setting with pair set does not cycle in place: it opens a page of its
+ * own, up raises it and down lowers it. One direction on the page above
+ * could only ever move it one way. A tap in the middle backs out, as on
+ * every page.
  */
 struct qs_page;
 
@@ -80,6 +85,7 @@ struct qs_entry
     const char *(*val)(char *buf, size_t len);
     int leave;                      /* a QUICKSCREEN_* to return */
     bool user_slot;
+    bool pair;                      /* cfgname on a page of its own */
 };
 
 struct qs_page
@@ -89,15 +95,17 @@ struct qs_page
 };
 
 #ifdef HAVE_HIBY_BLUETOOTH
-/* The PC's audio against the player's own, while one plays to us: up on
- * top and right, down on the bottom and left, like the rest of the screen */
+/* The PC's audio against the player's own, while one plays to us, and the
+ * jack against the headset while both play */
 static const struct qs_page qs_page_bt_mix = {
     .lang_id = LANG_BT_MIX,
     .items = {
-        [QUICKSCREEN_TOP]    = { .cfgname = "bluetooth receive volume" },
-        [QUICKSCREEN_BOTTOM] = { .cfgname = "bluetooth receive volume" },
-        [QUICKSCREEN_RIGHT]  = { .cfgname = "bluetooth player level" },
-        [QUICKSCREEN_LEFT]   = { .cfgname = "bluetooth player level" },
+        [QUICKSCREEN_TOP]    = { .cfgname = "bluetooth receive volume",
+                                 .pair = true },
+        [QUICKSCREEN_RIGHT]  = { .cfgname = "bluetooth player level",
+                                 .pair = true },
+        [QUICKSCREEN_BOTTOM] = { .cfgname = "bluetooth dual wired level",
+                                 .pair = true },
     },
 };
 
@@ -147,9 +155,9 @@ static const struct qs_page qs_page_playback = {
 static const struct qs_page qs_page_sound = {
     .lang_id = LANG_SOUND_SETTINGS,
     .items = {
-        [QUICKSCREEN_TOP]    = { .cfgname = "volume" },
-        [QUICKSCREEN_LEFT]   = { .cfgname = "bass" },
-        [QUICKSCREEN_RIGHT]  = { .cfgname = "treble" },
+        [QUICKSCREEN_TOP]    = { .cfgname = "volume", .pair = true },
+        [QUICKSCREEN_LEFT]   = { .cfgname = "bass", .pair = true },
+        [QUICKSCREEN_RIGHT]  = { .cfgname = "treble", .pair = true },
 #ifdef HAVE_HIBY_BLUETOOTH
         /* where the sound goes: a phone keeps this a swipe away too */
         [QUICKSCREEN_BOTTOM] = { .lang_id = LANG_BT_BLUETOOTH,
@@ -164,9 +172,9 @@ static const struct qs_page qs_page_sound = {
 static const struct qs_page qs_page_display = {
     .lang_id = LANG_DISPLAY,
     .items = {
-        [QUICKSCREEN_TOP]    = { .cfgname = "brightness" },
+        [QUICKSCREEN_TOP]    = { .cfgname = "brightness", .pair = true },
 #ifdef HAVE_BACKLIGHT_DIM_IDLE
-        [QUICKSCREEN_BOTTOM] = { .cfgname = "dim level" },
+        [QUICKSCREEN_BOTTOM] = { .cfgname = "dim level", .pair = true },
         [QUICKSCREEN_RIGHT]  = { .cfgname = "backlight off timeout" },
 #endif
         [QUICKSCREEN_LEFT]   = { .cfgname = "backlight timeout" },
@@ -641,6 +649,17 @@ static enum qs_button_result gui_quickscreen_do_button(
     {
         *leave = e->leave;
         return QS_BUTTON_LEAVE;
+    }
+
+    /* one at a time: a pair page has no pairs on it */
+    static struct qs_page pair_page;
+    static const struct qs_entry pair_entry = { .page = &pair_page };
+    if (e->pair)
+    {
+        pair_page.lang_id = qs->items[item]->lang_id;
+        pair_page.items[QUICKSCREEN_TOP].cfgname = e->cfgname;
+        pair_page.items[QUICKSCREEN_BOTTOM].cfgname = e->cfgname;
+        e = &pair_entry;
     }
 
     if (e->page)

@@ -139,8 +139,10 @@ out:
     return rc;
 }
 
-/* Bluetooth at the same volume step is much louder than the jack */
-#define HIBY_BT_VOL_PCT 85
+/* The headset's step against the player's. Was 85 (Bluetooth louder than
+ * the jack), which left most headsets short at the top: 1.5 times that,
+ * so the top of the player's range reaches the headset's own maximum. */
+#define HIBY_BT_VOL_PCT 127
 
 /* What the player last set the headset to, so the watcher below can tell
  * the player's own change from one the headset made */
@@ -155,6 +157,8 @@ static bool hiby_bluealsa_set_volume(long step)
     snd_mixer_elem_t *elem;
     bool set = false;
 
+    if (step > HIBY_ABSVOL_MAX)
+        step = HIBY_ABSVOL_MAX;
     if (snd_mixer_open(&mixer, 0) < 0)
         return false;
     if (snd_mixer_attach(mixer, "bluealsa") == 0

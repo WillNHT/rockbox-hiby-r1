@@ -569,6 +569,13 @@ void peak_meter_peek(void)
                                       &chan_peaks);
         pm_cur_left = chan_peaks.left;
         pm_cur_right = chan_peaks.right;
+#if defined(HAVE_HIBY_BLUETOOTH) && !defined(SIMULATOR)
+        /* a PC playing to us over Bluetooth moves the meter too */
+        static struct pcm_peaks rx_peaks; /* *MUST* be static */
+        mixer_channel_calculate_peaks(PCM_MIXER_CHAN_BTRX, &rx_peaks);
+        pm_cur_left = MAX(pm_cur_left, rx_peaks.left);
+        pm_cur_right = MAX(pm_cur_right, rx_peaks.right);
+#endif
     }
 #ifdef HAVE_RECORDING
     else

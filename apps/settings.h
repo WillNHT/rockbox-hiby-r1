@@ -795,6 +795,7 @@ struct user_settings
     int bt_rx_volume;        /* % the PC's audio plays at */
     int bt_player_level;     /* % the player's own audio plays at */
     int bt_view;             /* WPS layout: 0 auto, 1 player, 2 receiver, 3 both */
+    int bt_dual_wired;       /* % the jack plays at beside a headset */
 #endif
 #if ((CONFIG_BATTERY_MEASURE & VOLTAGE_MEASURE))
     int low_battery_poweroff_percent;

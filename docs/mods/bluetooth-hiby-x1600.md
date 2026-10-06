@@ -4,12 +4,14 @@ This build integrates [bidhata's patches](https://github.com/bidhata/hiby-r1-roc
 
 ## Using it
 
-Everything is on one screen, **Main Menu → Bluetooth**, laid out like a phone's:
+Everything is under **Main Menu → Bluetooth**, laid out like a phone's:
 
 *   **Bluetooth: On / Off** - select to switch. Turning it on reconnects the last headset that played.
+*   **Devices** - a page of its own, with what is connected after the name. On it:
 *   **Paired Devices** - select one to connect. A connected one shows `(Connected, 80%)` when the headset reports its battery; select it, or long-press any paired device, for its page.
 *   **Other Devices** - found while the screen is open (`Searching...`). Select one to pair and connect. A device that shows a code asks you to confirm it; one that wants a PIN gets `0000`.
-*   **Forget All Devices**, **Wired Sync Offset** - at the bottom.
+*   **Forget All Devices** - at the bottom of the Devices page.
+*   **Wired Sync Offset**, **Wired Level**, and **Music Ducking** while receiving - on the main page.
 
 ![The Bluetooth screen](screenshots/bluetooth-screen.png)
 ![A connected headset's page](screenshots/bluetooth-device.png)
@@ -18,7 +20,9 @@ A device's page shows its status, codec, sample rate and battery, and has **Conn
 
 The quickscreen's **Sound** page has a Bluetooth on/off toggle in its bottom slot.
 
-Headset buttons work as media keys, and the headset's own volume buttons move the player's volume. Earbuds put back in the case and taken out again reconnect on their own.
+Headset buttons work as media keys, and the headset's own volume buttons move the player's volume. The top of the player's volume reaches the headset's own maximum (it used to stop at 85%). Earbuds put back in the case and taken out again reconnect on their own.
+
+**Dual output** (the jack playing beside a headset): **Wired Level** sets the jack against the headset, 0-100%, the volume being the headset's. It is also on the quickscreen, Playback → Bluetooth → Bluetooth Mix, down.
 
 ## How it behaves
 
@@ -28,7 +32,7 @@ Headset buttons work as media keys, and the headset's own volume buttons move th
 
 ## Receiving audio
 
-**Receive Audio: On** makes the player a Bluetooth speaker as well: a PC or phone can play to it, and its sound is mixed in with the music. While the sender plays, the music drops by **Music Ducking** (70% unless set otherwise, at the bottom of the screen); it comes back over half a second once the sender has been quiet for a second. The sender's own volume slider sets how loud it plays.
+**Receive Audio: On** makes the player a Bluetooth speaker as well: a PC or phone can play to it, and its sound is mixed in with the music. While the sender plays, the music drops by **Music Ducking** (70% unless set otherwise, at the bottom of the screen); it comes back over half a second once the sender has been quiet for a second. The sender's own volume slider sets how loud it plays; its audio is played at twice the level it arrives at (+6 dB, clipped), because a PC at 100% was barely heard.
 
 *   To pair a PC, open the Bluetooth screen with Receive Audio on and pair from the PC. The player is visible and accepts the pairing while the screen is open, with no code to confirm.
 *   After that, the PC connects on its own, and is heard within a few seconds. It shows as `(Receiving)` on the screen.
@@ -49,9 +53,9 @@ The Now Playing screen has three layouts, picked by **Bluetooth View** (quickscr
 *   **Receiver**: the sender's screen, where the cover and the track were: who is sending, its track, its time and `PC VOLUME`.
 *   **Both**: the player's screen, with the sender's name and track in the band under the cover.
 
-On the Receiver screen the keys work the sender: POWER tap is its play/pause, the volume keys move its own volume (its slider moves with them), and the track keys and a headset's next/prev are its next and previous track. Elsewhere they are the player's, as always.
+While the sender plays and the player does not, the keys work the sender, whatever the screen: POWER tap and a headset's play key are its play/pause, and the track keys and a headset's next/prev are its next and previous track. With nothing playing they stay with whichever played last. While the player plays they are the player's. The volume keys are always the player's volume, which the sender's audio goes through too.
 
-Skin tags: `%?Bm<player|receiver|both>`, `%?Bs<stopped|playing|paused>`, `%Bt` title, `%Ba` artist, `%Bl` album, `%Bn` the sender's name, `%Bv` its volume (%), `%Be` / `%Bd` elapsed and duration. Snappy V2 and Snappy Vinyl have the Receiver and Both layouts; the other skins show the player's screen in all three.
+Skin tags: `%?Bm<player|receiver|both>`, `%?Bs<stopped|playing|paused>`, `%Bt` title, `%Ba` artist, `%Bl` album, `%Bn` the sender's name, `%Bv` its volume (%), `%Be` / `%Bd` elapsed and duration. Every Snappy skin but Snappy Radio has the Receiver and Both layouts. The Receiver layout keeps the peak meter in the band, and the sender's audio moves it.
 
 ### Latency: PC to player to headset
 
@@ -65,10 +69,11 @@ The debug log's `bt rx:` line says how much the capture and the ring hold.
 
 ![Receiver view](screenshots/bluetooth-receiver-view.png)
 ![Both view: the sender in the band](screenshots/bluetooth-both-view.png)
+![Receiver on Snappy Animated, Both on Snappy Gauge](screenshots/bluetooth-views-animated.png)
 
 ### Levels
 
-*   **Levels:** quickscreen → Playback → **Bluetooth** → **Bluetooth Mix**. Up/down sets **PC Volume**, the sender's audio; right/left sets **Player Level**, the player's own audio, which the PC's never goes through.
+*   **Levels:** quickscreen → Playback → **Bluetooth** → **Bluetooth Mix**. Up opens **PC Volume**, the sender's audio; right **Player Level**, the player's own audio, which the PC's never goes through; down **Wired Level**. Each opens a page of its own where up raises it and down lowers it; a tap in the middle goes back.
 *   **Icon:** the Snappy skins show an arrow into a tray beside the rune: grey while Receive Audio waits for a sender, blue while one plays (`%?Br<off|waiting|receiving>`). In the WPS it sits under the rune, where the jack's speaker goes in dual output.
 
 ![Receive Audio on, with its duck depth](screenshots/bluetooth-receive.png)

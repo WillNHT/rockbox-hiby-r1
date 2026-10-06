@@ -42,12 +42,18 @@
 %xl(vb_backdrop,vb_backdrop.bmp)
 %xl(vb_too_loud,vb_too_loud.bmp)
 %xl(bb_backdrop,bb_backdrop.bmp)
-%Vd(bg)
-%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>
-%?C<%Vd(mirror)>
-%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>
-%?CV<%Vd(vid)|%Vd(vid)|>
+%?if(%Bm,!=,2)<%Vd(bg)>
+%?if(%Bm,!=,2)<%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>>
+%?if(%Bm,!=,2)<%?C<%Vd(mirror)>>
+%?if(%Bm,=,1)<%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>>
+%?if(%Bm,!=,2)<%?CV<%Vd(vid)|%Vd(vid)|>>
 %Vd(volbar)%?mh<|%Vd(plname)>
+%?if(%Bm,=,2)<%Vd(rxfrom)%Vd(rxstate)%Vd(rxtitle)%Vd(rxartist)%Vd(rxalbum)%Vd(rxtime)%Vd(rxvol)%Vd(pm_long)>%?if(%Bm,=,3)<%Vd(rxs1)%Vd(rxs2)>
+%?if(%Bm,=,1)<%Vd(bd0)>
+%?if(%Bm,=,1)<%Vd(bd1)>
+%?if(%Bm,!=,2)<%Vd(tf0)>
+%?if(%Bm,!=,2)<%Vd(tf1)>
+%?if(%Bm,!=,2)<%Vd(tf2)>
 #
 # The volume dial, armed
 # =====================
@@ -124,11 +130,12 @@
 %Vs(invert)%ac%cH:%cM
 #
 # Shuffle
-%V(178,28,94,22,2)
+# 10 px clear of the clock box, which ends at x=174
+%V(184,28,94,22,2)
 SHF%xd(O,%ps)
 #
 # Repeat
-%V(178,58,94,22,2)
+%V(184,58,94,22,2)
 %?mm<RPT%xd(Ob)|RPT%xd(O)|RP1%xd(O)|RND%xd(O)|A-B%xd(O)>
 #
 # Bluetooth: grey off, white on, blue connected
@@ -246,27 +253,27 @@ SHF%xd(O,%ps)
 %Vt(0)
 %al%>%> FF
 #
-%V(280,628,-30,30,2)
+%Vl(bd0,280,628,-30,30,2)
 %Vt(0)
 %ar%fc %fb
 #
-%V(280,658,-30,30,2)
+%Vl(bd1,280,658,-30,30,2)
 %Vt(0)
 %ar%?if(%St(party mode),!=,off)<party|%?if(%St(single mode),!=,off)<%St(single mode)|%fk kHz>>
 #
 # Track
 # -----
-%V(30,690,-30,28,2)
+%Vl(tf0,30,690,-30,28,2)
 %Vt(0)
 %s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>%?id< - %id|>
 #
-%V(30,718,-30,46,4)
+%Vl(tf1,30,718,-30,46,4)
 %Vt(0)
 %al%s%?it<%it|%fn>
 #
 # Footer
 # ======
-%V(30,768,-30,30,2)
+%Vl(tf2,30,768,-30,30,2)
 %Vt(0)
 %al%pc/%pt%ar%pp/%pe
 #
@@ -280,9 +287,49 @@ SHF%xd(O,%ps)
 %Vl(vid,32,152,416,416,-)
 %Cv(0,0,416,416,cover)
 #
+# Receiving
+# =========
+%Vl(rxfrom,30,170,-30,30,2)
+%Vt(0)
+%Vf(D9E021)
+%al%sFROM %Bn
+#
+%Vl(rxstate,30,206,-30,30,2)
+%Vt(0)
+%al%?Bs<STOPPED|PLAYING|PAUSED>
+#
+%Vl(rxtitle,30,300,-30,70,5)
+%Vt(0)
+%al%s%?Bt<%Bt|%Bn>
+#
+%Vl(rxartist,30,380,-30,40,3)
+%Vt(0)
+%al%s%?Ba<%Ba|>
+#
+%Vl(rxalbum,30,426,-30,30,2)
+%Vt(0)
+%al%s%?Bl<%Bl|>
+#
+%Vl(rxtime,30,688,-30,40,3)
+%Vt(0)
+%al%?Be<%Be|>%ar%?Bd<%Bd|>
+#
+%Vl(rxvol,30,768,-30,30,2)
+%Vt(0)
+%alPC VOLUME%ar%?Bv<%Bv%%|-->
+#
+%Vl(rxs1,30,622,-30,30,2)
+%Vt(0)
+%Vf(D9E021)
+%al%sFROM %Bn%ar%?Bs<|PLAYING|PAUSED>
+#
+%Vl(rxs2,30,654,-30,36,3)
+%Vt(0)
+%al%s%?Bt<%Bt%?Ba< - %Ba|>|receiving>
+#
 # Locked
 # ======
-%V(30,102,-30,52,4)
+%V(30,98,-30,52,4)
 %Vs(invert)%ac%?mh<LOCKED|>
 #
 # Playlist
