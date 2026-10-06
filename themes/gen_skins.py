@@ -129,44 +129,61 @@ BATT_BAR = "%bl(0,0,138,18,bb,backdrop,bb_backdrop)"
 # Receiving: a PC or phone playing to the player (%Bm, docs/mods/
 # bluetooth-hiby-x1600.md). The receiver view (2) is the sender's screen,
 # where the cover and the track were: its name, its track as its AVRCP
-# player reports it, and its volume, which the keys move. Both (3) keeps
-# the player's screen and gives the band to the sender. A sender with no
-# player to report (a PC with nothing that tells it) shows its name.
+# player reports it, and its volume. The band keeps the peak meter, which
+# the sender's audio moves. Both (3) keeps the player's screen and gives
+# the band to the sender. A sender with no player to report (a PC with
+# nothing that tells it) shows its name.
 RX_ENABLES = ("%?if(%Bm,=,2)<%Vd(rxfrom)%Vd(rxstate)%Vd(rxtitle)%Vd(rxartist)"
-              "%Vd(rxalbum)%Vd(rxtime)%Vd(rxvol)>"
+              "%Vd(rxalbum)%Vd(rxtime)%Vd(rxvol)%Vd(pm_long)>"
               "%?if(%Bm,=,3)<%Vd(rxs1)%Vd(rxs2)>")
 
-RX_VIEWS = """#
+
+def rx_views(band_y):
+    """The receiving viewports, the band's two lines at band_y. %Vt(0):
+    over a skin's backdrop, where it has one."""
+    return """#
 # Receiving
 # =========
-%Vl(rxfrom,30,170,-30,30,2)
-%Vf(""" + ACCENT + """)
-%al%sFROM %Bn
+%%Vl(rxfrom,30,170,-30,30,2)
+%%Vt(0)
+%%Vf(%s)
+%%al%%sFROM %%Bn
 #
-%Vl(rxstate,30,206,-30,30,2)
-%al%?Bs<STOPPED|PLAYING|PAUSED>
+%%Vl(rxstate,30,206,-30,30,2)
+%%Vt(0)
+%%al%%?Bs<STOPPED|PLAYING|PAUSED>
 #
-%Vl(rxtitle,30,300,-30,70,5)
-%al%s%?Bt<%Bt|%Bn>
+%%Vl(rxtitle,30,300,-30,70,5)
+%%Vt(0)
+%%al%%s%%?Bt<%%Bt|%%Bn>
 #
-%Vl(rxartist,30,380,-30,40,3)
-%al%s%?Ba<%Ba|>
+%%Vl(rxartist,30,380,-30,40,3)
+%%Vt(0)
+%%al%%s%%?Ba<%%Ba|>
 #
-%Vl(rxalbum,30,426,-30,30,2)
-%al%s%?Bl<%Bl|>
+%%Vl(rxalbum,30,426,-30,30,2)
+%%Vt(0)
+%%al%%s%%?Bl<%%Bl|>
 #
-%Vl(rxtime,30,688,-30,40,3)
-%al%?Be<%Be|>%ar%?Bd<%Bd|>
+%%Vl(rxtime,30,688,-30,40,3)
+%%Vt(0)
+%%al%%?Be<%%Be|>%%ar%%?Bd<%%Bd|>
 #
-%Vl(rxvol,30,768,-30,30,2)
-%alPC VOLUME%ar%?Bv<%Bv%%|-->
+%%Vl(rxvol,30,768,-30,30,2)
+%%Vt(0)
+%%alPC VOLUME%%ar%%?Bv<%%Bv%%%%|-->
 #
-%Vl(rxs1,30,580,-30,30,2)
-%Vf(""" + ACCENT + """)
-%al%sFROM %Bn%ar%?Bs<|PLAYING|PAUSED>
+%%Vl(rxs1,30,%d,-30,30,2)
+%%Vt(0)
+%%Vf(%s)
+%%al%%sFROM %%Bn%%ar%%?Bs<|PLAYING|PAUSED>
 #
-%Vl(rxs2,30,612,-30,36,3)
-%al%s%?Bt<%Bt%?Ba< - %Ba|>|receiving>"""
+%%Vl(rxs2,30,%d,-30,36,3)
+%%Vt(0)
+%%al%%s%%?Bt<%%Bt%%?Ba< - %%Ba|>|receiving>""" % (ACCENT, band_y + 6, ACCENT,
+                                                band_y + 38)
+
+
 # Snappy Lyrics Lines gives the band to the lyrics, so one bar of the peak
 # meter takes the battery bar's rectangle: the level is in the percentage
 # under it anyway.
@@ -310,7 +327,7 @@ def band(y, meter_h=78, h=82, codec=True):
     return out
 
 
-def hide_while_armed(lines):
+def hide_while_armed(lines, skip=()):
     """Turn every plain viewport in `lines` into a labelled one that is
     only enabled while the dial is *not* armed, and return the enables.
 
@@ -331,6 +348,9 @@ def hide_while_armed(lines):
                 ln = "%%Vl(%s,%s" % (label, ln[3:])
             else:
                 label = ln[4:ln.index(",")]
+                if label.startswith(skip):
+                    out.append(ln)
+                    continue
             enables.append("%%?if(%%sd,=,0)<%%Vd(%s)>" % label)
         out.append(ln)
     return "\n".join(out), enables
@@ -470,7 +490,7 @@ def snappy_v2(vinyl=False):
 %ac%s%?id<%id|%?ia<%ia|no cover>>""")
     o.append(the_band)
     o.append(track)
-    o.append(RX_VIEWS)
+    o.append(rx_views(574))
     o.append(LOCKBAR)
     o.append(PLNAME)
     return "\n".join(o) + "\n"
@@ -637,22 +657,32 @@ def animated(gauge=False, lyrics=None, radio=False):
 #
 %%wd""" % (name.upper().replace("SNAPPY ", ""), name))
     o.append(PRELOAD)
-    o.append("%Vd(bg)")
-    o.append("%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
-    o.append("%?C<%Vd(mirror)>")
+    # Receiving (RX_ENABLES): the receiver view takes the cover, its
+    # backdrop, the band and the track; both gives the band to the sender,
+    # as on Snappy V2. A radio is not a player a PC plays beside.
+    rx = not radio
+    mine = "%%?if(%%Bm,!=,2)<%s>" if rx else "%s"
+    band_on = "%%?if(%%Bm,=,1)<%s>" if rx else "%s"
+    o.append(mine % "%Vd(bg)")
+    o.append(mine % "%?C<%Vd(aa)|%Vd(noart)%Vd(noartlabel)>")
+    o.append(mine % "%?C<%Vd(mirror)>")
     meter = "%?mp<|%?C<%Vd(pm_short)|%Vd(pm_long)>||%Vd(ff)|%Vd(rew)|>"
     if lyrics == "lines":
         # The band gives way to the lyrics, and comes back without them.
-        o.append("%%?yf<%%Vd(lyr1)%%Vd(lyr2)|%%Vd(lyr1)%%Vd(lyr2)|%s>"
-                 % meter)
+        o.append(band_on % ("%%?yf<%%Vd(lyr1)%%Vd(lyr2)|%%Vd(lyr1)%%Vd(lyr2)|%s>"
+                            % meter))
         band_slot = len(o)
         o.append("")
+    elif gauge:
+        # Its own enables, not hide_while_armed()'s: those were
+        # unconditional, so the meter and REW / FF sat over the band always
+        o.append("%%?if(%%sd,=,0)<%s>" % (band_on % meter))
     else:
-        o.append(meter)
+        o.append(band_on % meter)
     if lyrics == "meter":
-        o.append("%?yf<%Vd(lyr1)|%Vd(lyr1)|>")
+        o.append(mine % "%?yf<%Vd(lyr1)|%Vd(lyr1)|>")
     if lyrics == "canvas":
-        o.append("%?CV<%Vd(vid)|%Vd(vid)|>")
+        o.append(mine % "%?CV<%Vd(vid)|%Vd(vid)|>")
     # The volume bar is a viewport of its own again. It used to be drawn
     # inside the backdrop viewport when there was a cover, because a
     # viewport clears its background and a black box across the top of a
@@ -689,8 +719,14 @@ def animated(gauge=False, lyrics=None, radio=False):
     sheen = lyrics != "canvas"
     for f, stop in enumerate(schedule if sheen else []):
         if stop is not None:
-            o.append("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%02d)>"
-                     % (frames, SHEEN_MS, f + 1, stop))
+            o.append(mine % ("%%?if(%%an(%d,%d),=,%d)<%%Vd(sh%02d)>"
+                             % (frames, SHEEN_MS, f + 1, stop)))
+
+    if rx:
+        # the gauge covers them, and %Be is redrawn on its own: off too
+        o.append("%%?if(%%sd,=,0)<%s>" % RX_ENABLES if gauge else RX_ENABLES)
+        rx_slot = len(o)
+        o.append("")
 
     if not gauge:
         # Its enables come first in what it returns, then its viewports -
@@ -811,9 +847,17 @@ def animated(gauge=False, lyrics=None, radio=False):
     if sheen:
         o += moving
     the_band = band(BAND_Y, 62, 66, codec=not radio)
+    # gate()'s conditions, one inside the next; the gauge's own check
+    # too, for what hide_while_armed() skips
+    armed = "%%?if(%%sd,=,0)<@>" if gauge else "@"
     if lyrics == "lines":
-        the_band, enables = gate(the_band, "bd", "%%?yf<||%s>")
+        the_band, enables = gate(the_band, "bd", armed.replace(
+            "@", band_on.replace("%s", "%%?yf<||%s>")))
         o[band_slot] = "\n".join(enables)
+    elif rx:
+        the_band, enables = gate(the_band, "bd",
+                                 armed.replace("@", band_on))
+        o[rx_slot] = "\n".join(enables)
     if radio:
         # A station is not an album and a recording is not a track, and it
         # is not two lines either. "02 Flash FM" above the station name was
@@ -851,7 +895,7 @@ def animated(gauge=False, lyrics=None, radio=False):
 %Vt(0)
 %t(0.7)%Vf(CC2B2B)%xd(L);%t(0.7)%Vf(0C0D0E)%xd(L)""")
     else:
-        content = [the_band, """#
+        track, enables = gate("""#
 # Track
 # -----
 %V(30,690,-30,28,2)
@@ -860,14 +904,15 @@ def animated(gauge=False, lyrics=None, radio=False):
 #
 %V(30,718,-30,46,4)
 %Vt(0)
-%al%s%?it<%it|%fn>"""]
-
-        content.append("""#
+%al%s%?it<%it|%fn>
+#
 # Footer
 # ======
 %V(30,768,-30,30,2)
 %Vt(0)
-%al%pc/%pt%ar%pp/%pe""")
+%al%pc/%pt%ar%pp/%pe""", "tf", armed.replace("@", mine))
+        o[rx_slot] += "\n" + "\n".join(enables)
+        content = [the_band, track]
 
     if lyrics == "lines":
         content.append(LYRICS_LINES % (BAND_Y, INK, BAND_Y + 36, LYRIC_DIM))
@@ -877,7 +922,8 @@ def animated(gauge=False, lyrics=None, radio=False):
         content.append(LYRICS_METER % (MIRROR_Y + 4))
 
     if gauge:
-        body, enables = hide_while_armed("\n".join(content))
+        body, enables = hide_while_armed("\n".join(content),
+                                         ("bd", "tf", "pm_", "rew", "ff"))
         # Into the *default* viewport, at the top of the file, and not here.
         #
         # Appended here they land after every declaration in the file, which
@@ -890,6 +936,8 @@ def animated(gauge=False, lyrics=None, radio=False):
         o.append(body)
     else:
         o += content
+    if rx:
+        o.append(rx_views(BAND_Y))
 
     if gauge:
         # The whole panel, while the dial is armed.

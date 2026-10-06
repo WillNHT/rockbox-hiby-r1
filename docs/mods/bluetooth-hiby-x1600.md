@@ -51,7 +51,7 @@ The Now Playing screen has three layouts, picked by **Bluetooth View** (quickscr
 
 While the sender plays and the player does not, the keys work the sender, whatever the screen: POWER tap and a headset's play key are its play/pause, and the track keys and a headset's next/prev are its next and previous track. With nothing playing they stay with whichever played last. While the player plays they are the player's. The volume keys are always the player's volume, which the sender's audio goes through too.
 
-Skin tags: `%?Bm<player|receiver|both>`, `%?Bs<stopped|playing|paused>`, `%Bt` title, `%Ba` artist, `%Bl` album, `%Bn` the sender's name, `%Bv` its volume (%), `%Be` / `%Bd` elapsed and duration. Snappy V2 and Snappy Vinyl have the Receiver and Both layouts; the other skins show the player's screen in all three.
+Skin tags: `%?Bm<player|receiver|both>`, `%?Bs<stopped|playing|paused>`, `%Bt` title, `%Ba` artist, `%Bl` album, `%Bn` the sender's name, `%Bv` its volume (%), `%Be` / `%Bd` elapsed and duration. Every Snappy skin but Snappy Radio has the Receiver and Both layouts. The Receiver layout keeps the peak meter in the band, and the sender's audio moves it.
 
 ### Latency: PC to player to headset
 

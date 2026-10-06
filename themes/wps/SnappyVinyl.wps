@@ -43,7 +43,7 @@
 %?if(%Bm,!=,2)<%Vd(tf0)>
 %?if(%Bm,!=,2)<%Vd(tf1)>
 %?if(%Bm,!=,2)<%Vd(tf2)>
-%?if(%Bm,=,2)<%Vd(rxfrom)%Vd(rxstate)%Vd(rxtitle)%Vd(rxartist)%Vd(rxalbum)%Vd(rxtime)%Vd(rxvol)>%?if(%Bm,=,3)<%Vd(rxs1)%Vd(rxs2)>
+%?if(%Bm,=,2)<%Vd(rxfrom)%Vd(rxstate)%Vd(rxtitle)%Vd(rxartist)%Vd(rxalbum)%Vd(rxtime)%Vd(rxvol)%Vd(pm_long)>%?if(%Bm,=,3)<%Vd(rxs1)%Vd(rxs2)>
 #
 # The volume dial, armed
 # =====================
@@ -210,32 +210,41 @@ SHF%xd(O,%ps)
 # Receiving
 # =========
 %Vl(rxfrom,30,170,-30,30,2)
+%Vt(0)
 %Vf(D9E021)
 %al%sFROM %Bn
 #
 %Vl(rxstate,30,206,-30,30,2)
+%Vt(0)
 %al%?Bs<STOPPED|PLAYING|PAUSED>
 #
 %Vl(rxtitle,30,300,-30,70,5)
+%Vt(0)
 %al%s%?Bt<%Bt|%Bn>
 #
 %Vl(rxartist,30,380,-30,40,3)
+%Vt(0)
 %al%s%?Ba<%Ba|>
 #
 %Vl(rxalbum,30,426,-30,30,2)
+%Vt(0)
 %al%s%?Bl<%Bl|>
 #
 %Vl(rxtime,30,688,-30,40,3)
+%Vt(0)
 %al%?Be<%Be|>%ar%?Bd<%Bd|>
 #
 %Vl(rxvol,30,768,-30,30,2)
+%Vt(0)
 %alPC VOLUME%ar%?Bv<%Bv%%|-->
 #
 %Vl(rxs1,30,580,-30,30,2)
+%Vt(0)
 %Vf(D9E021)
 %al%sFROM %Bn%ar%?Bs<|PLAYING|PAUSED>
 #
 %Vl(rxs2,30,612,-30,36,3)
+%Vt(0)
 %al%s%?Bt<%Bt%?Ba< - %Ba|>|receiving>
 #
 # Locked
