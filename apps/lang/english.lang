@@ -20804,3 +20804,17 @@
     *: "Both"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_BT_DUAL_WIRED
+  desc: Hiby Bluetooth: level of the jack while it plays beside a headset
+  user: core
+  <source>
+    *: "Wired Level"
+  </source>
+  <dest>
+    *: "Wired Level"
+  </dest>
+  <voice>
+    *: "Wired Level"
+  </voice>
+</phrase>

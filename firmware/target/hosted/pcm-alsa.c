@@ -227,7 +227,7 @@ static void hiby_pcm_mirror_open(void)
     hiby_pcm_mirror_pad(hiby_pcm_mirror_target() - period_size);
 }
 
-static void hiby_pcm_mirror_write(const sample_t *buf, snd_pcm_uframes_t count)
+static void hiby_pcm_mirror_write(sample_t *buf, snd_pcm_uframes_t count)
 {
     snd_pcm_sframes_t delay, target, diff;
 
@@ -236,6 +236,11 @@ static void hiby_pcm_mirror_write(const sample_t *buf, snd_pcm_uframes_t count)
         hiby_pcm_mirror_close();
         return;
     }
+    /* bt_dual_wired: the jack against the headset, the volume being the
+       headset's. The headset has had this period: scaled in place. */
+    if (global_settings.bt_dual_wired < 100)
+        for (snd_pcm_uframes_t i = 0; i < count * channels; i++)
+            buf[i] = (int64_t)buf[i] * global_settings.bt_dual_wired / 100;
     if (!hiby_mirror)
     {
         if (TIME_BEFORE(current_tick, hiby_mirror_retry))

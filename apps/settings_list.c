@@ -1440,6 +1440,9 @@ const struct settings_list settings[] = {
                    "auto,player,receiver,both", NULL, 4,
                    ID2P(LANG_AUTO), ID2P(LANG_BT_VIEW_PLAYER),
                    ID2P(LANG_BT_VIEW_RECEIVER), ID2P(LANG_BT_VIEW_BOTH)),
+    INT_SETTING_NOWRAP(0, bt_dual_wired, LANG_BT_DUAL_WIRED, 100,
+                "bluetooth dual wired level", UNIT_PERCENT, 0, 100, 5,
+                NULL, NULL, NULL),
 #endif
 #if defined(HAVE_HIBY_LINUX_POWER_CHARGE_LIMIT) && !defined(SIMULATOR)
     STRINGCHOICE_SETTING(F_CB_ON_SELECT_ONLY | F_CB_ONLY_IF_CHANGED , hiby_charge_limit_voltage, LANG_CHARGE_LIMIT_VOLTAGE,0,

@@ -18,7 +18,9 @@ A device's page shows its status, codec, sample rate and battery, and has **Conn
 
 The quickscreen's **Sound** page has a Bluetooth on/off toggle in its bottom slot.
 
-Headset buttons work as media keys, and the headset's own volume buttons move the player's volume. Earbuds put back in the case and taken out again reconnect on their own.
+Headset buttons work as media keys, and the headset's own volume buttons move the player's volume. The top of the player's volume reaches the headset's own maximum (it used to stop at 85%). Earbuds put back in the case and taken out again reconnect on their own.
+
+**Dual output** (the jack playing beside a headset): **Wired Level** sets the jack against the headset, 0-100%, the volume being the headset's. It is also on the quickscreen, Playback → Bluetooth → Bluetooth Mix, down.
 
 ## How it behaves
 
