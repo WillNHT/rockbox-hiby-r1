@@ -69,6 +69,7 @@ The debug log's `bt rx:` line says how much the capture and the ring hold.
 
 ![Receiver view](screenshots/bluetooth-receiver-view.png)
 ![Both view: the sender in the band](screenshots/bluetooth-both-view.png)
+![Receiver on Snappy Animated, Both on Snappy Gauge](screenshots/bluetooth-views-animated.png)
 
 ### Levels
 
