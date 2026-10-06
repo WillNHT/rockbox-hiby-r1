@@ -28,7 +28,7 @@ Headset buttons work as media keys, and the headset's own volume buttons move th
 
 ## Receiving audio
 
-**Receive Audio: On** makes the player a Bluetooth speaker as well: a PC or phone can play to it, and its sound is mixed in with the music. While the sender plays, the music drops by **Music Ducking** (70% unless set otherwise, at the bottom of the screen); it comes back over half a second once the sender has been quiet for a second. The sender's own volume slider sets how loud it plays.
+**Receive Audio: On** makes the player a Bluetooth speaker as well: a PC or phone can play to it, and its sound is mixed in with the music. While the sender plays, the music drops by **Music Ducking** (70% unless set otherwise, at the bottom of the screen); it comes back over half a second once the sender has been quiet for a second. The sender's own volume slider sets how loud it plays; its audio is played at twice the level it arrives at (+6 dB, clipped), because a PC at 100% was barely heard.
 
 *   To pair a PC, open the Bluetooth screen with Receive Audio on and pair from the PC. The player is visible and accepts the pairing while the screen is open, with no code to confirm.
 *   After that, the PC connects on its own, and is heard within a few seconds. It shows as `(Receiving)` on the screen.

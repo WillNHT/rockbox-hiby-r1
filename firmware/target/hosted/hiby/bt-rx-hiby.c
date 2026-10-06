@@ -59,6 +59,9 @@ void hiby_debug_log(const char *format, ...);
 #define RX_CAPTURE_US    50000
 /* a peak over this (about -36 dBFS) is the sender playing, not its hiss */
 #define RX_LOUD          512
+/* senders hand A2DP over well under full scale: a PC at 100% was barely
+   heard. Twice that (+6 dB), clipped, before the mixer, which stops at unity */
+#define RX_GAIN          2
 
 static int16_t rx_ring[RX_RING_FRAMES * 2];
 static volatile unsigned int rx_head;   /* frames produced; pump only */
@@ -180,8 +183,8 @@ static void *rx_pump(void *arg)
         for (snd_pcm_sframes_t i = 0; i < n; i++)
         {
             unsigned int idx = (head + i) & (RX_RING_FRAMES - 1);
-            rx_ring[2 * idx]     = buf[2 * i];
-            rx_ring[2 * idx + 1] = buf[2 * i + 1];
+            rx_ring[2 * idx]     = MIN(MAX(buf[2 * i] * RX_GAIN, INT16_MIN), INT16_MAX);
+            rx_ring[2 * idx + 1] = MIN(MAX(buf[2 * i + 1] * RX_GAIN, INT16_MIN), INT16_MAX);
             peak = MAX(peak, abs(buf[2 * i]));
             peak = MAX(peak, abs(buf[2 * i + 1]));
         }
