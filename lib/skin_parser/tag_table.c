@@ -196,6 +196,7 @@ static const struct tag_info legal_tags[] =
     TAG(SKIN_TOKEN_BLUETOOTH,             "BT", "", SKIN_REFRESH_DYNAMIC),
     TAG(SKIN_TOKEN_DUAL_OUTPUT,           "Bw", "", SKIN_REFRESH_DYNAMIC),
     TAG(SKIN_TOKEN_BT_RECEIVE,            "Br", "", SKIN_REFRESH_DYNAMIC),
+    TAG(SKIN_TOKEN_BT_VIEW,               "Bm", "", SKIN_REFRESH_DYNAMIC),
     TAG(SKIN_TOKEN_BT_RX_STATUS,          "Bs", "", SKIN_REFRESH_DYNAMIC),
     TAG(SKIN_TOKEN_BT_RX_TITLE,           "Bt", "", SKIN_REFRESH_DYNAMIC),
     TAG(SKIN_TOKEN_BT_RX_ARTIST,          "Ba", "", SKIN_REFRESH_DYNAMIC),

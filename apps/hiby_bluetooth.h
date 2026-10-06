@@ -14,6 +14,9 @@ bool bt_is_connected_fast(void);
 bool bt_is_dual_fast(void);
 int bt_rx_state_fast(void);
 int bt_rx_status_fast(void);
+/* The WPS layout, from Bluetooth View or what is playing */
+enum { BT_VIEW_PLAYER, BT_VIEW_RX, BT_VIEW_BOTH };
+int bt_view_fast(void);
 const char *bt_rx_info(int what, char *buf, size_t len);
 void bt_rx_play_pause(void);
 void bt_rx_skip(int dir);

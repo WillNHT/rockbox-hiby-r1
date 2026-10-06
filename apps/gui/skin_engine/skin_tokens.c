@@ -1408,11 +1408,14 @@ const char *get_token_value(struct gui_wps *gwps,
             numeric_buf = buf;
             goto gtv_ret_numeric_tag_info;
 
+        case SKIN_TOKEN_BT_VIEW:
+            /* %?Bm<player|receiver|both> */
         case SKIN_TOKEN_BT_RX_STATUS:
             /* %?Bs<stopped|playing|paused> */
             numeric_ret = 1;
 #ifdef HAVE_HIBY_BLUETOOTH
-            numeric_ret += bt_rx_status_fast();
+            numeric_ret += token->type == SKIN_TOKEN_BT_VIEW ?
+                           bt_view_fast() : bt_rx_status_fast();
 #endif
             itoa_buf(buf, buf_size, numeric_ret);
             numeric_buf = buf;

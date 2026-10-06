@@ -38,7 +38,27 @@ Headset buttons work as media keys, and the headset's own volume buttons move th
 
 Switching it restarts bluealsa, which takes a few seconds: the row reads `Turning On...` / `Turning Off...` until it is done, and a connected headset drops for a moment and reconnects.
 
-*   **Levels:** quickscreen → Playback → **Bluetooth Mix** (where the sleep timer was). Up/down sets **PC Volume**, the sender's audio; right/left sets **Player Level**, the player's own audio, which the PC's never goes through.
+### What the sender plays, and its keys
+
+The sender's track, as its media player reports it over AVRCP (BlueZ's `MediaPlayer1`, read with `dbus-send` every two seconds): title, artist, album, position, playing or paused, and its volume. An iPhone reports all of it; a Windows PC reports what apps that use its media controls play (Spotify, a browser, the stock player), and only its name otherwise.
+
+The Now Playing screen has three layouts, picked by **Bluetooth View** (quickscreen → Playback → **Bluetooth**, up and down to cycle):
+
+*   **Auto** (default): the player's own screen while only the player plays, the **Receiver** screen while only the sender does, **Both** while both do. With nothing playing the last one stays, so pausing does not swap the screen.
+*   **Player**: the player's screen as before.
+*   **Receiver**: the sender's screen, where the cover and the track were: who is sending, its track, its time and `PC VOLUME`.
+*   **Both**: the player's screen, with the sender's name and track in the band under the cover.
+
+On the Receiver screen the keys work the sender: POWER tap is its play/pause, the volume keys move its own volume (its slider moves with them), and the track keys and a headset's next/prev are its next and previous track. Elsewhere they are the player's, as always.
+
+Skin tags: `%?Bm<player|receiver|both>`, `%?Bs<stopped|playing|paused>`, `%Bt` title, `%Ba` artist, `%Bl` album, `%Bn` the sender's name, `%Bv` its volume (%), `%Be` / `%Bd` elapsed and duration. Snappy V2 and Snappy Vinyl have the Receiver and Both layouts; the other skins show the player's screen in all three.
+
+![Receiver view](screenshots/bluetooth-receiver-view.png)
+![Both view: the sender in the band](screenshots/bluetooth-both-view.png)
+
+### Levels
+
+*   **Levels:** quickscreen → Playback → **Bluetooth** → **Bluetooth Mix**. Up/down sets **PC Volume**, the sender's audio; right/left sets **Player Level**, the player's own audio, which the PC's never goes through.
 *   **Icon:** the Snappy skins show an arrow into a tray beside the rune: grey while Receive Audio waits for a sender, blue while one plays (`%?Br<off|waiting|receiving>`). In the WPS it sits under the rune, where the jack's speaker goes in dual output.
 
 ![Receive Audio on, with its duck depth](screenshots/bluetooth-receive.png)

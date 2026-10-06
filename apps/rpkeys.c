@@ -34,6 +34,9 @@
  * silkscreen says. BUTTON_PREV and BUTTON_NEXT exist on this target for
  * Bluetooth remotes only.
  *
+ * In the receiver view - a PC or phone playing to us, nothing of our own -
+ * the tap, the volume keys and the track keys work the sender instead.
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
@@ -64,6 +67,9 @@
 #include "power.h"
 #include "powermgmt.h"
 #include "pradio.h"
+#ifdef HAVE_HIBY_BLUETOOTH
+#include "hiby_bluetooth.h"
+#endif
 #include "rpkeys.h"
 #include "screenshot.h"
 #include "settings.h"
@@ -137,6 +143,17 @@ static bool screen_is_off(void)
 bool rpkeys_locked(void)
 {
     return locked || screen_is_off();
+}
+
+/* A PC or phone plays to us and nothing of our own does: the keys work
+ * the sender - its play/pause, tracks and volume - over AVRCP */
+static bool keys_to_sender(void)
+{
+#ifdef HAVE_HIBY_BLUETOOTH
+    return bt_view_fast() == BT_VIEW_RX && bt_rx_state_fast() == 2;
+#else
+    return false;
+#endif
 }
 
 /* ---------------------------------------------------------- screen off */
@@ -652,7 +669,9 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
              * playing, with AUDIO_STATUS_PAUSE on top - so testing PLAY
              * meant the second tap paused an already-paused track and
              * resume was unreachable. */
-            if (audio_status() & AUDIO_STATUS_PAUSE)
+            if (keys_to_sender())
+                bt_rx_play_pause();
+            else if (audio_status() & AUDIO_STATUS_PAUSE)
             {
                 /* a station played on while it was paused */
                 pradio_pause(false);
@@ -773,7 +792,10 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
  * curve has nothing left to correct and direct is the honest mode. */
 static void volume_step(int steps)
 {
-    adjust_volume_ex(steps, VOLUME_ADJUST_DIRECT);
+    if (keys_to_sender())
+        bt_rx_volume_step(steps);
+    else
+        adjust_volume_ex(steps, VOLUME_ADJUST_DIRECT);
 }
 
 static bool handle_volume(int button, bool repeat, bool release)
@@ -844,7 +866,15 @@ static bool handle_skip(int idx, int dir, bool repeat, bool release)
         skipper[idx].down_tick = now;
         skipper[idx].consumed = false;
         skipper[idx].skipped = false;
-        seek_by(dir * SEEK_STEP_MS);
+        /* the sender's tracks: AVRCP has no seek worth the name */
+        if (keys_to_sender())
+        {
+            skipper[idx].consumed = true;
+            cue();
+            bt_rx_skip(dir);
+        }
+        else
+            seek_by(dir * SEEK_STEP_MS);
         return true;
     }
 
@@ -901,7 +931,9 @@ bool rpkeys_handle(int button, int *action)
         {
             int dir = (bare & BUTTON_NEXT) ? 1 : -1;
             seek_forget();
-            if (pradio_skip(dir))
+            if (keys_to_sender())
+                bt_rx_skip(dir);
+            else if (pradio_skip(dir))
                 ;
             else if (dir > 0)
                 audio_next();

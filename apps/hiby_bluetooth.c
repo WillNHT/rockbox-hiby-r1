@@ -1500,6 +1500,28 @@ int bt_rx_status_fast(void)
     return bt_rx_linked ? bt.now.status : 0;
 }
 
+/* Which WPS layout: Bluetooth View if set, else what is playing. With
+ * nothing playing the last one stays, so a pause does not swap screens. */
+int bt_view_fast(void)
+{
+    static int last = BT_VIEW_PLAYER;
+    int status = audio_status();
+    bool local = (status & AUDIO_STATUS_PLAY) && !(status & AUDIO_STATUS_PAUSE);
+    bool rx = bt_rx_linked && (bt.now.status == 1
+#ifndef SIMULATOR
+                               || hiby_bt_rx_loud(2*HZ)
+#endif
+                              );
+
+    if (global_settings.bt_view)
+        return global_settings.bt_view - 1;
+    if (rx)
+        last = local ? BT_VIEW_BOTH : BT_VIEW_RX;
+    else if (local || !bt_rx_linked)
+        last = BT_VIEW_PLAYER;
+    return last;
+}
+
 /* For the skin: the sender's 't'itle, 'a'rtist, a'l'bum, 'n'ame,
  * 'v'olume (%), 'e'lapsed and 'd'uration. NULL when there is none. */
 const char *bt_rx_info(int what, char *buf, size_t len)
