@@ -53,6 +53,16 @@ On the Receiver screen the keys work the sender: POWER tap is its play/pause, th
 
 Skin tags: `%?Bm<player|receiver|both>`, `%?Bs<stopped|playing|paused>`, `%Bt` title, `%Ba` artist, `%Bl` album, `%Bn` the sender's name, `%Bv` its volume (%), `%Be` / `%Bd` elapsed and duration. Snappy V2 and Snappy Vinyl have the Receiver and Both layouts; the other skins show the player's screen in all three.
 
+### Latency: PC to player to headset
+
+What the PC plays reaches a headset through two radio links and every buffer between them. The two links and the headset's own buffer are fixed; the player's part is kept short:
+
+*   The receive ring is held under about 70 ms. The sender's clock is not the player's, and before, what it got ahead by piled up until the ring was full (about 190 ms, plus up to 200 ms waiting in the capture). Above the line one frame in 512 is dropped, which is not heard.
+*   The capture holds at most 50 ms, down from 200.
+*   While a sender is connected the headset's buffer is halved, about 93 ms instead of 186 at 44.1 kHz: the headset's audio is reopened when the sender comes and goes, a quarter-second gap. LDAC may stutter at the smaller buffer; SBC or AAC on the headset keeps it smooth and adds less delay of its own.
+
+The debug log's `bt rx:` line says how much the capture and the ring hold.
+
 ![Receiver view](screenshots/bluetooth-receiver-view.png)
 ![Both view: the sender in the band](screenshots/bluetooth-both-view.png)
 

@@ -94,6 +94,7 @@
 /* hiby/pcm-alsa-hiby.c and pcm-alsa.c */
 int pcm_alsa_switch_playback_device(const char *device);
 void hiby_pcm_set_bt_mac(const char *mac);
+void hiby_pcm_set_low_latency(bool on);
 const char *hiby_pcm_get_bt_mac(void);
 bool hiby_pcm_mirror_active(void);
 bool hiby_pcm_bt_lost(void);
@@ -1763,16 +1764,27 @@ void bt_sync(void)
     if (bt_rx_gen != bt_rx_synced_gen || hiby_bt_rx_stalled())
     {
         static struct timeout duck;
+        char rx[18];
+        bool changed = bt_rx_gen != bt_rx_synced_gen;
 
-        if (bt_rx_gen != bt_rx_synced_gen)
+        if (changed)
             hiby_bt_rx_stop();
         bt_rx_synced_gen = bt_rx_gen;
         pthread_mutex_lock(&bt_mtx);
-        snprintf(link, sizeof(link), "%s", bt.rx);
+        snprintf(rx, sizeof(rx), "%s", bt.rx);
+        snprintf(link, sizeof(link), "%s", bt.link);
         pthread_mutex_unlock(&bt_mtx);
-        if (link[0])
+        /* a sender came or went: the headset's buffer to match, by opening
+           it again */
+        if (changed)
         {
-            hiby_bt_rx_start(link);
+            hiby_pcm_set_low_latency(rx[0] != '\0');
+            if (hiby_pcm_get_bt_mac() && link[0])
+                bt_route(link);
+        }
+        if (rx[0])
+        {
+            hiby_bt_rx_start(rx);
             timeout_register(&duck, bt_rx_duck, HZ/10, 0);
         }
     }
