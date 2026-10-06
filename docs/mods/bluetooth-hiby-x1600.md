@@ -4,12 +4,14 @@ This build integrates [bidhata's patches](https://github.com/bidhata/hiby-r1-roc
 
 ## Using it
 
-Everything is on one screen, **Main Menu → Bluetooth**, laid out like a phone's:
+Everything is under **Main Menu → Bluetooth**, laid out like a phone's:
 
 *   **Bluetooth: On / Off** - select to switch. Turning it on reconnects the last headset that played.
+*   **Devices** - a page of its own, with what is connected after the name. On it:
 *   **Paired Devices** - select one to connect. A connected one shows `(Connected, 80%)` when the headset reports its battery; select it, or long-press any paired device, for its page.
 *   **Other Devices** - found while the screen is open (`Searching...`). Select one to pair and connect. A device that shows a code asks you to confirm it; one that wants a PIN gets `0000`.
-*   **Forget All Devices**, **Wired Sync Offset** - at the bottom.
+*   **Forget All Devices** - at the bottom of the Devices page.
+*   **Wired Sync Offset**, **Wired Level**, and **Music Ducking** while receiving - on the main page.
 
 ![The Bluetooth screen](screenshots/bluetooth-screen.png)
 ![A connected headset's page](screenshots/bluetooth-device.png)

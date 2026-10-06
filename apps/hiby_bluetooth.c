@@ -1915,12 +1915,14 @@ static const char *bt_device_state(const struct bt_device *d, char *buf, size_t 
     return buf;
 }
 
-/* The one Bluetooth screen: the switch, paired devices, devices around */
-enum { ROW_POWER, ROW_RECEIVE, ROW_PAIRED, ROW_OTHER, ROW_DEVICE, ROW_SEARCH,
-       ROW_FORGET_ALL, ROW_OFFSET, ROW_RX_DUCK };
+/* The Bluetooth screen: the switches and levels, and the devices, paired
+ * and around, a page of their own */
+enum { ROW_POWER, ROW_RECEIVE, ROW_DEVICES, ROW_PAIRED, ROW_OTHER, ROW_DEVICE,
+       ROW_SEARCH, ROW_FORGET_ALL, ROW_OFFSET, ROW_DUAL_WIRED, ROW_RX_DUCK };
 static struct { unsigned char kind, dev; } rows[BT_MAX_DEVICES + 8];
 static int nrows;
 static bool bt_found_other;
+static bool bt_devices;     /* the devices page is open */
 
 static void bt_build_rows(void)
 {
@@ -1928,10 +1930,21 @@ static void bt_build_rows(void)
     int i;
 
     nrows = 0;
-    rows[nrows++].kind = ROW_POWER;
-    if (bt_power == BT_ON)
+    if (!bt_devices)
     {
-        rows[nrows++].kind = ROW_RECEIVE;
+        rows[nrows++].kind = ROW_POWER;
+        if (bt_power == BT_ON)
+        {
+            rows[nrows++].kind = ROW_RECEIVE;
+            rows[nrows++].kind = ROW_DEVICES;
+        }
+        rows[nrows++].kind = ROW_OFFSET;
+        rows[nrows++].kind = ROW_DUAL_WIRED;
+        if (bt_rx_on)
+            rows[nrows++].kind = ROW_RX_DUCK;
+    }
+    else if (bt_power == BT_ON)
+    {
         for (i = 0; i < snap.count; i++)
         {
             if (i == 0 && snap.dev[i].paired)
@@ -1952,9 +1965,6 @@ static void bt_build_rows(void)
         if (snap.count && snap.dev[0].paired)
             rows[nrows++].kind = ROW_FORGET_ALL;
     }
-    rows[nrows++].kind = ROW_OFFSET;
-    if (bt_rx_on)
-        rows[nrows++].kind = ROW_RX_DUCK;
 }
 
 static const char *bt_row_name(int i, void *data, char *buf, size_t len)
@@ -1973,6 +1983,16 @@ static const char *bt_row_name(int i, void *data, char *buf, size_t len)
                        bt_rx_switching == 2 ? LANG_BT_TURNING_OFF :
                        bt_rx_on ? LANG_ON : LANG_OFF));
             return buf;
+        case ROW_DEVICES:
+        {
+            /* what is connected, so the page need not be opened to see */
+            const struct bt_device *d = bt_find(snap.dev, snap.count, snap.link);
+            const struct bt_device *r = bt_find(snap.dev, snap.count, snap.rx);
+            snprintf(buf, len, "%s%s%s%s%s", S(LANG_BT_DEVICES),
+                     d || r ? ": " : "", d ? d->name : "",
+                     d && r ? ", " : "", r ? r->name : "");
+            return buf;
+        }
         case ROW_PAIRED:
             return S(LANG_BT_PAIRED_DEVICES);
         case ROW_OTHER:
@@ -1993,6 +2013,10 @@ static const char *bt_row_name(int i, void *data, char *buf, size_t len)
         case ROW_OFFSET:
             snprintf(buf, len, "%s: %d ms", S(LANG_BT_WIRED_OFFSET),
                      global_settings.bt_wired_offset);
+            return buf;
+        case ROW_DUAL_WIRED:
+            snprintf(buf, len, "%s: %d%%", S(LANG_BT_DUAL_WIRED),
+                     global_settings.bt_dual_wired);
             return buf;
         case ROW_RX_DUCK:
             snprintf(buf, len, "%s: %d%%", S(LANG_BT_RX_DUCK),
@@ -2015,9 +2039,12 @@ static enum themable_icons bt_row_icon(int i, void *data)
             return strcmp(snap.dev[rows[i].dev].mac, snap.link)
                    && strcmp(snap.dev[rows[i].dev].mac, snap.rx)
                    ? Icon_System_menu : Icon_Audio;
+        case ROW_DEVICES:
+            return Icon_Submenu;
         case ROW_POWER:
         case ROW_RECEIVE:
         case ROW_OFFSET:
+        case ROW_DUAL_WIRED:
         case ROW_RX_DUCK:
             return Icon_Menu_setting;
         case ROW_FORGET_ALL:
@@ -2038,6 +2065,9 @@ static int bt_screen_cb(int action, struct gui_synclist *lists)
         bt_context = true;
         return ACTION_STD_OK;
     }
+    /* switched off: no devices to show */
+    if (bt_devices && bt_power != BT_ON)
+        return ACTION_STD_CANCEL;
     if (snap.gen != bt_gen)
     {
         bt_snapshot();
@@ -2187,18 +2217,18 @@ static void bt_device_page(const char *mac)
     }
 }
 
-int hiby_bluetooth_menu(void)
+/* The main page, or with devices set the devices page */
+static void bt_list(bool devices)
 {
     struct simplelist_info info;
     int sel = 0;
 
-    bt.screen = true;
-    bt_wake_worker();
-    bt_snapshot();
     while (1)
     {
+        bt_devices = devices;
         bt_build_rows();
-        simplelist_info_init(&info, (char *)S(LANG_BT_BLUETOOTH), nrows, NULL);
+        simplelist_info_init(&info, (char *)S(devices ? LANG_BT_DEVICES :
+                                              LANG_BT_BLUETOOTH), nrows, NULL);
         info.get_name = bt_row_name;
         info.get_icon = bt_row_icon;
         info.action_callback = bt_screen_cb;
@@ -2214,6 +2244,14 @@ int hiby_bluetooth_menu(void)
         {
             case ROW_POWER:
                 bt_toggle_power();
+                break;
+            case ROW_DEVICES:
+                bt_list(true);
+                break;
+            case ROW_DUAL_WIRED:
+                set_int(S(LANG_BT_DUAL_WIRED), "%", UNIT_PERCENT,
+                        &global_settings.bt_dual_wired, NULL, 5, 0, 100, NULL);
+                settings_save();
                 break;
             case ROW_RECEIVE:
                 if (bt_rx_switching)
@@ -2271,6 +2309,14 @@ int hiby_bluetooth_menu(void)
         }
         bt_snapshot();
     }
+}
+
+int hiby_bluetooth_menu(void)
+{
+    bt.screen = true;
+    bt_wake_worker();
+    bt_snapshot();
+    bt_list(false);
     bt.screen = false;
     bt_wake_worker();
     return 0;
