@@ -1800,11 +1800,10 @@ int stick_handle_touch(const struct touchevent *ev, int context,
     *button = BUTTON_NONE;
     *prebutton = BUTTON_NONE;
 
-    /* Locked means locked. The POWER hold swallows every physical key but
-     * itself, and a panel that still scrolled and selected underneath that
-     * would be a lock in name only - the touchscreen is the input this
-     * device is most likely to get in a pocket. Consumed rather than
-     * passed, so nothing downstream sees the contact either. */
+    /* The lock is a touch lock: the keys keep working, the panel does
+     * nothing - the touchscreen is the input this device is most likely to
+     * get in a pocket. Consumed rather than passed, so nothing downstream
+     * sees the contact either. */
     if (rpkeys_locked())
     {
         stick_reset(&live_state, &live_cfg);

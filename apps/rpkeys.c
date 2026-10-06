@@ -18,7 +18,8 @@
  *
  *   POWER    tap            play / pause on the WPS, to the WPS from
  *                           anywhere else
- *            hold 1 s       lock / unlock input
+ *            hold 0.5 s     lock / unlock the touchscreen, on release
+ *            hold 2 s       screen off, on release; a press wakes it
  *            hold 4 s       shut down
  *   VOL+/-   tap            one step
  *            hold           continuous, linear in the volume value
@@ -60,6 +61,7 @@
 #include "misc.h"
 #include "scroll_engine.h"
 #include "timeout.h"
+#include "power.h"
 #include "powermgmt.h"
 #include "pradio.h"
 #include "rpkeys.h"
@@ -69,6 +71,9 @@
 #include "sound.h"
 #include "system.h"
 #include "viewport.h"
+#ifdef HAVE_GENERAL_PURPOSE_LED
+#include "led-general-purpose.h"
+#endif
 
 /* The three thresholds, in ticks.
  *
@@ -79,7 +84,8 @@
  * PMU stays what it should be - the way out of a wedged device, not the
  * thing that answers an ordinary hold. It also makes the countdown
  * honest, which counting to ten was not. */
-#define LOCK_HOLD_TICKS      (HZ)
+#define LOCK_HOLD_TICKS      (HZ / 2)
+#define SCREEN_OFF_HOLD_TICKS (2 * HZ)
 #define SHUTDOWN_HOLD_TICKS  (4 * HZ)
 
 /* A held next/prev changes track once it has been down this long - the
@@ -90,9 +96,9 @@
 /* POWER is the one key where a tap and a hold mean unrelated things, so the
  * two are made mutually exclusive rather than merely different: a press
  * shorter than this is a tap and nothing else, a press longer than it is a
- * lock attempt and nothing else. Letting go at 600 ms - a lock the user
- * thought better of - therefore does nothing at all, where it used to fall
- * through to the screen toggle and turn the display off mid-thought.
+ * lock attempt and nothing else. Letting go between the two - a lock the
+ * user thought better of - therefore does nothing at all, where it used to
+ * fall through to the screen toggle and turn the display off mid-thought.
  *
  * The same instant is when the countdown appears. It has to be after the
  * tap window closes or every screen-off tap flashes it on the way past. */
@@ -110,7 +116,8 @@
 #define SEEK_STEP_MS         5000
 
 static bool locked;
-static bool lock_cue_done;      /* the lock has fired for this press      */
+static bool lock_cue_done;      /* the arming run is over for this press  */
+static bool off_cue_done;       /* the screen-off chirp has played        */
 static int  lock_chirp_step;    /* how far the arming run has got         */
 static long power_down_tick;    /* 0 when POWER is not held               */
 static bool power_consumed;     /* this press already did something       */
@@ -118,9 +125,62 @@ static long vol_next_tick;
 static bool shot_taken;         /* this POWER press took a screenshot  */
 static bool countdown_drawn;
 
+static bool screen_is_off(void)
+{
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+    return backlight_is_screen_off();
+#else
+    return false;
+#endif
+}
+
 bool rpkeys_locked(void)
 {
-    return locked;
+    return locked || screen_is_off();
+}
+
+/* ---------------------------------------------------------- screen off */
+
+/* With the screen off the LED says what the player is doing: blinking
+ * while it plays, steady otherwise. On the charger it is the charger's. */
+#if defined(HAVE_GENERAL_PURPOSE_LED) && !defined(SIMULATOR)
+static struct timeout led_tmo;
+static bool led_lit;
+
+static int led_blink(struct timeout *tmo)
+{
+    (void)tmo;
+    if (!screen_is_off())
+        return 0;
+#if CONFIG_CHARGING
+    if (power_input_present())
+        return HZ;
+#endif
+    led_lit = (audio_status() & (AUDIO_STATUS_PLAY | AUDIO_STATUS_PAUSE))
+              == AUDIO_STATUS_PLAY ? !led_lit : true;
+    if (led_lit)
+        led_hw_on();
+    else
+        led_hw_off();
+    return HZ;
+}
+#endif
+
+static void screen_off(bool off)
+{
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+    backlight_screen_off(off);
+#endif
+#if defined(BUTTON_TOUCH_WAKES) && !defined(SIMULATOR)
+    button_set_touch_wake(!off && !locked);
+#endif
+#if defined(HAVE_GENERAL_PURPOSE_LED) && !defined(SIMULATOR)
+    timeout_cancel(&led_tmo);
+    if (off)
+        timeout_register(&led_tmo, led_blink, HZ, 0);
+    else
+        led_hw_on();
+#endif
 }
 
 /* ------------------------------------------------------------------ cues */
@@ -247,7 +307,7 @@ void rpkeys_chirp_step(int step, int total, bool rising)
 
 static long countdown_next_tick;
 static long border_done;        /* perimeter pixels already inked */
-static int  countdown_stage;    /* 0 = heading for the lock, 1 = shutdown */
+static int  countdown_stage;    /* 0 = the lock, 1 = screen off, 2 = shutdown */
 
 /* Union a rectangle into an accumulating bounding box. */
 static void bbox_add(int *bx, int *by, int *bw, int *bh,
@@ -325,10 +385,19 @@ static void countdown_draw(long held_ticks)
     int stage;
     bool first;
 
-    if (held_ticks >= LOCK_HOLD_TICKS)
+    if (held_ticks >= SCREEN_OFF_HOLD_TICKS)
     {
-        what = locked ? "Unlocking - hold for shutdown" : "Locking - hold for shutdown";
+        what = "Release: screen off";
         target = SHUTDOWN_HOLD_TICKS;
+        start = SCREEN_OFF_HOLD_TICKS;
+        stage = 2;
+    }
+    else if (held_ticks >= LOCK_HOLD_TICKS)
+    {
+        /* Short: the line is one line of a big face. Holding on is
+         * shown by the border starting round again. */
+        what = locked ? "Release: unlock" : "Release: lock";
+        target = SCREEN_OFF_HOLD_TICKS;
         start = LOCK_HOLD_TICKS;
         stage = 1;
     }
@@ -340,9 +409,9 @@ static void countdown_draw(long held_ticks)
         stage = 0;
     }
 
-    /* Crossing into the shutdown stage restarts the border from nothing, so
-     * it has to restart the screen too - the first stage's rectangle is
-     * closed by then and would otherwise stay up behind the second. */
+    /* Crossing into the next stage restarts the border from nothing, so
+     * it has to restart the screen too - the last stage's rectangle is
+     * closed by then and would otherwise stay up behind this one. */
     if (countdown_drawn && stage != countdown_stage)
         countdown_drawn = false;
 
@@ -527,13 +596,34 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
          * letting it fall through to the screen toggle is what made
          * thinking better of a lock turn the display off. */
         bool was_tap = !power_consumed && held_ticks < POWER_TAP_MAX_TICKS;
+        bool spent = power_consumed || shot_taken;
 
         countdown_clear();
         power_down_tick = 0;
         lock_cue_done = false;
+        off_cue_done = false;
         lock_chirp_step = 0;
         power_consumed = false;
         shot_taken = false;
+
+        /* Each hold does the one thing it was let go in: the lock, or past
+         * it the screen. Shutdown never gets here - it fires while held. */
+        if (!spent && held_ticks >= SCREEN_OFF_HOLD_TICKS)
+        {
+            screen_off(true);
+            return true;
+        }
+        if (!spent && held_ticks >= LOCK_HOLD_TICKS)
+        {
+            locked = !locked;
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+            backlight_set_locked(locked);
+#endif
+#if defined(BUTTON_TOUCH_WAKES) && !defined(SIMULATOR)
+            button_set_touch_wake(!locked);
+#endif
+            return true;
+        }
 
         /* Away from the WPS a tap is the way back to it and nothing
          * more: the screen the user asked for should not arrive with
@@ -600,7 +690,17 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
         power_down_tick = now;
         power_consumed = false;
         lock_cue_done = false;
+        off_cue_done = false;
         lock_chirp_step = 0;
+        /* The screen is off: this press only brings it back, however long
+         * it is held - spent like a screenshot's. */
+        if (screen_is_off())
+        {
+            screen_off(false);
+            cue();
+            shot_taken = true;
+            power_consumed = true;
+        }
         return true;
     }
 
@@ -640,17 +740,15 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
             }
         }
 
-        if (held_ticks >= LOCK_HOLD_TICKS && !lock_cue_done)
-        {
+        /* The run ends on the lock's threshold; letting go from here on
+         * toggles it. A falling chirp says the next let-go is the screen. */
+        if (held_ticks >= LOCK_HOLD_TICKS)
             lock_cue_done = true;
-            power_consumed = true;
-            locked = !locked;
-#ifdef HAVE_BACKLIGHT_DIM_IDLE
-            backlight_set_locked(locked);
-#endif
-#if defined(BUTTON_TOUCH_WAKES) && !defined(SIMULATOR)
-            button_set_touch_wake(!locked);
-#endif
+        if (held_ticks >= SCREEN_OFF_HOLD_TICKS && !off_cue_done)
+        {
+            off_cue_done = true;
+            if (keyclick_enabled(KEYCLICK_SRC_LOCK))
+                rpkeys_chirp_down();
         }
 
         /* Not until the press has outlived a tap's opening moments: the
@@ -812,11 +910,6 @@ bool rpkeys_handle(int button, int *action)
         }
         return true;
     }
-
-    /* Locked: everything but POWER is swallowed, which is what locked
-     * means. POWER is handled above, so a 3 s hold still unlocks. */
-    if (locked)
-        return true;
 
     if (bare & (BUTTON_UP | BUTTON_DOWN))
         return handle_volume(bare, repeat, release);

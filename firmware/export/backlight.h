@@ -41,6 +41,10 @@ bool is_backlight_lit(void);
 /* level is in tenths of a percent (0..1000). */
 void backlight_set_dim_brightness(int level);
 int  backlight_get_dim_brightness(void);
+/* The screen off until switched back on: keys work in the dark and do not
+ * wake it. */
+void backlight_screen_off(bool off);
+bool backlight_is_screen_off(void);
 /* The same while input is locked, and whether it is. */
 void backlight_set_dim_brightness_locked(int level);
 void backlight_set_locked(bool locked);

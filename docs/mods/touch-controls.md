@@ -34,3 +34,18 @@ For right-to-left languages, the left/right shortcuts are swapped.
 - Right to left - **Current Playlist / Cuesheet**
 - Left to right - **File Browser**
 - Bottom to top - **Context Menu**
+
+## Touch lock and screen off
+
+Hold **Power** and let go:
+
+- at **0.5 s** - lock or unlock the touchscreen. The keys keep working while it is locked; `LOCKED` shows under the header.
+- at **2 s** - screen off. The keys still work in the dark and do not wake it, and the touchscreen is off; a **Power** press brings the screen back and does nothing else. While it is off the LED blinks while playing and stays lit while paused (not on the charger, where it shows charging).
+- hold **4 s** - shut down, as before.
+
+The countdown says what letting go now will do; the border round the screen starts again at each step.
+
+<p align="center">
+<img width="160" alt="Release to lock" src="screenshots/power-hold-lock.png" />
+<img width="160" alt="Release for screen off" src="screenshots/power-hold-screen-off.png" />
+</p>
