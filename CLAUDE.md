@@ -73,6 +73,52 @@ Every issue you pick up gets a PR, and every PR points back at its issue:
   Nobody merges their own work, so never approve or merge a PR you opened - the
   review is the human's.
 
+## Device test loop
+
+**Hard rule.** Device testing is manual: the human flashes the build and
+reports back, often hours later. Carrying a session across those gaps is the
+biggest cost in this repo - context grows every round and is re-read on every
+turn, so one 200-turn session costs more than ten 25-turn ones. The loop is
+fixed:
+
+* **The issue is the memory, not the session.** Goal and acceptance criteria
+  live in the issue body. Everything learned since lives in one **state
+  comment** on the issue, edited in place - never a new comment per round:
+
+  ```
+  <!-- state -->
+  **Hypothesis:** what we currently think is wrong, and why
+  **Tried:** round 1: X - failed, saw Y. round 2: ...
+  **Build:** PR #n @ <sha>, CI run <link>
+  **Test this round:**
+  1. <action> - expect <result>
+  2. ...
+  ```
+
+  For a batch, each issue keeps its own state comment and the combined
+  checklist goes in the PR description, so one flash covers the batch.
+* **Resume from the issue.** The first call of a session on an issue is
+  `gh issue view <n> --comments`. Never ask the human to re-explain the goal or
+  the history; if the state comment is missing something, fix the comment.
+* **One flash, one session.** When a build goes out for device testing: wait
+  for CI green, update the state comment with a numbered checklist (an action
+  and the expected result per item), then stop. Tell the human the round is
+  done and to start a fresh session with the results. Do not wait in the
+  session for test results, and do not continue a session that has already
+  handed off a build.
+* **Results come back per checklist item**, one line each ("1 ok, 2 fail:
+  drops after 3s"). Prefer logs over prose: debug builds log to a file on the
+  device and the human pastes only the relevant lines.
+* **Make each flash count.** When more than one fix is plausible, ship the
+  candidates in one build behind a debug toggle instead of one flash per
+  guess, and remove the toggle before the PR is marked ready. Anything the
+  simulator can show is checked there first - the device is for hardware
+  behaviour.
+* **Keep the session small.** CI failures through
+  `gh run view <id> --log-failed | tail -80`, never the full log. Look at a
+  screenshot once and record what it shows in the state comment instead of
+  re-opening it.
+
 ## Proof
 
 A claim is not evidence. Anything user-visible ships with a screenshot in the PR
