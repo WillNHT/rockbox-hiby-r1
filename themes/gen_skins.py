@@ -58,11 +58,12 @@ HEADER = """#
 %%Vs(invert)%%ac%%cH:%%cM
 #""" % (CLOCK_X, CLOCK_Y, CLOCK_W, CLOCK_H) + """
 # Shuffle
-%V(178,28,94,22,2)
+# 10 px clear of the clock box, which ends at x=174
+%V(184,28,94,22,2)
 SHF%xd(O,%ps)
 #
 # Repeat
-%V(178,58,94,22,2)
+%V(184,58,94,22,2)
 %?mm<RPT%xd(Ob)|RPT%xd(O)|RP1%xd(O)|RND%xd(O)|A-B%xd(O)>
 #
 # Bluetooth: grey off, white on, blue connected
@@ -115,11 +116,12 @@ PLNAME = """#
 # draws no line and it costs nothing while the keys are free.
 #
 # 52 px rather than 44: the 44 px face is 48 px tall, and a line that does
-# not fit its viewport is not drawn either.
+# not fit its viewport is not drawn either. It ends at y=150, where the
+# cover starts: one more pixel and its clear takes the cover's top edge.
 LOCKBAR = """#
 # Locked
 # ======
-%V(30,102,-30,52,4)
+%V(30,98,-30,52,4)
 %Vs(invert)%ac%?mh<LOCKED|>"""
 
 BATT_BAR = "%bl(0,0,138,18,bb,backdrop,bb_backdrop)"

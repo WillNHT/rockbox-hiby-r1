@@ -311,11 +311,12 @@
 %Vs(invert)%ac%cH:%cM
 #
 # Shuffle
-%V(178,28,94,22,2)
+# 10 px clear of the clock box, which ends at x=174
+%V(184,28,94,22,2)
 SHF%xd(O,%ps)
 #
 # Repeat
-%V(178,58,94,22,2)
+%V(184,58,94,22,2)
 %?mm<RPT%xd(Ob)|RPT%xd(O)|RP1%xd(O)|RND%xd(O)|A-B%xd(O)>
 #
 # Bluetooth: grey off, white on, blue connected
@@ -1041,7 +1042,7 @@ SHF%xd(O,%ps)
 #
 # Locked
 # ======
-%V(30,102,-30,52,4)
+%V(30,98,-30,52,4)
 %Vs(invert)%ac%?mh<LOCKED|>
 #
 # Playlist
