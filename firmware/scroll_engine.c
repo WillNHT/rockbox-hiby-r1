@@ -31,6 +31,7 @@
 #include "thread.h"
 #include "usb.h"
 #include "lcd.h"
+#include "lcd-layers.h"
 #include "font.h"
 #if !defined(BOOTLOADER)
 #include "misc.h"

@@ -34,6 +34,7 @@ Grab a build from the [releases page](https://github.com/WillNHT/rockbox-hiby-r1
 ## Look and feel
 
 * [Transitions](mods/transitions.md) - animated menu and track changes.
+* [Layering](mods/layering.md) - how skin viewports stack, and what `%Vt` means.
 * [Themes](https://github.com/WillNHT/rockbox-hiby-r1/tree/master/themes) - the Snappy
   family and `gen_skins.py`.
 

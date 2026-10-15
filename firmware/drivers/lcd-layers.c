@@ -72,6 +72,8 @@ static struct layer layers[LCD_LAYER_COUNT] =
 };
 
 static bool composed;
+/* The last partial update, for lcd_update_rect(). */
+static struct lrect last_rect;
 
 extern struct frame_buffer_t lcd_framebuffer_default;
 
@@ -175,9 +177,280 @@ void lcd_layer_clear(enum lcd_layer layer,
 }
 
 
+/* Surfaces.
+ *
+ * One arena the size of the panel holds them all. A surface keeps its own
+ * columns and is given rows of the arena: its own rows if nothing is
+ * there, the first free ones that fit if something is. The viewport
+ * addresses it with panel coordinates through a buffer whose origin is
+ * moved by the difference, so everything that writes a buffer at
+ * absolute coordinates - the lcd driver, skin_art_fx.c, skin_layer.c -
+ * works on a surface unchanged. */
+#define MAX_SURFACES 64
+
+/* Pages of these that no surface has touched are never made resident on
+ * a hosted target, so a skin that lifts little costs little. */
+static fb_data arena_px[LCD_HEIGHT * LCD_WIDTH];
+static unsigned char arena_cov[LCD_HEIGHT * LCD_WIDTH];
+static struct lcd_surface surfaces[MAX_SURFACES];
+/* The ones in use, in ascending z. */
+static struct lcd_surface *zorder[MAX_SURFACES];
+static int nsurfaces;
+
+static inline fb_data *arena_row(const struct lcd_surface *s, int row)
+{
+    return arena_px + (size_t)(s->row + row) * LAYER_STRIDE + s->x;
+}
+
+static bool arena_free(int x, int row, int w, int h)
+{
+    int i;
+    for (i = 0; i < nsurfaces; i++)
+    {
+        const struct lcd_surface *s = zorder[i];
+        if (x < s->x + s->w && s->x < x + w &&
+            row < s->row + s->h && s->row < row + h)
+            return false;
+    }
+    return true;
+}
+
+struct lcd_surface *lcd_surface_find(const void *owner)
+{
+    int i;
+    for (i = 0; i < nsurfaces; i++)
+        if (zorder[i]->owner == owner)
+            return zorder[i];
+    return NULL;
+}
+
+struct lcd_surface *lcd_surface_from_fb(const struct frame_buffer_t *fb)
+{
+    const struct lcd_surface *s = (const struct lcd_surface *)fb;
+    if (s < surfaces || s >= surfaces + MAX_SURFACES || !s->owner)
+        return NULL;
+    return (struct lcd_surface *)s;
+}
+
+unsigned char *lcd_surface_coverage(const fb_data *px)
+{
+    if (px < arena_px || px >= arena_px + ARRAYLEN(arena_px))
+        return NULL;
+    return arena_cov + (px - arena_px);
+}
+
+void lcd_surface_clear(struct lcd_surface *s)
+{
+    int row, col;
+    for (row = 0; row < s->h; row++)
+    {
+        fb_data *p = arena_row(s, row);
+        for (col = 0; col < s->w; col++)
+            p[col] = LCD_LAYER_KEY;
+        memset(arena_cov + (p - arena_px), 255, s->w);
+    }
+    s->nveils = 0;
+}
+
+struct lcd_surface *lcd_surface_get(const void *owner, int tag, int x, int y,
+                                    int w, int h, int z)
+{
+    struct lcd_surface *s = lcd_surface_find(owner);
+    int row, i;
+
+    if (!clip(&x, &y, &w, &h))
+        return NULL;
+    if (s && s->x == x && s->y == y && s->w == w && s->h == h)
+        return s;
+    if (s)
+        lcd_surface_put(s);
+    if (nsurfaces == MAX_SURFACES)
+        return NULL;
+
+    /* Its own rows, or the first that are free. */
+    row = y;
+    if (!arena_free(x, row, w, h))
+    {
+        for (row = 0; row + h <= LCD_HEIGHT; row++)
+            if (arena_free(x, row, w, h))
+                break;
+        if (row + h > LCD_HEIGHT)
+            return NULL;
+    }
+
+    for (s = surfaces; s->owner; s++)
+        ;
+    s->owner = owner;
+    s->x = x; s->y = y; s->w = w; s->h = h;
+    s->row = row;
+    s->z = z;
+    s->tag = tag;
+    s->fresh = true;
+    s->fb = lcd_framebuffer_default;
+    s->fb.fb_ptr = arena_px + (ptrdiff_t)(row - y) * LAYER_STRIDE;
+    lcd_surface_clear(s);
+
+    for (i = nsurfaces; i > 0 && zorder[i - 1]->z > z; i--)
+        zorder[i] = zorder[i - 1];
+    zorder[i] = s;
+    nsurfaces++;
+    return s;
+}
+
+void lcd_surface_put(struct lcd_surface *s)
+{
+    int i;
+    for (i = 0; i < nsurfaces && zorder[i] != s; i++)
+        ;
+    if (i == nsurfaces)
+        return;
+    for (; i < nsurfaces - 1; i++)
+        zorder[i] = zorder[i + 1];
+    nsurfaces--;
+    s->owner = NULL;
+}
+
+void lcd_surface_put_tag(int tag)
+{
+    int i = 0;
+    while (i < nsurfaces)
+    {
+        if (zorder[i]->tag == tag)
+            lcd_surface_put(zorder[i]);
+        else
+            i++;
+    }
+}
+
+void lcd_surface_put_all(void)
+{
+    while (nsurfaces)
+        lcd_surface_put(zorder[0]);
+}
+
+void lcd_surface_veil(struct lcd_surface *s, int x, int y, int w, int h,
+                      fb_data top, fb_data bottom, unsigned alpha,
+                      const fb_data *src)
+{
+    struct lcd_veil *v;
+    int i;
+
+    if (!src && alpha == 0)
+        return;
+    /* A partial redraw lays the same veil again; it must not darken. */
+    for (i = 0; i < s->nveils; i++)
+    {
+        v = &s->veil[i];
+        if (v->x == x && v->y == y && v->w == w && v->h == h &&
+            v->top == top && v->bottom == bottom && v->alpha == alpha &&
+            v->src == src)
+            return;
+    }
+    /* ponytail: a surface's ninth veil is dropped; raise
+     * LCD_SURFACE_VEILS if a skin needs more. */
+    if (s->nveils == LCD_SURFACE_VEILS)
+        return;
+    v = &s->veil[s->nveils++];
+    v->x = x; v->y = y; v->w = w; v->h = h;
+    v->top = top; v->bottom = bottom;
+    v->alpha = MIN(alpha, 255);
+    v->src = src;
+}
+
+/* RGB565 lerp, a of 255 towards src. All three channels in one multiply,
+ * at 5-bit alpha: a divide per channel per pixel was most of what the
+ * compositor cost on the device. */
+static inline fb_data blend565(fb_data dst, fb_data src, unsigned a)
+{
+    unsigned a5 = (a + 4) >> 3;
+    uint32_t d = (dst | ((uint32_t)dst << 16)) & 0x07e0f81fu;
+    uint32_t s = (src | ((uint32_t)src << 16)) & 0x07e0f81fu;
+    uint32_t p = ((s * a5 + d * (32 - a5)) >> 5) & 0x07e0f81fu;
+    return (fb_data)(p | (p >> 16));
+}
+
+/* What a compose touches, on the panel. Only the pixels the panel is
+ * about to take matter: the rest is restored straight after. */
+static struct lrect clip_r = { 0, 0, LCD_WIDTH, LCD_HEIGHT };
+
+/* r := r n clip_r, false if nothing is left. */
+static bool clip_to(int *x, int *y, int *w, int *h)
+{
+    int x1 = MIN(*x + *w, clip_r.x + clip_r.w);
+    int y1 = MIN(*y + *h, clip_r.y + clip_r.h);
+    *x = MAX(*x, clip_r.x);
+    *y = MAX(*y, clip_r.y);
+    *w = x1 - *x;
+    *h = y1 - *y;
+    return *w > 0 && *h > 0;
+}
+
+/* Painter's order: the veils - the surface's background - over what is
+ * beneath, wherever any of it shows through, then the surface's own
+ * pixels over that, by their coverage. */
+static void paint_surface(const struct lcd_surface *s, fb_data *base)
+{
+    int i, row, c;
+    int sx = s->x, sy = s->y, sw = s->w, sh = s->h;
+
+    if (!clip_to(&sx, &sy, &sw, &sh))
+        return;
+
+    for (i = 0; i < s->nveils; i++)
+    {
+        const struct lcd_veil *v = &s->veil[i];
+        int y = v->y, h = v->h;
+        int x0 = MAX(v->x, sx), y0 = MAX(y, sy);
+        int x1 = MIN(v->x + v->w, sx + sw), y1 = MIN(y + h, sy + sh);
+
+        for (row = y0; row < y1; row++)
+        {
+            const fb_data *sp = arena_row(s, row - s->y) + (x0 - s->x);
+            const unsigned char *cp = arena_cov + (sp - arena_px);
+            size_t off = (size_t)row * LAYER_STRIDE + x0;
+            fb_data *bp = base + off;
+            fb_data colour = blend565(v->top, v->bottom,
+                                      h > 1 ? (row - y) * 255 / (h - 1) : 0);
+            for (c = 0; c < x1 - x0; c++)
+            {
+                if (sp[c] != LCD_LAYER_KEY && cp[c] == 255)
+                    continue;
+                bp[c] = v->src ? v->src[off + c]
+                               : blend565(bp[c], colour, v->alpha);
+            }
+        }
+    }
+
+    for (row = sy; row < sy + sh; row++)
+    {
+        const fb_data *sp = arena_row(s, row - s->y) + (sx - s->x);
+        const unsigned char *cp = arena_cov + (sp - arena_px);
+        fb_data *bp = base + (size_t)row * LAYER_STRIDE + sx;
+        for (c = 0; c < sw; c++)
+        {
+            if (sp[c] == LCD_LAYER_KEY)
+                continue;
+            bp[c] = cp[c] == 255 ? sp[c] : blend565(bp[c], sp[c], cp[c]);
+        }
+    }
+}
+
+bool lcd_surface_flatten(void)
+{
+    int i;
+    if (composed || !nsurfaces)
+        return false;
+    for (i = 0; i < nsurfaces; i++)
+        paint_surface(zorder[i], base_px());
+    lcd_surface_put_all();
+    return true;
+}
+
 static bool any_content(void)
 {
     int l;
+    if (nsurfaces)
+        return true;
     for (l = 0; l < LCD_LAYER_COUNT; l++)
         if (layers[l].n)
             return true;
@@ -186,40 +459,60 @@ static bool any_content(void)
 
 enum pass { SAVE, PAINT, RESTORE };
 
+static void copy_rect(enum pass pass, int x, int y, int w, int h)
+{
+    fb_data *base = base_px();
+    int row;
+
+    if (!clip_to(&x, &y, &w, &h))
+        return;
+    for (row = 0; row < h; row++)
+    {
+        size_t off = (size_t)(y + row) * LAYER_STRIDE + x;
+        if (pass == SAVE)
+            memcpy(saved_px + off, base + off, w * sizeof(fb_data));
+        else
+            memcpy(base + off, saved_px + off, w * sizeof(fb_data));
+    }
+}
+
 static void run_pass(enum pass pass)
 {
     fb_data *base = base_px();
     int l, i, row, c;
+
+    /* Surfaces first: they are under the layers. */
+    for (i = 0; i < nsurfaces; i++)
+    {
+        const struct lcd_surface *s = zorder[i];
+        if (pass == PAINT)
+            paint_surface(s, base);
+        else
+            copy_rect(pass, s->x, s->y, s->w, s->h);
+    }
 
     for (l = 0; l < LCD_LAYER_COUNT; l++)
     {
         const struct layer *ly = &layers[l];
         for (i = 0; i < ly->n; i++)
         {
-            const struct lrect *r = &ly->r[i];
-            for (row = 0; row < r->h; row++)
+            int x = ly->r[i].x, y = ly->r[i].y;
+            int w = ly->r[i].w, h = ly->r[i].h;
+            if (pass != PAINT)
             {
-                size_t off = (size_t)(r->y + row) * LAYER_STRIDE + r->x;
-                switch (pass)
-                {
-                case SAVE:
-                    memcpy(saved_px + off, base + off,
-                           r->w * sizeof(fb_data));
-                    break;
-                case RESTORE:
-                    memcpy(base + off, saved_px + off,
-                           r->w * sizeof(fb_data));
-                    break;
-                case PAINT:
-                {
-                    const fb_data *lp = ly->px + off;
-                    fb_data *bp = base + off;
-                    for (c = 0; c < r->w; c++)
-                        if (lp[c] != LCD_LAYER_KEY)
-                            bp[c] = lp[c];
-                    break;
-                }
-                }
+                copy_rect(pass, x, y, w, h);
+                continue;
+            }
+            if (!clip_to(&x, &y, &w, &h))
+                continue;
+            for (row = 0; row < h; row++)
+            {
+                size_t off = (size_t)(y + row) * LAYER_STRIDE + x;
+                const fb_data *lp = ly->px + off;
+                fb_data *bp = base + off;
+                for (c = 0; c < w; c++)
+                    if (lp[c] != LCD_LAYER_KEY)
+                        bp[c] = lp[c];
             }
         }
     }
@@ -255,6 +548,7 @@ void lcd_update(void)
     if (lcd_transition_hold())
         return;
 #endif
+    last_rect.w = 0;
     if (composed || !any_content())
     {
         lcd_update_base();
@@ -265,18 +559,37 @@ void lcd_update(void)
     lcd_layers_compose(false);
 }
 
+/* A partial update composes only what the panel will read: this
+ * rectangle, and the one before it. A page-flipping driver replays into
+ * the back plane what it missed while it was the front one - the last
+ * update, as the planes swap on every update - out of the framebuffer,
+ * and that replay has to see the layers too or the two planes disagree
+ * and flicker. A driver without page flipping reads less than this. */
 void lcd_update_rect(int x, int y, int width, int height)
 {
+    int x0 = x, y0 = y, x1 = x + width, y1 = y + height;
 #if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
     if (lcd_transition_hold())
         return;
 #endif
+    if (last_rect.w > 0)
+    {
+        x0 = MIN(x0, last_rect.x);
+        y0 = MIN(y0, last_rect.y);
+        x1 = MAX(x1, last_rect.x + last_rect.w);
+        y1 = MAX(y1, last_rect.y + last_rect.h);
+    }
+    last_rect.x = x; last_rect.y = y;
+    last_rect.w = width; last_rect.h = height;
+
     if (composed || !any_content())
     {
         lcd_update_rect_base(x, y, width, height);
         return;
     }
+    clip_r.x = x0; clip_r.y = y0; clip_r.w = x1 - x0; clip_r.h = y1 - y0;
     lcd_layers_compose(true);
     lcd_update_rect_base(x, y, width, height);
     lcd_layers_compose(false);
+    clip_r.x = 0; clip_r.y = 0; clip_r.w = LCD_WIDTH; clip_r.h = LCD_HEIGHT;
 }

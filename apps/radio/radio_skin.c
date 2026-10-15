@@ -38,6 +38,7 @@
 #endif
 #include "skin_engine/wps_internals.h"
 #include "skin_engine/skin_art_fx.h"
+#include "skin_engine/skin_layer.h"
 
 
 char* default_radio_skin(enum screen_type screen)
@@ -79,6 +80,7 @@ void fms_fix_displays(enum fms_exiting toggle_state)
         {
             screens[i].scroll_stop();
             skin_art_fx_leave();
+            skin_layer_leave(FM_SCREEN);
 #ifdef HAVE_BACKDROP_IMAGE
             skin_backdrop_show(sb_get_backdrop(i));
 #endif
