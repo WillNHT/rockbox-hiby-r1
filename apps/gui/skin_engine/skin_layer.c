@@ -33,8 +33,8 @@
  * That alone is not compositing: with one layer beneath the framebuffer,
  * a viewport over another viewport cleared to the backdrop and wiped it,
  * and the one beneath painted straight through it whenever it redrew a
- * line. So on the WPS and the FM screen a viewport declared after one it
- * overlaps is *lifted*: it draws into a surface of its own
+ * line. So on the WPS, the FM screen and the status bar every viewport
+ * is *lifted*: it draws into a surface of its own
  * (lcd-layers.c), its clears make the surface transparent rather than
  * touch the framebuffer, and its background - the %Vt veil, or the
  * backdrop for a viewport without one - is laid over whatever is beneath
@@ -155,26 +155,19 @@ static bool draws(char *buf, const struct skin_viewport *svp,
              SKINOFFSETTOPTR(buf, el->next));
 }
 
-static bool overlap(const struct viewport *a, const struct viewport *b)
-{
-    return a->x < b->x + b->width && b->x < a->x + a->width &&
-           a->y < b->y + b->height && b->y < a->y + a->height;
-}
-
 void skin_layer_begin(struct gui_wps *gwps, bool full)
 {
     struct wps_data *data = gwps->data;
     struct screen *display = gwps->display;
     char *buf = get_skin_buffer(data);
-    struct skin_element *el, *lo;
+    struct skin_element *el;
     struct skin_element *tree = SKINOFFSETTOPTR(buf, data->tree);
     struct skin_viewport *base = tree ? SKINOFFSETTOPTR(buf, tree->data)
                                       : NULL;
     int skin = skin_of(gwps);
 
-    /* Lifting depends on where viewports are, which only a full pass can
-     * change - and a skin like Snappy Animated has a hundred and fifty of
-     * them to compare, pair by pair. */
+    /* Surfaces follow where viewports are, which only a full pass can
+     * change. */
     if (skin < 0 || !full)
         return;
 
@@ -183,32 +176,20 @@ void skin_layer_begin(struct gui_wps *gwps, bool full)
     lcd_surface_put_tag(skin);
     flattened[skin] = false;
 
-    /* Hidden viewports count: lifting must not come and go with %Vd, or
-     * a viewport would change surfaces every time one under it did. The
-     * info viewport is where the lists draw, so it stays on the panel. */
+    /* Every viewport that draws is lifted, hidden or not, so the
+     * framebuffer beneath the skin holds the backdrop and nothing else:
+     * the bottom layer, under every %Vt. The info viewport is where the
+     * lists draw, so it stays on the panel. */
     for (el = tree; el;
          el = SKINOFFSETTOPTR(buf, el->next))
     {
         struct skin_viewport *svp = SKINOFFSETTOPTR(buf, el->data);
         if (!svp)
             continue;
-        svp->lifted = false;
-        if (!draws(buf, svp, el) || svp->is_infovp)
-            continue;
-        for (lo = tree; lo != el;
-             lo = SKINOFFSETTOPTR(buf, lo->next))
-        {
-            struct skin_viewport *lsvp = SKINOFFSETTOPTR(buf, lo->data);
-            if (lsvp && draws(buf, lsvp, lo) && overlap(&lsvp->vp, &svp->vp))
-            {
-                svp->lifted = true;
-                break;
-            }
-        }
+        svp->lifted = draws(buf, svp, el) && !svp->is_infovp;
 
         /* A lifted viewport never clears the framebuffer, so on a full
-         * pass the ground beneath it is cleared here, before anything
-         * beneath it draws. */
+         * pass the ground beneath it is cleared here. */
         if (svp->lifted)
         {
             struct viewport ground = svp->vp;

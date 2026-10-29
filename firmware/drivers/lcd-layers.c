@@ -189,7 +189,8 @@ void lcd_layer_clear(enum lcd_layer layer,
 
 /* Surfaces.
  *
- * One arena the size of the panel holds them all. A surface keeps its own
+ * One arena two panels tall holds them all - every viewport of a skin
+ * and of the status bar over it. A surface keeps its own
  * columns and is given rows of the arena: its own rows if nothing is
  * there, the first free ones that fit if something is. The viewport
  * addresses it with panel coordinates through a buffer whose origin is
@@ -200,8 +201,9 @@ void lcd_layer_clear(enum lcd_layer layer,
 
 /* Pages of these that no surface has touched are never made resident on
  * a hosted target, so a skin that lifts little costs little. */
-static fb_data arena_px[LCD_HEIGHT * LCD_WIDTH];
-static unsigned char arena_cov[LCD_HEIGHT * LCD_WIDTH];
+#define ARENA_ROWS (2 * LCD_HEIGHT)
+static fb_data arena_px[ARENA_ROWS * LCD_WIDTH];
+static unsigned char arena_cov[ARENA_ROWS * LCD_WIDTH];
 static struct lcd_surface surfaces[MAX_SURFACES];
 /* The ones in use, in ascending z. */
 static struct lcd_surface *zorder[MAX_SURFACES];
@@ -274,10 +276,10 @@ struct lcd_surface *lcd_surface_get(const void *owner, int tag, int x, int y,
     row = y;
     if (!arena_free(x, row, w, h))
     {
-        for (row = 0; row + h <= LCD_HEIGHT; row++)
+        for (row = 0; row + h <= ARENA_ROWS; row++)
             if (arena_free(x, row, w, h))
                 break;
-        if (row + h > LCD_HEIGHT)
+        if (row + h > ARENA_ROWS)
             return NULL;
     }
 
@@ -486,7 +488,9 @@ static void blend_all(fb_data *dst, int dst_stride,
 void lcd_layers_blend(fb_data *dst, int dst_stride,
                       int x, int y, int w, int h)
 {
-    if (lcd_layers_in_copy)
+    /* Composed, the framebuffer already holds them: a transition's frames
+     * and a screen dump are the finished picture. */
+    if (lcd_layers_in_copy && !composed)
         blend_all(dst, dst_stride, x, y, w, h);
 }
 
