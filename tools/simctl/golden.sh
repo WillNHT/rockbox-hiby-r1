@@ -45,11 +45,17 @@ for cfg in "$ROOT"/themes/*.cfg; do
   # A fresh config each time: the theme on its own, no transitions, so
   # a dump never lands mid-animation of a screen change.
   { grep -v '^#' "$cfg"; echo "wps transition: off"; } > "$DISK/.rockbox/config.cfg"
-  rm -f "$DISK"/.rockbox/*.dat "$DISK"/.rockbox/nvram.bin
+  # and nothing a previous run left behind: the browse folder, the
+  # playlist to resume, bookmarks.
+  rm -f "$DISK"/.rockbox/*.dat "$DISK"/.rockbox/nvram.bin \
+        "$DISK"/.rockbox/.resume.cfg "$DISK"/.rockbox/.playlist_control* \
+        "$DISK"/.rockbox/*.bmark
+  find "$DISK/Music" -name '*.bmark' -delete
 
   TZ=UTC FAKETIME="@2026-01-01 12:00:00" FAKETIME_DONT_FAKE_MONOTONIC=1 \
     LD_PRELOAD=${FAKETIME_LIB:-} \
-    bash "$HERE/simctl.sh" /tmp/golden.txt "$OUT/new/$slug" >/dev/null
+    timeout 120 bash "$HERE/simctl.sh" /tmp/golden.txt "$OUT/new/$slug" >/dev/null ||
+    { echo "golden: $slug: simulator run failed or hung"; fail=1; pkill rockboxui || true; continue; }
 
   for shot in "$OUT/new/$slug"/*.png; do
     s=$(basename "$shot" .png)
@@ -66,6 +72,7 @@ for cfg in "$ROOT"/themes/*.cfg; do
     eval "$CONVERT \"$shot\" -fill magenta $draw \"$OUT/a.png\""
     eval "$CONVERT \"$gold\" -fill magenta $draw \"$OUT/b.png\""
     px=$($COMPARE -metric AE "$OUT/a.png" "$OUT/b.png" "$OUT/diff-$slug-$s.png" 2>&1 || true)
+    px=${px%% *}   # newer ImageMagick appends " (fraction)"
     if [ "$px" != 0 ]; then
       echo "golden: $slug/$s: $px pixel(s) differ"
       fail=1
