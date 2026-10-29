@@ -18,5 +18,8 @@ Snappy-Animated shot06 31,324 449,377
 # The selected line scrolls on the scroll thread's own timer.
 Snappy-Animated shot03 184,200 443,249
 Snappy-V2 shot03 184,200 443,249
-# The cover's sheen band moves on the same timer as the scroll.
-Snappy-Animated shot05 48,246 449,287
+# The cover's sheen: its frame comes from the tick of the last render
+# before the shot, which the UI thread reaches at its own pace. shot04
+# still checks the cover.
+Snappy-Animated shot05 31,150 449,600
+Snappy-Animated shot06 31,150 449,600
