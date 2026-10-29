@@ -52,6 +52,8 @@
 
 #include <SDL.h>
 
+#include "kernel.h"
+#include "system.h"
 #include "sim_ctrl.h"
 #include "sim-ui-defines.h"
 
@@ -134,10 +136,26 @@ static SDL_Keycode key_by_name(const char *name)
     return SDLK_UNKNOWN;
 }
 
+/* With RBSIM_CLOCK set the tick is ours: it moves only inside a sleep, one
+ * tick per 10 ms of it, so a thumb held for 100 ms is ten ticks every run
+ * rather than nine or eleven depending on where the wall clock stood. The
+ * stick engine times everything in ticks, and a gesture that lands one
+ * tick either side of a threshold is a different gesture. */
 static void ctl_sleep_ms(int ms)
 {
-    if (ms > 0)
-        usleep((useconds_t)ms * 1000);
+    if (!sim_ctrl_clock)
+    {
+        if (ms > 0)
+            usleep((useconds_t)ms * 1000);
+        return;
+    }
+    for (; ms > 0; ms -= 1000/HZ)
+    {
+        usleep((1000/HZ) * 1000);
+        sim_enter_irq_handler();
+        call_tick_tasks();
+        sim_exit_irq_handler();
+    }
 }
 
 /* One command per line. Unknown words are reported and ignored rather
@@ -212,6 +230,8 @@ static void run_line(char *line)
     else if (!strcmp(verb, "quit"))
     {
         SDL_Event ev;
+        /* Shutdown waits on ticks, and no sleep is coming to move them. */
+        sim_ctrl_clock = false;
         memset(&ev, 0, sizeof(ev));
         ev.type = SDL_QUIT;
         SDL_PushEvent(&ev);
@@ -264,6 +284,7 @@ void sim_ctrl_init(void)
         return;
 
     snprintf(path, sizeof(path), "%s", env);
+    sim_ctrl_clock = getenv("RBSIM_CLOCK") != NULL;
 
     signal(SIGSEGV, ctl_segv);
     signal(SIGBUS, ctl_segv);
