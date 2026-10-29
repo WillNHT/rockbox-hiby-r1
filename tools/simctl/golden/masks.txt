@@ -15,3 +15,8 @@ Snappy-Animated * 184,610 210,683
 Snappy-V2 * 179,568 207,649
 # The held stick's band is mid-animation when the shot is taken.
 Snappy-Animated shot06 31,324 449,377
+# The selected line scrolls on the scroll thread's own timer.
+Snappy-Animated shot03 184,200 443,249
+Snappy-V2 shot03 184,200 443,249
+# The cover's sheen band moves on the same timer as the scroll.
+Snappy-Animated shot05 48,246 449,287
