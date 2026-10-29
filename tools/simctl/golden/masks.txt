@@ -15,6 +15,9 @@ Snappy-Canvas shot03 183,210 443,244
 Snappy-Lyrics-Meter shot03 183,210 443,244
 # Progress bar ends and elapsed-driven gauges and lyrics.
 Snappy-Canvas shot06 196,614 201,678
+Snappy-Canvas shot05 193,614 201,678
+Snappy-Animated shot05 193,614 201,678
+Snappy-Animated shot06 193,614 201,678
 Snappy-Stick shot04 329,254 334,288
 Snappy-V2 shot04 192,572 196,644
 Snappy-V2 shot06 194,572 201,644

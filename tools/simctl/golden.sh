@@ -61,7 +61,7 @@ for cfg in "$ROOT"/themes/*.cfg; do
     fi
     # Paint the moving parts out of both before comparing.
     draw=$(awk -v t="$slug" -v s="$s" \
-      '$1==t && ($2==s || $2=="*") { printf "-draw \"rectangle %s\" ", $3 }' \
+      '$1==t && ($2==s || $2=="*") { printf "-draw \"rectangle %s %s\" ", $3, $4 }' \
       "$HERE/golden/masks.txt")
     eval "$CONVERT \"$shot\" -fill magenta $draw \"$OUT/a.png\""
     eval "$CONVERT \"$gold\" -fill magenta $draw \"$OUT/b.png\""
