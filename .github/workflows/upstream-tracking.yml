@@ -56,6 +56,10 @@ jobs:
           done <<'REPOS'
         bidhata/Hiby-R1-Mod|
         hiby-modding/hiby_os_crack|
+        hiby-modding/Meowby-R1|
+        hiby-modding/hiby-mods|
+        hiby-modding/open_hiby_player|
+        hiby-modding/hiby-rockbox-theme|
         bidhata/hiby-r1-rockbox-bt|
         bahusoid/rockbox|Mod25.12.07
         REPOS
@@ -70,14 +74,18 @@ jobs:
           --allowedTools "Bash(cat /tmp/digest.md),Bash(gh api:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh search issues:*),Grep,Glob,Read,WebFetch"
         prompt: |
           Weekly upstream tracking for ${{ github.repository }}, a Rockbox fork
-          for the HiBy R1. These four projects work on the same device or the
-          same base mod. None of them is a git upstream - nothing merges, every
-          change has to be read and ported by hand.
+          for the HiBy R1. These projects work on the same device, the same
+          HiBy OS, or the same base mod. None of them is a git upstream -
+          nothing merges, every change has to be read and ported by hand.
 
           1. Read the week: cat /tmp/digest.md
              It lists every commit since ${{ steps.digest.outputs.since }} in:
                - bidhata/Hiby-R1-Mod
                - hiby-modding/hiby_os_crack
+               - hiby-modding/Meowby-R1 (mirror of codeberg.org/oricat/Meowby-R1)
+               - hiby-modding/hiby-mods (tested on the R3 Pro II, not the R1)
+               - hiby-modding/open_hiby_player
+               - hiby-modding/hiby-rockbox-theme
                - bidhata/hiby-r1-rockbox-bt
                - bahusoid/rockbox, branch Mod25.12.07
              Use `gh api repos/OWNER/REPO/commits/SHA` to read a diff when the
