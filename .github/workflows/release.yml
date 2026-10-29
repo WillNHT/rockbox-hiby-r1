@@ -150,10 +150,11 @@ jobs:
     # sit on the card so the archive unzips over the player's root.
     - name: Package
       run: |
-        mkdir -p pkg/.rockbox/themes pkg/.rockbox/wps pkg/.rockbox/fonts out
+        mkdir -p pkg/.rockbox/themes pkg/.rockbox/wps pkg/.rockbox/fonts pkg/.rockbox/icons out
         cp themes/*.cfg pkg/.rockbox/themes/
         cp -r themes/wps/. pkg/.rockbox/wps/
         cp -r themes/fonts/. pkg/.rockbox/fonts/
+        cp -r themes/icons/. pkg/.rockbox/icons/
         (cd pkg && zip -r ../out/rockbox-hibyr1-themes.zip .rockbox)
     - uses: actions/upload-artifact@v7
       with:

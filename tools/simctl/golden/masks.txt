@@ -3,29 +3,20 @@
 #
 #   <theme-slug> <shotNN|*> x0,y0 x1,y1
 #
-# Keep them tight: a masked pixel is one a regression can hide in.
+# Keep them tight: a masked pixel is one a regression can hide in. The
+# simulator's tick follows the script (RBSIM_CLOCK), so what is left here
+# follows audio or the wall clock instead.
 
-# Battery level in the status bar: the simulated battery drains.
-Snappy-Animated shot05 380,24 415,75
-Snappy-Canvas shot05 380,24 415,75
-Snappy-V2 shot05 380,24 415,75
-Snappy-Vinyl shot05 380,24 415,75
-# Selected line scrolls.
-Snappy-Canvas shot03 183,210 443,244
-Snappy-Lyrics-Meter shot03 183,210 443,244
-# Progress bar ends and elapsed-driven gauges and lyrics.
-Snappy-Canvas shot06 196,614 201,678
-Snappy-Canvas shot05 193,614 201,678
-Snappy-Animated shot05 193,614 201,678
-Snappy-Animated shot06 193,614 201,678
-Snappy-Stick shot04 329,254 334,288
-Snappy-V2 shot04 192,572 196,644
-Snappy-V2 shot06 194,572 201,644
-Snappy-Gauge shot05 48,24 449,293
-Snappy-Lyrics-Meter shot05 48,24 449,293
-Snappy-Lyrics-Lines shot05 190,25 411,678
+# Battery level: the simulated battery drains on the wall clock.
+Snappy-Animated * 376,20 420,80
+Snappy-V2 * 376,20 420,80
+Snappy-Vinyl * 376,20 420,80
+iPod * 424,30 448,62
+# Peak meter bar ends: the level of whatever audio has been played.
+Snappy-Animated * 184,610 210,683
+Snappy-V2 * 179,568 207,649
+Snappy-Vinyl * 179,568 207,649
+# The record's label turns with the audio position.
+Snappy-Vinyl shot06 160,280 320,441
 # The held stick's band is mid-animation when the shot is taken.
 Snappy-Animated shot06 31,324 449,377
-Snappy-Gauge shot06 31,324 449,377
-Snappy-Lyrics-Lines shot06 31,324 449,377
-Snappy-Lyrics-Meter shot06 31,324 449,678

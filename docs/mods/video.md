@@ -185,11 +185,10 @@ open it directly, and `Open with` always offers it.
 
 Music playback stops while a video plays — one sound at a time.
 
-## Demo theme
+## Themes
 
-**Snappy Canvas** is Snappy Animated with the track's canvas (or its
-music video) where the cover is. It turns video on, and it needs the
-decoder installed.
+No bundled theme shows video. The Snappy Canvas demo was removed; a
+skin asks for the canvas with the tags above.
 
 ## What to expect from the hardware
 
