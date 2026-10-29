@@ -24,9 +24,10 @@ CONVERT=$(command -v convert-im6.q16 || command -v convert)
 COMPARE=$(command -v compare-im6.q16 || command -v compare)
 
 # The themes as they sit on a card, as the release lays them out.
-mkdir -p "$DISK/.rockbox/wps" "$DISK/.rockbox/fonts" "$DISK/.rockbox/themes"
+mkdir -p "$DISK/.rockbox/wps" "$DISK/.rockbox/fonts" "$DISK/.rockbox/themes" "$DISK/.rockbox/icons"
 cp -r "$ROOT"/themes/wps/. "$DISK/.rockbox/wps/"
 cp -r "$ROOT"/themes/fonts/. "$DISK/.rockbox/fonts/"
+cp -r "$ROOT"/themes/icons/. "$DISK/.rockbox/icons/"
 cp "$ROOT"/themes/*.cfg "$DISK/.rockbox/themes/"
 
 cat "$HERE/tests/library.txt" "$HERE/golden/script.txt" > /tmp/golden.txt
@@ -52,10 +53,10 @@ for cfg in "$ROOT"/themes/*.cfg; do
         "$DISK"/.rockbox/*.bmark
   find "$DISK/Music" -name '*.bmark' -delete
 
-  TZ=UTC FAKETIME="@2026-01-01 12:00:00" FAKETIME_DONT_FAKE_MONOTONIC=1 \
+  RBSIM_CLOCK=1 TZ=UTC FAKETIME="@2026-01-01 12:00:00" FAKETIME_DONT_FAKE_MONOTONIC=1 \
     LD_PRELOAD=${FAKETIME_LIB:-} \
     timeout 120 bash "$HERE/simctl.sh" /tmp/golden.txt "$OUT/new/$slug" >/dev/null ||
-    { echo "golden: $slug: simulator run failed or hung"; fail=1; pkill rockboxui || true; continue; }
+    { echo "golden: $slug: simulator run failed or hung"; fail=1; pkill -9 rockboxui || true; continue; }
 
   for shot in "$OUT/new/$slug"/*.png; do
     s=$(basename "$shot" .png)
