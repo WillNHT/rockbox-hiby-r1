@@ -9,8 +9,7 @@ geometry is stated once, here, and the files are generated.
 
     python3 themes/gen_skins.py      (run from the rockbox/ directory)
 
-Writes themes/wps/SnappyV2.wps, SnappyVinyl.wps, SnappyAnimated.wps and
-SnappyRadio.wps.
+Writes themes/wps/SnappyV2.wps, SnappyAnimated.wps and SnappyRadio.wps.
 """
 import io
 import math
@@ -984,11 +983,10 @@ def animated(gauge=False, lyrics=None, radio=False):
 
 
 io.open("themes/wps/SnappyV2.wps", "w", newline="\n").write(snappy_v2())
-io.open("themes/wps/SnappyVinyl.wps", "w", newline="\n").write(snappy_v2(True))
 io.open("themes/wps/SnappyAnimated.wps", "w", newline="\n").write(animated(False))
 io.open("themes/wps/SnappyRadio.wps", "w",
         newline="\n").write(animated(False, None, True))
-print("wrote SnappyV2.wps, SnappyVinyl.wps, SnappyAnimated.wps, SnappyRadio.wps")
+print("wrote SnappyV2.wps, SnappyAnimated.wps, SnappyRadio.wps")
 
 
 # bt.bmp: the Bluetooth indicator, %xd(bt,%BT). Four 21x22 frames stacked,
@@ -1074,7 +1072,7 @@ def rx_bmp():
     return head + pix
 
 
-for skin in ("SnappyV2", "SnappyVinyl", "SnappyAnimated", "SnappyRadio"):
+for skin in ("SnappyV2", "SnappyAnimated", "SnappyRadio"):
     io.open("themes/wps/%s/bt.bmp" % skin, "wb").write(bt_bmp())
     io.open("themes/wps/%s/wired.bmp" % skin, "wb").write(wired_bmp())
     io.open("themes/wps/%s/rx.bmp" % skin, "wb").write(rx_bmp())
