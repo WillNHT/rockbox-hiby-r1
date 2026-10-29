@@ -23,6 +23,21 @@ Everything else is upstream Rockbox. Do not reformat, "clean up" or refactor
 upstream files. Touch them only where the feature needs it, in the style of the
 surrounding code.
 
+## Related projects
+
+Not upstreams - nothing merges - but worth a look before reinventing
+something. `.github/workflows/upstream-tracking.yml` reads them weekly; keep
+the two lists in step.
+
+* [bahusoid/rockbox](https://github.com/bahusoid/rockbox) (`Mod25.12.07`) - the Audiobook Mod we sit on.
+* [bidhata/hiby-r1-rockbox-bt](https://github.com/bidhata/hiby-r1-rockbox-bt), [bidhata/Hiby-R1-Mod](https://github.com/bidhata/Hiby-R1-Mod) - Bluetooth patches; modded stock firmware (radio, PEQ, audiobooks).
+* [hiby-modding](https://github.com/hiby-modding) org:
+  * `hiby_os_crack` - unpacking/repacking HiBy OS firmware.
+  * `Meowby-R1` - nix-built custom R1 firmware (mirror of codeberg.org/oricat/Meowby-R1; file issues there).
+  * `open_hiby_player` - open replacement for the stock `hiby_player`.
+  * `hiby-rockbox-theme` - Rockbox themes for HiBy devices.
+  * `hiby-mods` - firmware mods, tested on the R3 Pro II only.
+
 ## Rules
 
 * **Match the neighbours.** Comment density, naming, brace style and error
