@@ -136,6 +136,10 @@ void lcd_surface_veil(struct lcd_surface *s, int x, int y, int w, int h,
  * False if there were none. */
 bool lcd_surface_flatten(void);
 
+/* The framebuffer with the surfaces over it, but not the layers: the
+ * screen as a transition animates it. dst is LCD_WIDTH x LCD_HEIGHT. */
+void lcd_layers_snapshot(fb_data *dst);
+
 /* Coverage of a layer or surface pixel, or NULL if px is in neither. */
 unsigned char *lcd_surface_coverage(const fb_data *px);
 

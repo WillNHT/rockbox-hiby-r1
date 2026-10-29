@@ -478,7 +478,11 @@ static void blend_all(fb_data *dst, int dst_stride,
 {
     int l, i, row;
 
-    /* Surfaces first: they are under the layers. */
+    /* Surfaces first: they are under the layers. A running transition
+     * stands in for them and the framebuffer both. */
+#if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
+    if (!lcd_transition_paint(dst, dst_stride, x, y, w, h))
+#endif
     for (i = 0; i < nsurfaces; i++)
         paint_surface(zorder[i], dst, dst_stride, x, y, w, h);
 
@@ -514,6 +518,10 @@ void lcd_layers_blend(fb_data *dst, int dst_stride,
      * and a screen dump are the finished picture. */
     if (lcd_layers_in_copy && !composed)
         blend_all(dst, dst_stride, x, y, w, h);
+#if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
+    else
+        lcd_transition_paint(dst, dst_stride, x, y, w, h);
+#endif
 }
 
 /* The composed colour of one pixel, for a driver that fetches pixels one
@@ -580,6 +588,17 @@ void lcd_layers_compose(bool on)
     else
         save_pass(false);
     composed = on;
+}
+
+void lcd_layers_snapshot(fb_data *dst)
+{
+    int i;
+    memcpy(dst, base_px(), sizeof(fb_data) * LCD_WIDTH * LCD_HEIGHT);
+    if (composed)
+        return;
+    for (i = 0; i < nsurfaces; i++)
+        paint_surface(zorder[i], dst, LAYER_STRIDE,
+                      0, 0, LCD_WIDTH, LCD_HEIGHT);
 }
 
 bool lcd_surface_flatten(void)
