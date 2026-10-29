@@ -1,0 +1,6 @@
+# Rectangles golden.sh paints out of a shot and its golden before comparing,
+# for whatever moves on its own between two runs of the same build.
+#
+#   <theme-slug> <shotNN|*> x0,y0 x1,y1
+#
+# Keep them tight: a masked pixel is one a regression can hide in.

@@ -409,7 +409,39 @@ void screenshot_take(void)
 
     close(enc.fd);
     if (enc.failed)
+    {
         remove(path);
+        return;
+    }
+
+#ifdef HAVE_LCD_PRESENT_STATS
+    /* What it cost to put frames on the panel since the last shot, next
+     * to the picture, so a device round trip comes back as numbers. */
+    {
+        struct lcd_present_stats st;
+        unsigned long n;
+        int fd;
+
+        lcd_get_present_stats(&st);
+        n = st.frames ? st.frames : 1;
+        strcpy(path + strlen(path) - 4, ".txt");
+        fd = creat(path, 0666);
+        if (fd >= 0)
+        {
+            fdprintf(fd, "frames %lu full %lu partial %lu promoted %lu\n"
+                         "copy_us avg %lu max %lu\n"
+                         "present_us avg %lu max %lu\n"
+                         "px_per_frame %llu doublebuf %d vsync %d\n",
+                     st.frames, st.full_frames, st.partial_frames,
+                     st.promoted_frames,
+                     st.copy_us_total / n, st.copy_us_max,
+                     st.present_us_total / n, st.present_us_max,
+                     st.px_copied / n, st.doublebuf, st.vsync);
+            close(fd);
+        }
+        lcd_reset_present_stats();
+    }
+#endif
 }
 
 #endif /* LCD_DEPTH == 16 */
