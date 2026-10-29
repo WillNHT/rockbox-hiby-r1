@@ -75,7 +75,63 @@ fb_data lcd_layers_pixel(int x, int y, fb_data base);
 /* Debug: true composes in the copy to the panel, false the old way. */
 extern bool lcd_layers_in_copy;
 
-/* Coverage of a layer pixel, or NULL if px is not in a layer. */
+/* Surfaces: retained layers the size of a rectangle, for UI that sits over
+ * other UI - a skin viewport declared after one it overlaps.
+ *
+ * A viewport whose buffer is a surface's fb draws into the surface and
+ * never into the framebuffer, so nothing drawn underneath it later can
+ * paint over it, and its own clears cannot wipe what is underneath. The
+ * surfaces are blended in the copy to the panel, in ascending z, under
+ * the layers above. A surface pixel equal to LCD_LAYER_KEY is
+ * transparent; where it is, the surface's veils - its background - are
+ * laid over what is beneath, in the order they were added. A veil is a
+ * vertical two-stop gradient at an opacity, or, with `src` set, that
+ * full-screen image copied straight through.
+ *
+ * Every surface pixel also has a coverage, as a layer pixel does. */
+#define LCD_SURFACE_VEILS 8
+
+struct lcd_veil
+{
+    short x, y, w, h;           /* on the panel */
+    fb_data top, bottom;
+    unsigned char alpha;        /* 0..255 */
+    const fb_data *src;
+};
+
+struct lcd_surface
+{
+    struct frame_buffer_t fb;   /* point a viewport's buffer here */
+    const void *owner;          /* NULL while free */
+    short x, y, w, h;           /* on the panel */
+    short row;                  /* where its rows are in the arena */
+    short z;
+    short tag;                  /* the owner's group, for put_tag() */
+    bool fresh;                 /* nothing has been drawn into it yet */
+    unsigned char nveils;
+    struct lcd_veil veil[LCD_SURFACE_VEILS];
+};
+
+/* The owner's surface, made transparent and fresh if it had to be
+ * created. NULL when there is no room: draw the old way then. */
+struct lcd_surface *lcd_surface_get(const void *owner, int tag, int x, int y,
+                                    int w, int h, int z);
+struct lcd_surface *lcd_surface_find(const void *owner);
+struct lcd_surface *lcd_surface_from_fb(const struct frame_buffer_t *fb);
+void lcd_surface_put(struct lcd_surface *s);
+void lcd_surface_put_tag(int tag);
+void lcd_surface_put_all(void);
+/* Back to transparent, veils and all. */
+void lcd_surface_clear(struct lcd_surface *s);
+void lcd_surface_veil(struct lcd_surface *s, int x, int y, int w, int h,
+                      fb_data top, fb_data bottom, unsigned alpha,
+                      const fb_data *src);
+/* Compose the surfaces into the framebuffer for good and drop them, for
+ * something that draws over the screen without knowing they are there.
+ * False if there were none. */
+bool lcd_surface_flatten(void);
+
+/* Coverage of a layer or surface pixel, or NULL if px is in neither. */
 unsigned char *lcd_surface_coverage(const fb_data *px);
 
 /* The target's own update functions, renamed by the driver. */

@@ -30,12 +30,16 @@
  *   - %dr's seventh parameter blends a rectangle over what the clear just
  *     restored, so a sheen is a highlight rather than a painted bar.
  *
- * None of this is compositing: there is still exactly one layer beneath
- * the framebuffer, and the reason a translucent viewport does not smear
- * is that it *does* clear every frame - it just clears to the layer
- * instead of to a colour. Anything that has to be transparent over
- * content which is not in the backdrop buffer cannot be done this way and
- * belongs on canvas_glue.c's overlay, which carries its own backing store.
+ * That alone is not compositing: with one layer beneath the framebuffer,
+ * a viewport over another viewport cleared to the backdrop and wiped it,
+ * and the one beneath painted straight through it whenever it redrew a
+ * line. So on the WPS and the FM screen a viewport declared after one it
+ * overlaps is *lifted*: it draws into a surface of its own
+ * (lcd-layers.c), its clears make the surface transparent rather than
+ * touch the framebuffer, and its background - the %Vt veil, or the
+ * backdrop for a viewport without one - is laid over whatever is beneath
+ * when the panel is updated. Declaration order is z order, as it always
+ * was for a full redraw, and now for every other redraw too.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -53,7 +57,11 @@
 #include "scroll_engine.h"
 #include "screen_access.h"
 #include "skin_layer.h"
+#include "skin_engine.h"
 #include "wps_internals.h"
+#ifdef HAVE_LCD_LAYERS
+#include "lcd-layers.h"
+#endif
 
 /* Blending needs real colour channels and a framebuffer laid out in them,
  * and blend565() works on RGB565 pixels only.
@@ -107,6 +115,231 @@ static bool vp_plane(struct screen *display, struct viewport *vp,
 
 #endif /* SKIN_LAYER_CAN_BLEND */
 
+#if defined(HAVE_LCD_LAYERS) && !defined(__PCTOOL__)
+
+/* The backdrop the pass would have cleared to, taken before a lifted
+ * viewport turns it off to draw. */
+static fb_data *lift_backdrop;
+/* A skin's surfaces were baked into the framebuffer; a viewport lifted
+ * again now would show its own old pixels through its glass. */
+static bool flattened[SKINNABLE_SCREENS_COUNT];
+
+/* Which skin this is, as a surface tag, or -1 for one that does not lift:
+ * the status bar, the WPS and the FM screen do, each dropping its own
+ * surfaces when it goes. */
+static int skin_of(struct gui_wps *gwps)
+{
+    if (gwps->display->screen_type != SCREEN_MAIN)
+        return -1;
+    if (gwps == skin_get_gwps(CUSTOM_STATUSBAR, SCREEN_MAIN))
+        return CUSTOM_STATUSBAR;
+    if (gwps == skin_get_gwps(WPS, SCREEN_MAIN))
+        return WPS;
+#if CONFIG_TUNER
+    if (gwps == skin_get_gwps(FM_SCREEN, SCREEN_MAIN))
+        return FM_SCREEN;
+#endif
+    return -1;
+}
+
+/* Puts something on the panel, as opposed to into the backdrop buffer or
+ * nowhere: the default viewport does not draw once there are others, and
+ * the one that builds %Cb draws into the backdrop. */
+static bool draws(char *buf, const struct skin_viewport *svp,
+                  const struct skin_element *el)
+{
+    return !(svp->hidden_flags & VP_NEVER_VISIBLE) &&
+           !svp->output_to_backdrop_buffer &&
+           !svp->builds_backdrop &&
+           !(svp->label == VP_DEFAULT_LABEL &&
+             SKINOFFSETTOPTR(buf, el->next));
+}
+
+static bool overlap(const struct viewport *a, const struct viewport *b)
+{
+    return a->x < b->x + b->width && b->x < a->x + a->width &&
+           a->y < b->y + b->height && b->y < a->y + a->height;
+}
+
+void skin_layer_begin(struct gui_wps *gwps, bool full)
+{
+    struct wps_data *data = gwps->data;
+    struct screen *display = gwps->display;
+    char *buf = get_skin_buffer(data);
+    struct skin_element *el, *lo;
+    struct skin_element *tree = SKINOFFSETTOPTR(buf, data->tree);
+    struct skin_viewport *base = tree ? SKINOFFSETTOPTR(buf, tree->data)
+                                      : NULL;
+    int skin = skin_of(gwps);
+
+    /* Lifting depends on where viewports are, which only a full pass can
+     * change - and a skin like Snappy Animated has a hundred and fifty of
+     * them to compare, pair by pair. */
+    if (skin < 0 || !full)
+        return;
+
+    /* Everything renders again, so every surface is taken again, in
+     * order, and none is left behind by a viewport that has gone. */
+    lcd_surface_put_tag(skin);
+    flattened[skin] = false;
+
+    /* Hidden viewports count: lifting must not come and go with %Vd, or
+     * a viewport would change surfaces every time one under it did. The
+     * info viewport is where the lists draw, so it stays on the panel. */
+    for (el = tree; el;
+         el = SKINOFFSETTOPTR(buf, el->next))
+    {
+        struct skin_viewport *svp = SKINOFFSETTOPTR(buf, el->data);
+        if (!svp)
+            continue;
+        svp->lifted = false;
+        if (!draws(buf, svp, el) || svp->is_infovp)
+            continue;
+        for (lo = tree; lo != el;
+             lo = SKINOFFSETTOPTR(buf, lo->next))
+        {
+            struct skin_viewport *lsvp = SKINOFFSETTOPTR(buf, lo->data);
+            if (lsvp && draws(buf, lsvp, lo) && overlap(&lsvp->vp, &svp->vp))
+            {
+                svp->lifted = true;
+                break;
+            }
+        }
+
+        /* A lifted viewport never clears the framebuffer, so on a full
+         * pass the ground beneath it is cleared here, before anything
+         * beneath it draws. */
+        if (svp->lifted)
+        {
+            struct viewport ground = svp->vp;
+            ground.buffer = NULL;
+            ground.bg_pattern = base ? base->vp.bg_pattern
+                                      : ground.bg_pattern;
+            skin_backdrop_show(data->backdrop_id);
+            display->set_viewport(&ground);
+            display->clear_viewport();
+            display->set_viewport(NULL);
+        }
+    }
+}
+
+bool skin_layer_enter(struct gui_wps *gwps, struct skin_viewport *svp,
+                      int z)
+{
+    struct viewport *vp = &svp->vp;
+    struct lcd_surface *s = NULL;
+    int skin;
+
+    if (!svp->lifted)
+        return false;
+    skin = skin_of(gwps);
+    /* The status bar is drawn over the screen it is on. */
+    if (skin >= 0 && !flattened[skin])
+        s = lcd_surface_get(svp, skin, vp->x, vp->y, vp->width, vp->height,
+                            (skin == CUSTOM_STATUSBAR ? 2000 : 1000) + z);
+    if (!s)
+    {
+        /* No room: this one draws the old way until the next full pass. */
+        svp->lifted = false;
+        return false;
+    }
+    vp->buffer = &s->fb;
+    /* The lcd's backdrop is addressed relative to the framebuffer, so it
+     * cannot be drawn from into a surface, and every background fill has
+     * to leave the key behind: the background is the veil. */
+    lift_backdrop = lcd_get_backdrop();
+    gwps->display->backdrop_show(NULL);
+    svp->layer_bg = vp->bg_pattern;
+    vp->bg_pattern = LCD_LAYER_KEY;
+    return s->fresh;
+}
+
+void skin_layer_exit(struct skin_viewport *svp)
+{
+    struct lcd_surface *s;
+
+    if (!svp->lifted)
+        return;
+    svp->vp.bg_pattern = svp->layer_bg;
+    s = lcd_surface_find(svp);
+    if (s)
+    {
+        s->fresh = false;
+        /* skin_render() resets the last viewport's buffer on its way out,
+         * and the scroll engine draws through it. */
+        svp->vp.buffer = &s->fb;
+    }
+}
+
+void skin_layer_hide(struct screen *display, struct skin_viewport *svp)
+{
+    struct lcd_surface *s = svp->lifted ? lcd_surface_find(svp) : NULL;
+
+    if (!s)
+    {
+        skin_layer_clear_viewport(display, svp);
+        return;
+    }
+    lcd_scroll_stop_viewport(&svp->vp);
+    lcd_surface_put(s);
+}
+
+void skin_layer_leave(int skin)
+{
+    lcd_surface_put_tag(skin);
+}
+
+void skin_layer_flatten(void)
+{
+    int i;
+    if (!lcd_surface_flatten())
+        return;
+    for (i = 0; i < SKINNABLE_SCREENS_COUNT; i++)
+        flattened[i] = true;
+}
+
+unsigned skin_layer_bg(const struct skin_viewport *svp)
+{
+    return (svp->lifted && svp->vp.bg_pattern == LCD_LAYER_KEY)
+           ? svp->layer_bg : svp->vp.bg_pattern;
+}
+
+bool skin_layer_set_bg(struct skin_viewport *svp, unsigned colour)
+{
+    if (!svp->lifted || svp->vp.bg_pattern != LCD_LAYER_KEY)
+        return false;
+    svp->layer_bg = colour;
+    return true;
+}
+
+/* A lifted viewport's clear: the surface goes transparent and gets its
+ * background back as a veil, so whatever is beneath shows through it -
+ * live, not as it was when the viewport cleared. */
+static bool clear_lifted(struct skin_viewport *svp, int veil)
+{
+    struct viewport *vp = &svp->vp;
+    struct lcd_surface *s = svp->lifted ? lcd_surface_from_fb(vp->buffer)
+                                        : NULL;
+    if (!s)
+        return false;
+
+    lcd_surface_clear(s);
+    if (veil >= 0)
+        lcd_surface_veil(s, s->x, s->y, s->w, s->h, svp->layer_bg,
+                         svp->layer_bg, (unsigned)veil * 255 / 100, NULL);
+    else if (lift_backdrop)
+        /* No %Vt is the old opaque clear: the backdrop, or the colour. */
+        lcd_surface_veil(s, s->x, s->y, s->w, s->h, 0, 0, 0, lift_backdrop);
+    else
+        lcd_surface_veil(s, s->x, s->y, s->w, s->h, svp->layer_bg,
+                         svp->layer_bg, 255, NULL);
+
+    lcd_scroll_stop_viewport(vp);
+    vp->flags &= ~(VP_FLAG_VP_SET_CLEAN);
+    return true;
+}
+#endif /* HAVE_LCD_LAYERS && !__PCTOOL__ */
+
 void skin_layer_clear_viewport(struct screen *display,
                                struct skin_viewport *svp)
 {
@@ -114,6 +347,11 @@ void skin_layer_clear_viewport(struct screen *display,
     int veil = svp->clear_veil;
 #else
     int veil = -1;
+#endif
+
+#if defined(HAVE_LCD_LAYERS) && !defined(__PCTOOL__)
+    if (clear_lifted(svp, veil))
+        return;
 #endif
 
     /* No %Vt on this viewport: byte for byte the call this replaced. */
@@ -200,6 +438,20 @@ bool skin_layer_fillrect(struct screen *display, struct viewport *vp,
     if (y + h > vp->height) h = vp->height - y;
     if (w <= 0 || h <= 0)
         return true;
+#ifdef HAVE_LCD_LAYERS
+    {
+        /* In a surface there is nothing to blend with until the panel is
+         * updated: the rectangle becomes one of its veils. */
+        struct lcd_surface *s = lcd_surface_from_fb(vp->buffer);
+        if (s)
+        {
+            lcd_surface_veil(s, vp->x + x, vp->y + y, w, h,
+                             (fb_data)start_colour, (fb_data)end_colour,
+                             a, NULL);
+            return true;
+        }
+    }
+#endif
     if (a == 0)
         return true;
 

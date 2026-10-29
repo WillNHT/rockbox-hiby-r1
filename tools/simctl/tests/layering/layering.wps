@@ -1,0 +1,39 @@
+# Issue #42: viewports over other viewports. Nothing here has a backdrop.
+%Fl(2,31-GeistMono-SemiBold.fnt)
+#
+# The blue box is underneath everything and redraws on its own every
+# second: the time, and a progress bar across the middle of it.
+%V(40,100,400,300,-)%Vf(FFFFFF)%Vb(204080)
+LOWER %pc / %pt
+%pb(0,150,400,40)
+#
+# Glass: %Vt(0). The box underneath should show through round the text.
+%V(60,140,200,120,-)%Vf(FFFF00)%Vb(000000)
+%Vt(0)
+GLASS
+#
+# A scrim: %Vt(50). The box underneath, half-darkened.
+%V(260,140,160,120,-)%Vf(FFFFFF)%Vb(000000)
+%Vt(50)
+SCRIM
+#
+# Opaque, over the progress bar. The bar must not paint through it.
+%V(180,230,80,80,-)%Vf(000000)%Vb(FF8000)
+OPAQUE
+#
+# A green box, and glass over it whose line scrolls.
+%V(40,440,400,120,-)%Vf(FFFFFF)%Vb(206020)
+GREEN
+%pc
+#
+%V(40,480,400,40,-)%Vf(FFFF00)%Vb(000000)
+%Vt(0)
+%sThis line scrolls over the green box and must not wipe it as it goes
+#
+# White antialiased text on glass over a light box: its edges must blend
+# with the box, not go dark.
+%V(40,600,400,100,-)%Vf(000000)%Vb(E0C040)
+LIGHT
+%V(40,625,400,60,2)%Vf(FFFFFF)%Vb(000000)
+%Vt(0)
+%acEDGES ARE CLEAN

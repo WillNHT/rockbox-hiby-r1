@@ -400,6 +400,12 @@ static int parse_art_fx(struct skin_element *element,
     if (token->type == SKIN_TOKEN_ALBUMART_BACKDROP)
         skin_art_fx_reserve();
 #endif
+#ifdef HAVE_LCD_LAYERS
+    /* Nothing it holds reaches the panel but through the backdrop, so a
+     * viewport over it is over the backdrop, not over it (skin_layer.c). */
+    if (token->type == SKIN_TOKEN_ALBUMART_BACKDROP && curr_vp)
+        curr_vp->builds_backdrop = true;
+#endif
 
     token->value.data = PTRTOSKINOFFSET(skin_buffer, fx);
     return 0;
@@ -2509,6 +2515,10 @@ static int convert_viewport(struct wps_data *data, struct skin_element* element)
 #if (LCD_DEPTH > 1) || (defined(HAVE_REMOTE_LCD) && (LCD_REMOTE_DEPTH > 1))
     skin_vp->output_to_backdrop_buffer = false;
     skin_vp->clear_veil = -1; /* no %Vt: the old opaque clear */
+#endif
+#ifdef HAVE_LCD_LAYERS
+    skin_vp->lifted = false;
+    skin_vp->builds_backdrop = false;
 #endif
 #ifdef HAVE_LCD_COLOR
     skin_vp->start_gradient.start = global_settings.lss_color;
