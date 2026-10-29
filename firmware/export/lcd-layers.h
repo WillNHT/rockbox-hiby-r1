@@ -66,6 +66,18 @@ bool lcd_layer_has_content(enum lcd_layer layer);
  * a screen dump. lcd_update*() do this themselves. */
 void lcd_layers_compose(bool on);
 
+/* Called by the driver with each rectangle it copies to the panel: blends
+ * the layers onto dst, which holds the framebuffer's pixels there. */
+void lcd_layers_blend(fb_data *dst, int dst_stride,
+                      int x, int y, int w, int h);
+/* The same for one pixel, for a driver that fetches pixel by pixel. */
+fb_data lcd_layers_pixel(int x, int y, fb_data base);
+/* Debug: true composes in the copy to the panel, false the old way. */
+extern bool lcd_layers_in_copy;
+
+/* Coverage of a layer pixel, or NULL if px is not in a layer. */
+unsigned char *lcd_surface_coverage(const fb_data *px);
+
 /* The target's own update functions, renamed by the driver. */
 void lcd_update_base(void);
 void lcd_update_rect_base(int x, int y, int width, int height);

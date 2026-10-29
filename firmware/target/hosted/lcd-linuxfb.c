@@ -254,6 +254,10 @@ static void copy_to_plane(int plane, const fb_data *src,
         lcd_copy_buffer_rect(dst, src, width, height);
     }
 
+#ifdef HAVE_LCD_LAYERS
+    lcd_layers_blend(dst, LCD_WIDTH, x, y, width, height);
+#endif
+
     STAT(stats.px_copied += (unsigned long long)width * height);
 }
 

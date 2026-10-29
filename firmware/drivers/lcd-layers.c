@@ -63,8 +63,18 @@ struct layer
 };
 
 static fb_data overlay_px[LCD_HEIGHT * LCD_WIDTH];
+/* How much of each non-key pixel is ink, 255 = all of it. A glyph edge
+ * keeps its colour and records its coverage here (lcd-16bit-common.c), so
+ * it is blended with what is really beneath it when the panel is updated
+ * instead of with the key's near-black when it is drawn. */
+static unsigned char overlay_cov[LCD_HEIGHT * LCD_WIDTH];
 /* What the composed pixels replaced, at the same offsets. */
 static fb_data saved_px[LCD_HEIGHT * LCD_WIDTH];
+
+/* Debug toggle: blend the layers on the way into the panel plane (true),
+ * or lay them into the framebuffer around each update as before (false).
+ * shortcut: both paths for one device flash, remove the old one after. */
+bool lcd_layers_in_copy = true;
 
 static struct layer layers[LCD_LAYER_COUNT] =
 {
@@ -90,6 +100,7 @@ static struct layer *get(enum lcd_layer l)
         size_t i;
         for (i = 0; i < ARRAYLEN(overlay_px); i++)
             ly->px[i] = LCD_LAYER_KEY;
+        memset(overlay_cov, 255, sizeof(overlay_cov));
         /* Same geometry as the framebuffer, and the same address function:
          * it resolves against the current viewport's buffer, which is this
          * one while the owner draws. */
@@ -164,9 +175,11 @@ void lcd_layer_clear(enum lcd_layer layer,
         struct lrect *r = &ly->r[i];
         for (row = 0; row < r->h; row++)
         {
-            fb_data *p = ly->px + (size_t)(r->y + row) * LAYER_STRIDE + r->x;
+            size_t off = (size_t)(r->y + row) * LAYER_STRIDE + r->x;
+            fb_data *p = ly->px + off;
             for (col = 0; col < r->w; col++)
                 p[col] = LCD_LAYER_KEY;
+            memset(overlay_cov + off, 255, r->w);
         }
         if (cleared)
             cleared(r->x, r->y, r->w, r->h);
@@ -184,12 +197,83 @@ static bool any_content(void)
     return false;
 }
 
+unsigned char *lcd_surface_coverage(const fb_data *px)
+{
+    if (px < overlay_px || px >= overlay_px + ARRAYLEN(overlay_px))
+        return NULL;
+    return overlay_cov + (px - overlay_px);
+}
+
+/* src over dst with a of 255 of src, RGB565, one multiply per channel
+ * pair: red and blue in one word, green in another. */
+static inline fb_data blend_px(fb_data dst, fb_data src, unsigned a)
+{
+    unsigned w = (a + (a >> 7)) >> 3;           /* 0..32 */
+    uint32_t d = (dst | ((uint32_t)dst << 16)) & 0x07e0f81f;
+    uint32_t s = (src | ((uint32_t)src << 16)) & 0x07e0f81f;
+    d = ((s * w + d * (32 - w)) >> 5) & 0x07e0f81f;
+    return (fb_data)(d | (d >> 16));
+}
+
+static inline void paint_row(fb_data *dst, const fb_data *lp,
+                             const unsigned char *cov, int w)
+{
+    int c;
+    for (c = 0; c < w; c++)
+    {
+        if (lp[c] == LCD_LAYER_KEY)
+            continue;
+        dst[c] = cov[c] == 255 ? lp[c] : blend_px(dst[c], lp[c], cov[c]);
+    }
+}
+
+/* Blend every layer's content inside (x, y, w, h) onto dst, which holds
+ * the framebuffer's pixels for that rectangle at dst_stride. Called by the
+ * driver as it copies a rectangle into the panel plane, so whatever it
+ * copies - the update itself or a replay of what the other plane missed -
+ * carries the layers, and the framebuffer is never touched. */
+void lcd_layers_blend(fb_data *dst, int dst_stride,
+                      int x, int y, int w, int h)
+{
+    int l, i, row;
+
+    if (!lcd_layers_in_copy)
+        return;
+
+    for (l = 0; l < LCD_LAYER_COUNT; l++)
+    {
+        const struct layer *ly = &layers[l];
+        for (i = 0; i < ly->n; i++)
+        {
+            const struct lrect *r = &ly->r[i];
+            int x1 = MAX(x, r->x), y1 = MAX(y, r->y);
+            int x2 = MIN(x + w, r->x + r->w), y2 = MIN(y + h, r->y + r->h);
+            if (x2 <= x1 || y2 <= y1)
+                continue;
+            for (row = y1; row < y2; row++)
+            {
+                size_t off = (size_t)row * LAYER_STRIDE + x1;
+                paint_row(dst + (size_t)(row - y) * dst_stride + (x1 - x),
+                          ly->px + off, overlay_cov + off, x2 - x1);
+            }
+        }
+    }
+}
+
+/* The composed colour of one pixel, for a driver that fetches pixels one
+ * at a time (the simulator). */
+fb_data lcd_layers_pixel(int x, int y, fb_data base)
+{
+    lcd_layers_blend(&base, 1, x, y, 1, 1);
+    return base;
+}
+
 enum pass { SAVE, PAINT, RESTORE };
 
 static void run_pass(enum pass pass)
 {
     fb_data *base = base_px();
-    int l, i, row, c;
+    int l, i, row;
 
     for (l = 0; l < LCD_LAYER_COUNT; l++)
     {
@@ -211,14 +295,9 @@ static void run_pass(enum pass pass)
                            r->w * sizeof(fb_data));
                     break;
                 case PAINT:
-                {
-                    const fb_data *lp = ly->px + off;
-                    fb_data *bp = base + off;
-                    for (c = 0; c < r->w; c++)
-                        if (lp[c] != LCD_LAYER_KEY)
-                            bp[c] = lp[c];
+                    paint_row(base + off, ly->px + off, overlay_cov + off,
+                              r->w);
                     break;
-                }
                 }
             }
         }
@@ -255,7 +334,7 @@ void lcd_update(void)
     if (lcd_transition_hold())
         return;
 #endif
-    if (composed || !any_content())
+    if (composed || lcd_layers_in_copy || !any_content())
     {
         lcd_update_base();
         return;
@@ -271,7 +350,7 @@ void lcd_update_rect(int x, int y, int width, int height)
     if (lcd_transition_hold())
         return;
 #endif
-    if (composed || !any_content())
+    if (composed || lcd_layers_in_copy || !any_content())
     {
         lcd_update_rect_base(x, y, width, height);
         return;

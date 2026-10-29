@@ -119,6 +119,13 @@ static unsigned long get_lcd_pixel(int x, int y)
 #include "lcd-layers.h"
 #define lcd_update      lcd_update_base
 #define lcd_update_rect lcd_update_rect_base
+
+/* The layers blended in on the way to the window, as on the device. */
+static unsigned long get_composed_pixel(int x, int y)
+{
+    return lcd_layers_pixel(x, y, get_lcd_pixel(x, y));
+}
+#define get_lcd_pixel get_composed_pixel
 #endif
 
 void lcd_update(void)
