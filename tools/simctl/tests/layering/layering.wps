@@ -1,5 +1,6 @@
 # Issue #42: viewports over other viewports. Nothing here has a backdrop.
 %Fl(2,31-GeistMono-SemiBold.fnt)
+%Vd(half)%Vo(half,50)%Vx(half,20,10)
 #
 # The blue box is underneath everything and redraws on its own every
 # second: the time, and a progress bar across the middle of it.
@@ -37,3 +38,8 @@ LIGHT
 %V(40,625,400,60,2)%Vf(FFFFFF)%Vb(000000)
 %Vt(0)
 %acEDGES ARE CLEAN
+#
+# %Vo and %Vx: half opaque, and moved 20 right and 10 down from where it
+# is declared, so at (300,300). The blue box and its bar show through it.
+%Vl(half,280,290,120,60,-)%Vf(FFFFFF)%Vb(C02020)
+HALF

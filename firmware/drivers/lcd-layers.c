@@ -290,6 +290,8 @@ struct lcd_surface *lcd_surface_get(const void *owner, int tag, int x, int y,
     s->row = row;
     s->z = z;
     s->tag = tag;
+    s->dx = s->dy = 0;
+    s->opacity = 255;
     s->fresh = true;
     s->fb = lcd_framebuffer_default;
     s->fb.fb_ptr = arena_px + (ptrdiff_t)(row - y) * LAYER_STRIDE;
@@ -405,49 +407,69 @@ static inline void paint_row(fb_data *dst, const fb_data *lp,
     }
 }
 
-/* Painter's order, inside (x, y, w, h) of dst as for lcd_layers_blend():
+/* Painter's order, for one row of the panel, columns x0..x1, onto dp:
  * the veils - the surface's background - over what is beneath, wherever
  * any of it shows through, then the surface's own pixels over that, by
  * their coverage. */
-static void paint_surface(const struct lcd_surface *s, fb_data *dst,
-                          int dst_stride, int x, int y, int w, int h)
+static void paint_surface_row(const struct lcd_surface *s, fb_data *dp,
+                              int row, int x0, int x1)
 {
-    int i, row, c;
-    int sx = MAX(x, s->x), sy = MAX(y, s->y);
-    int sx2 = MIN(x + w, s->x + s->w), sy2 = MIN(y + h, s->y + s->h);
-
-    if (sx2 <= sx || sy2 <= sy)
-        return;
+    const fb_data *sp = arena_row(s, row - s->y - s->dy) +
+                        (x0 - s->x - s->dx);
+    const unsigned char *cp = arena_cov + (sp - arena_px);
+    int i, c;
 
     for (i = 0; i < s->nveils; i++)
     {
         const struct lcd_veil *v = &s->veil[i];
-        int x0 = MAX(v->x, sx), y0 = MAX(v->y, sy);
-        int x1 = MIN(v->x + v->w, sx2), y1 = MIN(v->y + v->h, sy2);
+        int vy = v->y + s->dy;
+        int c0 = MAX(v->x + s->dx, x0) - x0;
+        int c1 = MIN(v->x + s->dx + v->w, x1) - x0;
+        const fb_data *src;
+        fb_data colour;
 
-        for (row = y0; row < y1; row++)
+        if (row < vy || row >= vy + v->h || c1 <= c0)
+            continue;
+        src = v->src ? v->src + (size_t)row * LAYER_STRIDE + x0 : NULL;
+        colour = blend_px(v->top, v->bottom, v->h > 1 ?
+                          (row - vy) * 255 / (v->h - 1) : 0);
+        for (c = c0; c < c1; c++)
         {
-            const fb_data *sp = arena_row(s, row - s->y) + (x0 - s->x);
-            const unsigned char *cp = arena_cov + (sp - arena_px);
-            const fb_data *src = v->src ?
-                v->src + (size_t)row * LAYER_STRIDE + x0 : NULL;
-            fb_data *dp = dst + (size_t)(row - y) * dst_stride + (x0 - x);
-            fb_data colour = blend_px(v->top, v->bottom, v->h > 1 ?
-                                      (row - v->y) * 255 / (v->h - 1) : 0);
-            for (c = 0; c < x1 - x0; c++)
-            {
-                if (sp[c] != LCD_LAYER_KEY && cp[c] == 255)
-                    continue;
-                dp[c] = src ? src[c] : blend_px(dp[c], colour, v->alpha);
-            }
+            if (sp[c] != LCD_LAYER_KEY && cp[c] == 255)
+                continue;
+            dp[c] = src ? src[c] : blend_px(dp[c], colour, v->alpha);
         }
     }
+    paint_row(dp, sp, cp, x1 - x0);
+}
+
+/* Inside (x, y, w, h) of dst as for lcd_layers_blend(). A surface that is
+ * not opaque is painted over a copy of the row, and the copy blended
+ * back by its opacity. */
+static void paint_surface(const struct lcd_surface *s, fb_data *dst,
+                          int dst_stride, int x, int y, int w, int h)
+{
+    static fb_data row_px[LCD_WIDTH];
+    int ox = s->x + s->dx, oy = s->y + s->dy;
+    int sx = MAX(x, ox), sy = MAX(y, oy);
+    int sx2 = MIN(x + w, ox + s->w), sy2 = MIN(y + h, oy + s->h);
+    int row, c;
+
+    if (sx2 <= sx || sy2 <= sy || !s->opacity)
+        return;
 
     for (row = sy; row < sy2; row++)
     {
-        const fb_data *sp = arena_row(s, row - s->y) + (sx - s->x);
-        paint_row(dst + (size_t)(row - y) * dst_stride + (sx - x), sp,
-                  arena_cov + (sp - arena_px), sx2 - sx);
+        fb_data *dp = dst + (size_t)(row - y) * dst_stride + (sx - x);
+        if (s->opacity == 255)
+        {
+            paint_surface_row(s, dp, row, sx, sx2);
+            continue;
+        }
+        memcpy(row_px, dp, (sx2 - sx) * sizeof(fb_data));
+        paint_surface_row(s, row_px, row, sx, sx2);
+        for (c = 0; c < sx2 - sx; c++)
+            dp[c] = blend_px(dp[c], row_px[c], s->opacity);
     }
 }
 
@@ -525,7 +547,11 @@ static void save_pass(bool save)
     for (i = 0; i < nsurfaces; i++)
     {
         const struct lcd_surface *s = zorder[i];
-        struct lrect r = { s->x, s->y, s->w, s->h };
+        int x = s->x + s->dx, y = s->y + s->dy, w = s->w, h = s->h;
+        struct lrect r;
+        if (!clip(&x, &y, &w, &h))
+            continue;
+        r.x = x; r.y = y; r.w = w; r.h = h;
         copy_rect(save, &r);
     }
     for (l = 0; l < LCD_LAYER_COUNT; l++)

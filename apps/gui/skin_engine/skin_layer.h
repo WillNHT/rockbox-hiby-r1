@@ -73,6 +73,13 @@ unsigned skin_layer_bg(const struct skin_viewport *svp);
 /* %Vb while a lifted viewport renders: the colour is its veil's, and
  * bg_pattern stays the key. False if the viewport is not drawing lifted. */
 bool skin_layer_set_bg(struct skin_viewport *svp, unsigned colour);
+/* %Vo (opacity true, a in percent) or %Vx (a, b the offset): where the
+ * layer is to be, eased there if the viewport has a %Va for it. */
+void skin_layer_compose_to(struct skin_viewport *svp, bool opacity,
+                           int a, int b);
+/* Bring every layer of the skin to where it is now on the way there,
+ * updating only the rectangles it left and entered. */
+void skin_layer_compose(struct gui_wps *gwps);
 #else
 static inline void skin_layer_begin(struct gui_wps *g, bool f)
 { (void)g; (void)f; }
@@ -86,6 +93,8 @@ static inline void skin_layer_leave(int skin) { (void)skin; }
 static inline void skin_layer_flatten(void) { }
 #define skin_layer_bg(svp) ((svp)->vp.bg_pattern)
 #define skin_layer_set_bg(svp, colour) false
+#define skin_layer_compose_to(svp, o, a, b) ((void)(svp))
+#define skin_layer_compose(gwps) ((void)(gwps))
 #endif
 
 #endif /* _SKIN_LAYER_H_ */

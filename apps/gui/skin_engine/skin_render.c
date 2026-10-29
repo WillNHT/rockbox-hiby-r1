@@ -189,6 +189,19 @@ static bool do_non_text_tags(struct gui_wps *gwps, struct skin_draw_info *info,
             }
         }
         break;
+        case SKIN_TOKEN_VIEWPORT_OPACITY:
+        case SKIN_TOKEN_VIEWPORT_OFFSET:
+        {
+            struct viewport_compose *c =
+                    SKINOFFSETTOPTR(skin_buffer, token->value.data);
+            struct skin_viewport *svp = c ? skin_find_item(
+                    SKINOFFSETTOPTR(skin_buffer, c->label), SKIN_FIND_VP,
+                    gwps->data) : NULL;
+            if (svp)
+                skin_layer_compose_to(svp, token->type ==
+                        SKIN_TOKEN_VIEWPORT_OPACITY, c->a, c->b);
+        }
+        break;
         case SKIN_TOKEN_LIST_ITEM_CFG:
             skinlist_set_cfg(gwps->display->screen_type,
                                 SKINOFFSETTOPTR(skin_buffer, token->value.data));
@@ -1123,6 +1136,7 @@ void skin_render(struct gui_wps *gwps, unsigned refresh_mode)
 #endif
     if (skin_viewport)
         skin_layer_exit(skin_viewport);
+    skin_layer_compose(gwps);
 
     dirty[display->screen_type] = defer_rendering;
     if (((refresh_mode&SKIN_REFRESH_ALL) == SKIN_REFRESH_ALL))

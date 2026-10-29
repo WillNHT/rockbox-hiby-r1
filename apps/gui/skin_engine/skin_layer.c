@@ -53,6 +53,7 @@
 
 #include "config.h"
 #include <stdlib.h>
+#include "kernel.h"
 #include "lcd.h"
 #include "scroll_engine.h"
 #include "screen_access.h"
@@ -291,6 +292,90 @@ bool skin_layer_set_bg(struct skin_viewport *svp, unsigned colour)
         return false;
     svp->layer_bg = colour;
     return true;
+}
+
+static unsigned now_ms(void)
+{
+    return current_tick * (1000 / HZ);
+}
+
+static void ease_to(struct canvas_anim *a, int to, unsigned ms,
+                    unsigned ease, unsigned now)
+{
+    if (a->to == to)
+        return;
+    if (ms)
+        canvas_anim_start(a, canvas_anim_value(a, now), to, ms,
+                          (enum canvas_ease)ease, now);
+    else
+    {
+        canvas_anim_stop(a);
+        a->to = to;
+    }
+}
+
+void skin_layer_compose_to(struct skin_viewport *svp, bool opacity,
+                           int a, int b)
+{
+    unsigned now = now_ms();
+    if (opacity)
+        ease_to(&svp->fade, a * 255 / 100, svp->fade_ms, svp->fade_ease,
+                now);
+    else
+    {
+        ease_to(&svp->move_x, a, svp->move_ms, svp->move_ease, now);
+        ease_to(&svp->move_y, b, svp->move_ms, svp->move_ease, now);
+    }
+}
+
+static void update_clipped(int x, int y, int w, int h)
+{
+    int x2 = MIN(x + w, LCD_WIDTH), y2 = MIN(y + h, LCD_HEIGHT);
+    x = MAX(x, 0);
+    y = MAX(y, 0);
+    if (x2 > x && y2 > y)
+        lcd_update_rect(x, y, x2 - x, y2 - y);
+}
+
+void skin_layer_compose(struct gui_wps *gwps)
+{
+    struct wps_data *data = gwps->data;
+    char *buf = get_skin_buffer(data);
+    struct skin_element *el;
+    unsigned now = now_ms();
+    bool easing = false;
+
+    if (skin_of(gwps) < 0)
+        return;
+    for (el = SKINOFFSETTOPTR(buf, data->tree); el;
+         el = SKINOFFSETTOPTR(buf, el->next))
+    {
+        struct skin_viewport *svp = SKINOFFSETTOPTR(buf, el->data);
+        struct lcd_surface *s = svp && svp->lifted ? lcd_surface_find(svp)
+                                                   : NULL;
+        int o, dx, dy;
+
+        if (!s)
+            continue;
+        o = canvas_anim_value(&svp->fade, now);
+        dx = canvas_anim_value(&svp->move_x, now);
+        dy = canvas_anim_value(&svp->move_y, now);
+        easing |= !canvas_anim_done(&svp->fade, now) ||
+                  !canvas_anim_done(&svp->move_x, now) ||
+                  !canvas_anim_done(&svp->move_y, now);
+        if (o == s->opacity && dx == s->dx && dy == s->dy)
+            continue;
+        /* Moved or faded, not redrawn: only where it was and where it is
+         * now look different. */
+        update_clipped(s->x + s->dx, s->y + s->dy, s->w, s->h);
+        s->opacity = o;
+        s->dx = dx;
+        s->dy = dy;
+        update_clipped(s->x + dx, s->y + dy, s->w, s->h);
+    }
+    /* The frame rate %an gets, for as long as something is on its way. */
+    if (easing)
+        data->animation_enabled = true;
 }
 
 /* A lifted viewport's clear: the surface goes transparent and gets its

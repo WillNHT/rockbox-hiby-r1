@@ -107,6 +107,11 @@ struct lcd_surface
     short row;                  /* where its rows are in the arena */
     short z;
     short tag;                  /* the owner's group, for put_tag() */
+    /* How it is composed, without touching what is in it: moved by dx,
+     * dy from where it was made, its veils with it - a backdrop veil
+     * shows the backdrop where it is now - at opacity 0..255. */
+    short dx, dy;
+    unsigned char opacity;
     bool fresh;                 /* nothing has been drawn into it yet */
     unsigned char nveils;
     struct lcd_veil veil[LCD_SURFACE_VEILS];
