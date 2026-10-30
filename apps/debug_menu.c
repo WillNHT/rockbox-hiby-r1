@@ -3092,15 +3092,6 @@ static bool dbg_display_doublebuf(void)
     return false;
 }
 
-#ifdef HAVE_LCD_LAYERS
-static bool dbg_display_layers_in_copy(void)
-{
-    lcd_layers_in_copy = !lcd_layers_in_copy;
-    splashf(HZ * 2, "Layers composed %s", lcd_layers_in_copy ?
-            "in the panel copy (new)" : "in the framebuffer (old)");
-    return false;
-}
-#endif
 #endif /* HAVE_LCD_PRESENT_STATS */
 
 /****** The menu *********/
@@ -3161,9 +3152,6 @@ static const struct {
         { "Display present benchmark", dbg_display_bench },
         { "Reset display stats", dbg_display_reset },
         { "Toggle page flipping", dbg_display_doublebuf },
-#ifdef HAVE_LCD_LAYERS
-        { "Toggle layer compose path", dbg_display_layers_in_copy },
-#endif
 #ifdef HAVE_COMPOSITOR
         { "Canvas effects demo", dbg_canvas_demo },
 #endif

@@ -27,11 +27,10 @@
  *
  * So the overlay does not go into the framebuffer at all. It lives in a
  * layer of its own, and the only place the two meet is the copy to the
- * panel: lcd_update() and lcd_update_rect() lay the layers over the
- * framebuffer, let the target present it, and put the framebuffer's own
- * pixels straight back. The framebuffer never holds overlay pixels outside
- * that call, so a screen repainting underneath cannot eat the overlay and
- * dismissing the overlay is clearing its layer.
+ * panel: the driver hands each rectangle it copies to lcd_layers_blend().
+ * The framebuffer never holds overlay pixels, so a screen repainting
+ * underneath cannot eat the overlay and dismissing the overlay is clearing
+ * its layer.
  *
  * All layers are composed on every update while they have content, not only
  * inside the updated rectangle: a page-flipping driver replays regions the
@@ -70,11 +69,6 @@ static fb_data overlay_px[LCD_HEIGHT * LCD_WIDTH];
 static unsigned char overlay_cov[LCD_HEIGHT * LCD_WIDTH];
 /* What the composed pixels replaced, at the same offsets. */
 static fb_data saved_px[LCD_HEIGHT * LCD_WIDTH];
-
-/* Debug toggle: blend the layers on the way into the panel plane (true),
- * or lay them into the framebuffer around each update as before (false).
- * shortcut: both paths for one device flash, remove the old one after. */
-bool lcd_layers_in_copy = true;
 
 static struct layer layers[LCD_LAYER_COUNT] =
 {
@@ -516,7 +510,7 @@ void lcd_layers_blend(fb_data *dst, int dst_stride,
 {
     /* Composed, the framebuffer already holds them: a transition's frames
      * and a screen dump are the finished picture. */
-    if (lcd_layers_in_copy && !composed)
+    if (!composed)
         blend_all(dst, dst_stride, x, y, w, h);
 #if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
     else
@@ -621,14 +615,7 @@ void lcd_update(void)
     if (lcd_transition_hold())
         return;
 #endif
-    if (composed || lcd_layers_in_copy || !any_content())
-    {
-        lcd_update_base();
-        return;
-    }
-    lcd_layers_compose(true);
     lcd_update_base();
-    lcd_layers_compose(false);
 }
 
 void lcd_update_rect(int x, int y, int width, int height)
@@ -637,12 +624,5 @@ void lcd_update_rect(int x, int y, int width, int height)
     if (lcd_transition_hold())
         return;
 #endif
-    if (composed || lcd_layers_in_copy || !any_content())
-    {
-        lcd_update_rect_base(x, y, width, height);
-        return;
-    }
-    lcd_layers_compose(true);
     lcd_update_rect_base(x, y, width, height);
-    lcd_layers_compose(false);
 }

@@ -63,7 +63,7 @@ bool lcd_layer_has_content(enum lcd_layer layer);
 
 /* Put the layers into the framebuffer (true) or take them back out (false)
  * around something that reads the framebuffer as the picture on the panel:
- * a screen dump. lcd_update*() do this themselves. */
+ * a screen dump. */
 void lcd_layers_compose(bool on);
 
 /* Called by the driver with each rectangle it copies to the panel: blends
@@ -72,8 +72,6 @@ void lcd_layers_blend(fb_data *dst, int dst_stride,
                       int x, int y, int w, int h);
 /* The same for one pixel, for a driver that fetches pixel by pixel. */
 fb_data lcd_layers_pixel(int x, int y, fb_data base);
-/* Debug: true composes in the copy to the panel, false the old way. */
-extern bool lcd_layers_in_copy;
 
 /* Surfaces: retained layers the size of a rectangle, for UI that sits over
  * other UI - a skin viewport declared after one it overlaps.
