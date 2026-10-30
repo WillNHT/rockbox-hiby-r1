@@ -1,0 +1,302 @@
+<!--
+ ____ _  _ ____ ___  ___  _   _   _  _ ____
+ [__  |\ | |__| |__] |__]  \_/    |  |  __]
+ ___] | \| |  | |    |      |      \/  |___
+
+ Snappy V2 - Chris Soffke's Snappy (CC-BY-SA), relaid for a device whose
+ transport lives on the physical keys and whose panel belongs to the
+ stick.
+
+ * The prev / play-pause / next badges and their touch band are gone.
+   Under the stick those regions never fire, so they were decoration
+   holding 88 px of the middle of the screen.
+ * The progress bar and its seek region are gone for the same reason: a
+   seek you cannot touch is a picture of a seek. Elapsed / total and the
+   playlist position stay as text - information, not a control.
+ * The album art takes the freed space: the full width between the
+   theme's 30 px margins.
+ * The peak meter, codec, bit rate and sample rate move into one band
+   beneath it. The meter fills 70 px of that band.
+ * While the stick's volume dial is armed, the volume bar wears a
+   marching rim (%sd). The dial used to draw a ring around the thumb;
+   this says the same thing where the user is already looking.
+
+ Compiled from themes/src/SnappyV2.html by themes/wpsc.py; edit that, not
+ this. Coordinates are absolute for 480x800.
+
+ Based on Snappy v1.3 2026 by Chris Soffke, CC-BY-SA, itself a remix of
+ Simon Anden's SNARTY and the SPAZZ / SNAZZ / SNAZZY / Adwaitapod line.
+-->
+<skin statusbar="none">
+<style>
+@font-face { font-family: small; src: url(24-GeistMono-SemiBold.fnt) }
+@font-face { font-family: body;  src: url(31-GeistMono-SemiBold.fnt) }
+@font-face { font-family: title; src: url(44-GeistMono-SemiBold.fnt) }
+@font-face { font-family: big;   src: url(58-GeistMono-SemiBold.fnt) }
+
+/* Most of the screen runs between the theme's 30 px margins. */
+.row { left: 30px; right: 30px }
+.glass { background: transparent }
+
+#volbar   { left: 30px;  top: 26px; width: 138px; height: 18px }
+
+#aa, #noart { left: 30px; top: 150px; width: 420px; height: 420px }
+#noartlabel { left: 40px; top: 340px; width: 400px; height: 40px; font-family: small }
+
+#pm_short { left: 30px; width: 240px; top: 574px; height: 74px; font-family: small }
+#pm_long  { top: 574px; height: 74px; font-family: small }
+#rew, #ff { left: 30px; width: 240px; top: 592px; height: 46px; font-family: title }
+#codec    { left: 280px; right: 30px; top: 586px; height: 30px; font-family: small }
+#rate     { left: 280px; right: 30px; top: 616px; height: 30px; font-family: small }
+
+#artist   { top: 688px; height: 30px; font-family: small }
+#title    { top: 720px; height: 46px; font-family: title }
+#footer   { top: 768px; height: 30px; font-family: small }
+
+#rxfrom   { top: 170px; height: 30px; font-family: small; color: #D9E021 }
+#rxstate  { top: 206px; height: 30px; font-family: small }
+#rxtitle  { top: 300px; height: 70px; font-family: big }
+#rxartist { top: 380px; height: 40px; font-family: body }
+#rxalbum  { top: 426px; height: 30px; font-family: small }
+#rxtime   { top: 688px; height: 40px; font-family: body }
+#rxvol    { top: 768px; height: 30px; font-family: small }
+#rxs1     { top: 580px; height: 30px; font-family: small; color: #D9E021 }
+#rxs2     { top: 612px; height: 36px; font-family: body }
+
+#plname   { top: 112px; height: 34px; font-family: body }
+
+/* The volume dial, armed: a rim round the volume bar and a segment
+   marching clockwise round it, a frame every 60 ms. One segment for the
+   top and bottom, one for the sides, each moved to where it is. */
+#vdrim { left: 27px; top: 23px; width: 144px; height: 24px }
+#vdh   { left: 30px; top: 23px; width: 27px; height: 3px;
+         animation: dial-h 720ms steps(12) infinite }
+#vdv   { left: 168px; top: 26px; width: 3px; height: 18px;
+         animation: dial-v 720ms steps(12) infinite }
+@keyframes dial-h {
+  0%      { transform: translate(0, 0) }
+  8.333%  { transform: translate(27px, 0) }
+  16.667% { transform: translate(54px, 0) }
+  25%     { transform: translate(81px, 0) }
+  33.333% { transform: translate(108px, 0) }
+  41.667% { visibility: hidden }
+  50%     { visibility: visible; transform: translate(108px, 21px) }
+  58.333% { transform: translate(81px, 21px) }
+  66.667% { transform: translate(54px, 21px) }
+  75%     { transform: translate(27px, 21px) }
+  83.333% { transform: translate(0, 21px) }
+  91.667% { visibility: hidden }
+}
+@keyframes dial-v {
+  0%      { visibility: hidden }
+  41.667% { visibility: visible; transform: translate(0, 0) }
+  50%     { visibility: hidden }
+  91.667% { visibility: visible; transform: translate(-141px, 0) }
+}
+</style>
+<img id="B" src="batt_wps.bmp" x="2" y="0" frames="2">
+<img id="O" src="off_on.bmp" x="48" y="0" frames="2">
+<img id="bt" src="bt.bmp" x="0" y="0" frames="4">
+<img id="wired" src="wired.bmp" x="0" y="0">
+<img id="rx" src="rx.bmp" x="0" y="0" frames="2">
+<img id="vb" src="vb.bmp">
+<img id="vb_track" src="vb_track.bmp">
+<img id="bb" src="bb.bmp">
+<img id="vb_backdrop" src="vb_backdrop.bmp">
+<img id="vb_too_loud" src="vb_too_loud.bmp">
+<img id="bb_backdrop" src="bb_backdrop.bmp">
+
+<!--
+ The volume dial, armed
+ ======================
+-->
+<div id="vdrim" when="%sd = 1">
+%dr(0,0,-,2,D9E021,D9E021)
+%dr(0,22,-,2,D9E021,D9E021)
+%dr(0,0,2,-,D9E021,D9E021)
+%dr(142,0,2,-,D9E021,D9E021)
+</div>
+<div id="vdh" class="glass" when="%sd = 1">
+%dr(0,0,-,-,D9E021,F4F2EE)
+</div>
+<div id="vdv" class="glass" when="%sd = 1">
+%dr(0,0,-,-,D9E021,F4F2EE)
+</div>
+
+<!--
+ Header
+ ======
+ Clock
+ Set like the battery percentage on the other side of the row: an
+ inverted box of the same height on the same line. No icon: the time is
+ the whole widget, centred in a box that runs the full width of the
+ column, up to the shuffle label.
+
+ No id, so always drawn. The corner used to be shared with the sleep
+ timer and the volume number, which meant the one thing it is for was the
+ one thing it was often not showing.
+-->
+<div style="left: 30px; top: 48px; width: 144px; height: 34px; font-family: body">
+%Vs(invert)%ac%cH:%cM
+</div>
+<!-- Shuffle: 10 px clear of the clock box, which ends at x=174 -->
+<div style="left: 184px; top: 28px; width: 94px; height: 22px; font-family: small">
+SHF%xd(O,%ps)
+</div>
+<!-- Repeat -->
+<div style="left: 184px; top: 58px; width: 94px; height: 22px; font-family: small">
+%?mm<RPT%xd(Ob)|RPT%xd(O)|RP1%xd(O)|RND%xd(O)|A-B%xd(O)>
+</div>
+<!-- Bluetooth: grey off, white on, blue connected -->
+<div style="left: 280px; top: 28px; width: 21px; height: 22px">
+%xd(bt,%BT)
+</div>
+<!-- The jack playing beside the headset, under the rune; else receiving -->
+<div style="left: 280px; top: 58px; width: 21px; height: 22px">
+%?Bw<%xd(wired)|%?Br<|%xd(rx,1)|%xd(rx,2)>>
+</div>
+<!-- Battery bar -->
+<div style="right: 30px; width: 138px; top: 26px; height: 18px">
+%bl(0,0,138,18,bb,backdrop,bb_backdrop)
+</div>
+<!-- Battery percentage -->
+<div style="right: 30px; width: 138px; top: 48px; height: 34px; font-family: body">
+%Vs(invert)%ac%?bp<%xd(Bb)|%xd(Ba)> %bl%%
+</div>
+<!--
+ Volume bar
+ Above the clock, in the battery bar's place on the other side of the
+ row but not its look: the volume's own stripes, and the checker once it
+ is past 0 dB, so the two bars are never read as the same thing. Under
+ it the same stripes in grey, all the way across (vb_track.bmp, grey on
+ the transparent magenta): the track the level runs along.
+-->
+<div id="volbar">
+%pv(0,0,138,18,vb,backdrop,vb_track)
+%?if(%pv, >, 0)<%pv(0,0,138,18,vb_too_loud,backdrop,vb_track)>
+</div>
+
+<!--
+ Main
+ ====
+ The art, full width. The frame is four rules rather than a bitmap so it
+ costs nothing and inherits the theme's foreground colour. %Cl is
+ viewport-relative, so the inset is 2,2 and not 32,162.
+-->
+<div id="aa" when="%Bm != 2 and %C">
+%Cl(2,2,416,416,c,c)
+%dr(0,0,420,2)
+%dr(0,418,-,-)
+%dr(0,2,2,416)
+%dr(418,2,-,416)
+%Cd
+</div>
+<!--
+ No cover is not an empty screen. %C is false for a track with no
+ artwork, and the frame above is inside the viewport that goes with it,
+ so without this the whole middle of the panel is nothing at all.
+-->
+<div id="noart" when="%Bm != 2 and !%C">
+%dr(0,0,420,2)
+%dr(0,418,-,-)
+%dr(0,2,2,416)
+%dr(418,2,-,416)
+</div>
+<div id="noartlabel" when="%Bm != 2 and !%C">
+%ac%s%?id<%id|%?ia<%ia|no cover>>
+</div>
+
+<!--
+ The band
+ ========
+ The meter fills 70 px of a 74 px band. %mp[2] is playing, [4] fast
+ forward, [5] rewind. Receiving, the meter shows the sender's level
+ across the whole band.
+-->
+<div id="pm_short" class="glass" when="%Bm = 1 and %mp[2] and %C">
+%pm(70)
+</div>
+<div id="pm_long" class="row glass" when="%Bm = 1 and %mp[2] and !%C or %Bm = 2">
+%pm(70)
+</div>
+<div id="rew" class="glass" when="%Bm = 1 and %mp[5]">
+%al%<%< REW
+</div>
+<div id="ff" class="glass" when="%Bm = 1 and %mp[4]">
+%al%>%> FF
+</div>
+<div id="codec" class="glass" when="%Bm = 1">
+%ar%fc %fb
+</div>
+<div id="rate" class="glass" when="%Bm = 1">
+%ar%?if(%St(party mode),!=,off)<party|%?if(%St(single mode),!=,off)<%St(single mode)|%fk kHz>>
+</div>
+
+<!--
+ Track
+ -----
+-->
+<div id="artist" class="row" when="%Bm != 2">
+%s%al%?if(%ig,=,Classical)<%?ic<By %ic - >%ia|%ia>%?id< - %id|>
+</div>
+<div id="title" class="row" when="%Bm != 2">
+%al%s%?it<%it|%fn>
+</div>
+<!--
+ Footer
+ ======
+-->
+<div id="footer" class="row glass" when="%Bm != 2">
+%al%pc/%pt%ar%pp/%pe
+</div>
+
+<!--
+ Receiving
+ =========
+ %Bm 2 is the receiver view, which takes the cover, the band and the
+ track; 3 is both, which gives the band to the sender.
+-->
+<div id="rxfrom" class="row glass" when="%Bm = 2">
+%al%sFROM %Bn
+</div>
+<div id="rxstate" class="row glass" when="%Bm = 2">
+%al%?Bs<STOPPED|PLAYING|PAUSED>
+</div>
+<div id="rxtitle" class="row glass" when="%Bm = 2">
+%al%s%?Bt<%Bt|%Bn>
+</div>
+<div id="rxartist" class="row glass" when="%Bm = 2">
+%al%s%?Ba<%Ba|>
+</div>
+<div id="rxalbum" class="row glass" when="%Bm = 2">
+%al%s%?Bl<%Bl|>
+</div>
+<div id="rxtime" class="row glass" when="%Bm = 2">
+%al%?Be<%Be|>%ar%?Bd<%Bd|>
+</div>
+<div id="rxvol" class="row glass" when="%Bm = 2">
+%alPC VOLUME%ar%?Bv<%Bv%%|-->
+</div>
+<div id="rxs1" class="row glass" when="%Bm = 3">
+%al%sFROM %Bn%ar%?Bs<|PLAYING|PAUSED>
+</div>
+<div id="rxs2" class="row glass" when="%Bm = 3">
+%al%s%?Bt<%Bt%?Ba< - %Ba|>|receiving>
+</div>
+
+<!--
+ Locked
+ ======
+-->
+<div class="row" style="top: 98px; height: 52px; font-family: title">
+%Vs(invert)%ac%?mh<LOCKED|>
+</div>
+
+<!--
+ Playlist
+ ========
+-->
+<div id="plname" class="row glass" when="!%mh">
+%s%al%?pn<%pn|>
+</div>
+</skin>

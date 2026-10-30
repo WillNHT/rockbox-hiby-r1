@@ -136,6 +136,13 @@ jobs:
       run: |
         RBSIM_DIR=$PWD/sim xvfb-run -a bash tools/simctl/simctl.sh "$PWD/tools/simctl/tests/library.txt" "$PWD/shots/library"
 
+    # The skins as committed are the skins their sources compile to:
+    # themes/src/*.html through themes/wpsc.py, the rest gen_skins.py.
+    - name: Skins up to date
+      run: |
+        python3 themes/gen_skins.py
+        git diff --exit-code themes/wps
+
     # Every theme through the same script, compared with the committed
     # goldens (tools/simctl/golden.sh). A change that is meant: copy
     # shots/golden/new over tools/simctl/golden in the same PR.
