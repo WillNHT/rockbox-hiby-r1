@@ -693,10 +693,10 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
         return true;
     }
 
-    /* POWER with the Next key: a screenshot. The press is spent on it -
+    /* POWER with Vol Up: a screenshot. The press is spent on it -
      * not a tap, not a lock, no countdown - and it fires once however
      * long the two are held. */
-    if ((held & BUTTON_RIGHT) && !shot_taken)
+    if ((held & BUTTON_UP) && !shot_taken)
     {
         if (!power_down_tick)
             power_down_tick = now;
