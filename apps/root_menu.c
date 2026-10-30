@@ -538,11 +538,8 @@ extern struct menu_item_ex
         tagcache_menu,
 #endif
         main_menu_,
-        manage_settings,
         plugin_menu,
-        playlist_options,
-        info_menu,
-        system_menu;
+        playlist_options;
 static const struct root_items items[] = {
     [GO_TO_FILEBROWSER] =   { browser, (void*)GO_TO_FILEBROWSER, &file_menu},
 #ifdef HAVE_TAGCACHE
@@ -565,7 +562,8 @@ static const struct root_items items[] = {
     [GO_TO_PLAYLISTS_SCREEN] = { playlist_view_catalog, NULL,
                                                         &playlist_options },
     [GO_TO_PLAYLIST_VIEWER] = { playlist_view, NULL, &playlist_options },
-    [GO_TO_SYSTEM_SCREEN] = { miscscrn, &info_menu, &system_menu },
+    [GO_TO_SYSTEM_SCREEN] = { miscscrn, (struct menu_item_ex*)&info_menu,
+                                                            &system_menu },
     [GO_TO_SHORTCUTMENU] = { do_shortcut_menu, NULL, NULL },
     [GO_TO_CUSTOMFOLDER] = { browser, (void*)GO_TO_CUSTOMFOLDER, &file_menu },
     [GO_TO_AUDIOBOOKS]   = { audiobooks, NULL, NULL },
