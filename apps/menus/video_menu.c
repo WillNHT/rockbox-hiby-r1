@@ -181,4 +181,4 @@ MAKE_MENU(video_settings_menu, ID2P(LANG_VIDEO), NULL, Icon_Wps,
 #if defined(HIBY_LINUX)
           &video_bt_latency_item,
 #endif
-          &video_fps_item, &saver_menu, &decoder_item);
+          &video_fps_item, &decoder_item);

@@ -32,7 +32,7 @@ A Rockbox fork for the HiBy R1, built on top of [bahusoid's Rockbox Audiobook Mo
 *   **[Transitions](docs/mods/transitions.md):** animated menu changes and track changes (fade, slide, push, cascade), each with its own effect and length; themes can set them.
 *   **Database:** `[All tracks]` and `Decade` entries, and folders the scan leaves alone (the Audiobooks folder by default).
 *   **[Audiobooks library](docs/mods/audiobooks-library.md):** the main menu's Audiobooks entry is a library with covers, authors, series, narrators, progress and time left, a Continue Listening card, per-book speed, rewind after a long pause, a sleep timer that stops at the end of a chapter, and its own WPS.
-*   **Emoji:** colour emoji in any text (titles, file names, menus), drawn from `/.rockbox/emoji/emoji.rbe` (Noto Emoji, made by `tools/emojipack.py`; in the release as `rockbox-hibyr1-emoji.zip`). Theme Settings > Emoji turns them off.
+*   **Emoji:** colour emoji in any text (titles, file names, menus), drawn from `/.rockbox/emoji/emoji.rbe` (Noto Emoji, made by `tools/emojipack.py`; in the release as `rockbox-hibyr1-emoji.zip`). Settings > Display > Emoji turns them off.
 *   **Keyclick:** each click source (keys, stick arming/armed/action, dial, scroll, touch, lock) can be turned on or off.
 *   **Robustness:** config.cfg is fsynced and a last-good copy is kept; crashes are logged to `/.rockbox/crash.log`.
 
@@ -74,12 +74,12 @@ Available in the [Development Build](#development-builds):
 Available in the [Development Build](#development-builds):
 
 * **Optimized Background Checks:** Extends battery life.
-* **Battery Protection Options:** Added configurable limits for charging voltage, current, and low-battery power-off (*Settings -> General Settings -> System -> Limits*).
-  *Shortcut:* Long-press 'System' in the Main Menu to open System Settings directly.
-* **Touchscreen Exemptions:** Added the ability to disable touch controls in WPS and/or Lists/Menus (*Settings -> General Settings -> Display -> Touchscreen Settings -> Touchscreen Exemptions*).
+* **Battery Protection Options:** Added configurable limits for charging voltage, current, and low-battery power-off (*Settings -> System -> Battery*).
+  *Shortcut:* with System shown in the Main Menu (Settings -> Controls -> Main Menu Layout), long-press it to open System Settings directly.
+* **Touchscreen Exemptions:** Added the ability to disable touch controls in WPS and/or Lists/Menus (*Settings -> Advanced -> Input -> Touchscreen Exemptions*).
 * **Screen-Off Shutdown Beep:** Added an audible beep when powering off via hardware button with the screen off, preventing over-pressing in your pocket. *(Note: Voice Menu must be disabled to hear this).*
 * **Snappier Scrolling & Navigation:** Removed scrolling inertia when stopping. Disabled the right-half screen tap for the **Quickscreen** to prevent accidental activations when attempting to navigate **Back**.
-* **Touch-Friendly Lists:** Increased the default size of list elements. Fine tune it for your fingers via *Settings -> General Settings -> Display -> Touchscreen Settings -> Line Padding in Lists*.
+* **Touch-Friendly Lists:** Increased the default size of list elements. Fine tune it for your fingers via *Settings -> Display -> Line Padding in Lists*.
 * **UI Enhancements:** Larger system font and various default theme tweaks.
 * **Key Remapping:** Made keymap remap friendly. Added documentation and ready-to-use examples. See [Key Remapping](docs/mods/keyremap.md).
 * **Bootloader Expansion:** Added support for loading the Open HiBy player.

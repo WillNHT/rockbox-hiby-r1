@@ -92,7 +92,6 @@ MENUITEM_SETTING(buffer_margin, &global_settings.buffer_margin,
 #endif /*HAVE_DISK_STORAGE */
 MENUITEM_SETTING(fade_on_stop, &global_settings.fade_on_stop, NULL);
 MENUITEM_SETTING(single_mode, &global_settings.single_mode, NULL);
-MENUITEM_SETTING(party_mode, &global_settings.party_mode, NULL);
 
 #ifdef HAVE_CROSSFADE
 /* crossfade submenu */
@@ -141,7 +140,6 @@ MENUITEM_SETTING(replaygain_preamp,
 MAKE_MENU(replaygain_settings_menu,ID2P(LANG_REPLAYGAIN),0, Icon_NOICON,
           &replaygain_type, &replaygain_noclip, &replaygain_preamp);
 
-MENUITEM_SETTING(beep, &global_settings.beep ,NULL);
 
 #ifdef HAVE_SPDIF_POWER
 MENUITEM_SETTING(spdif_enable, &global_settings.spdif_enable, NULL);
@@ -211,34 +209,33 @@ MAKE_MENU(lyrics_menu, ID2P(LANG_LYRICS), 0, Icon_NOICON,
 
 MAKE_MENU(playback_settings,ID2P(LANG_PLAYBACK),0,
           Icon_Playback_menu,
-          &shuffle_item, &repeat_mode, &play_selected,
+          &shuffle_item, &repeat_mode, &skip_length, &next_folder,
+          &resume_rewind, &pause_rewind,
+          &startup_fade, &startup_volume_limit, &track_static
+#if defined(HAVE_CROSSFADE)
+          ,&crossfade_settings_menu
+#endif
+#ifdef HAVE_HEADPHONE_DETECTION
+         ,&unplug_menu
+#endif
+#ifdef HAVE_LYRICS
+        ,&lyrics_menu
+#endif
+         );
+
+MAKE_MENU(advanced_playback_menu,ID2P(LANG_PLAYBACK),0,
+          Icon_Playback_menu,
+          &play_selected,
           &ff_rewind_settings_menu,
 #ifdef HAVE_DISK_STORAGE
           &buffer_margin,
 #endif
-          &fade_on_stop, &single_mode, &party_mode,
-
-#if defined(HAVE_CROSSFADE)
-          &crossfade_settings_menu,
-#endif
-
-          &replaygain_settings_menu, &beep,
-          &pradio_settings_menu,
-
+          &fade_on_stop, &single_mode,
 #ifdef HAVE_SPDIF_POWER
           &spdif_enable,
 #endif
-          &next_folder, &constrain_next_folder, &cuesheet
-#ifdef HAVE_HEADPHONE_DETECTION
-         ,&unplug_menu
-#endif
-         ,&skip_length, &prevent_skip
-          ,&track_static, &track_static_ms
-          ,&startup_fade, &startup_volume_limit
-          ,&rewind_across_tracks
-
-          ,&resume_rewind
-          ,&pause_rewind
+          &constrain_next_folder, &cuesheet, &prevent_skip,
+          &track_static_ms, &rewind_across_tracks
 #ifdef HAVE_PLAY_FREQ
           ,&play_frequency
 #endif
@@ -246,9 +243,6 @@ MAKE_MENU(playback_settings,ID2P(LANG_PLAYBACK),0,
           ,&album_art
 #endif
         ,&playback_log
-#ifdef HAVE_LYRICS
-        ,&lyrics_menu
-#endif
          );
 
 /*    PLAYBACK MENU                */

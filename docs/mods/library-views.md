@@ -2,7 +2,7 @@
 
 ## Library View
 
-**Theme Settings > Library View** changes how albums, tracks, playlists and audiobooks are listed:
+**Settings > Library > Library View** changes how albums, tracks, playlists and audiobooks are listed:
 
 | View | Layout |
 |---|---|

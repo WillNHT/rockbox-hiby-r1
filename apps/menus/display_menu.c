@@ -47,6 +47,7 @@
 #include "viewport.h"
 #include "statusbar.h" /* statusbar_vals enum*/
 #include "rbunicode.h"
+#include "exported_menus.h"
 
 #ifdef HAVE_BACKLIGHT
 static int selectivebacklight_callback(int action,
@@ -70,6 +71,7 @@ static int selectivebacklight_callback(int action,
     return action;
 }
 
+#ifdef HAVE_REMOTE_LCD
 static int filterfirstkeypress_callback(int action,
                                         const struct menu_item_ex *this_item,
                                         struct gui_synclist *this_list)
@@ -89,6 +91,7 @@ static int filterfirstkeypress_callback(int action,
 
     return action;
 }
+#endif
 
 static int selectivebacklight_set_mask(void* param)
 {
@@ -160,10 +163,6 @@ MENUITEM_SETTING(caption_backlight, &global_settings.caption_backlight, NULL);
 MENUITEM_SETTING(backlight_fade_in, &global_settings.backlight_fade_in, NULL);
 MENUITEM_SETTING(backlight_fade_out, &global_settings.backlight_fade_out, NULL);
 #endif
-MENUITEM_SETTING(bl_filter_first_keypress,
-                    &global_settings.bl_filter_first_keypress,
-                    filterfirstkeypress_callback);
-
 MENUITEM_SETTING(bl_selective_actions,
                  &global_settings.bl_selective_actions,
                                                     selectivebacklight_callback);
@@ -199,44 +198,6 @@ MENUITEM_SETTING(invert, &global_settings.invert, NULL);
 MENUITEM_SETTING(flip_display, &global_settings.flip_display, flipdisplay_callback);
 #endif
 
-/* now the actual menu */
-MAKE_MENU(lcd_settings,ID2P(LANG_LCD_MENU),
-            NULL, Icon_Display_menu
-#ifdef HAVE_BACKLIGHT
-            ,&backlight_timeout
-# if CONFIG_CHARGING
-            ,&backlight_timeout_plugged
-# endif
-            ,&backlight_on_button_hold
-            ,&caption_backlight
-#if    defined(HAVE_BACKLIGHT_FADING_INT_SETTING) \
-    || defined(HAVE_BACKLIGHT_FADING_BOOL_SETTING)
-            ,&backlight_fade_in, &backlight_fade_out
-#endif
-            ,&bl_filter_first_keypress
-            ,&sel_backlight
-# ifdef HAVE_LCD_SLEEP_SETTING
-            ,&lcd_sleep_after_backlight_off
-# endif
-# ifdef HAVE_BACKLIGHT_BRIGHTNESS
-            ,&brightness_item
-# endif
-# ifdef HAVE_BACKLIGHT_DIM_IDLE
-            ,&dim_brightness_item
-            ,&dim_locked_item
-            ,&backlight_off_timeout_item
-# endif
-#endif /* HAVE_BACKLIGHT */
-#ifdef HAVE_LCD_CONTRAST
-            ,&contrast
-#endif
-# ifdef HAVE_LCD_INVERT
-            ,&invert
-# endif
-# ifdef HAVE_LCD_FLIP
-            ,&flip_display
-# endif
-         );
 /*    LCD MENU                    */
 /***********************************/
 
@@ -349,7 +310,12 @@ MENUITEM_SETTING(scroll_paginated, &global_settings.scroll_paginated, NULL);
 MENUITEM_SETTING(list_wraparound, &global_settings.list_wraparound, NULL);
 MENUITEM_SETTING(list_order, &global_settings.list_order, NULL);
 
-MAKE_MENU(scroll_settings_menu, ID2P(LANG_SCROLL_MENU), 0, Icon_NOICON,
+MENUITEM_SETTING(cursor_style, &global_settings.cursor_style, NULL);
+#if LCD_DEPTH > 1
+MENUITEM_SETTING(sep_menu, &global_settings.list_separator_height, NULL);
+#endif
+
+MAKE_MENU(advanced_lists_menu, ID2P(LANG_LISTS_SCROLLING), 0, Icon_NOICON,
           &scroll_speed, &scroll_delay,
           &scroll_step,
           &bidir_limit,
@@ -363,7 +329,12 @@ MAKE_MENU(scroll_settings_menu, ID2P(LANG_SCROLL_MENU), 0, Icon_NOICON,
           &list_wraparound,
           &list_order,
 #ifndef HAVE_WHEEL_ACCELERATION
-          &list_accel_start_delay, &list_accel_wait
+          &list_accel_start_delay, &list_accel_wait,
+#endif
+          &bars_menu,
+          &cursor_style,
+#if LCD_DEPTH > 1
+          &sep_menu,
 #endif
           );
 /*    SCROLL MENU                  */
@@ -640,18 +611,36 @@ MENUITEM_SETTING(stick_deg_per_detent, &global_settings.stick_deg_per_detent,
                  stick_setting_callback);
 
 MAKE_MENU(stick_menu, ID2P(LANG_STICK_SETTINGS), NULL, Icon_NOICON,
-            &stick_zone, &stick_sectors, &stick_rotation,
-            &stick_arm_ms, &stick_preset,
-            &stick_dial_wps, &stick_dial_lists, &stick_deg_per_detent,
+            &stick_preset, &stick_zone,
+            &stick_dial_wps, &stick_dial_lists,
             &stick_overlay, &stick_overlay_style, &stick_edge_swipe);
+#endif
 
-MAKE_MENU(touchscreen_menu, ID2P(LANG_TOUCHSCREEN_SETTINGS), NULL, Icon_NOICON, &list_line_padding,
+MENUITEM_SETTING(browser_default, &global_settings.browser_default, NULL);
+#ifdef HAVE_PERCEPTUAL_VOLUME
+MENUITEM_SETTING(volume_adjust_mode, &global_settings.volume_adjust_mode, NULL);
+MENUITEM_SETTING(volume_adjust_norm_steps, &global_settings.volume_adjust_norm_steps, NULL);
+#endif
+#ifdef HAVE_QUICKSCREEN
+MENUITEM_SETTING(shortcuts_replaces_quickscreen, &global_settings.shortcuts_replaces_qs, NULL);
+#endif
+
+MAKE_MENU(advanced_input_menu, ID2P(LANG_INPUT), NULL, Icon_NOICON,
+#ifdef HAVE_TOUCHSCREEN
+            &stick_sectors, &stick_rotation,
+            &stick_arm_ms, &stick_deg_per_detent,
 #if (CONFIG_KEYPAD != HIBY_R1_PAD)
             &touch_mode, &touchscreen_exemptions,
 #endif
-            &stick_menu,
-            &touchscreen_menu_calibrate, &touchscreen_menu_reset_calibration);
+            &touchscreen_menu_calibrate, &touchscreen_menu_reset_calibration,
 #endif
+#ifdef HAVE_PERCEPTUAL_VOLUME
+            &volume_adjust_mode, &volume_adjust_norm_steps,
+#endif
+#ifdef HAVE_QUICKSCREEN
+            &shortcuts_replaces_quickscreen,
+#endif
+            &wps_set_context_plugin, &browser_default);
 
 static int codepage_callback(int action,
                              const struct menu_item_ex *this_item,
@@ -679,14 +668,67 @@ MENUITEM_SETTING(codepage_setting, &global_settings.default_codepage, codepage_c
 
 MAKE_MENU(display_menu, ID2P(LANG_DISPLAY),
             NULL, Icon_Display_menu,
-            &lcd_settings,
+            &browse_themes, &browse_wps, &browse_fonts,
+#ifdef HAVE_LCD_COLOR
+            &emoji_item, &colors_settings,
+#endif
+#ifdef HAVE_BACKLIGHT
+# ifdef HAVE_BACKLIGHT_BRIGHTNESS
+            &brightness_item,
+# endif
+            &backlight_timeout,
+# if CONFIG_CHARGING
+            &backlight_timeout_plugged,
+# endif
+# if defined(HAVE_BACKLIGHT_BRIGHTNESS) && defined(HAVE_BACKLIGHT_DIM_IDLE)
+            &dim_brightness_item,
+            &dim_locked_item,
+            &backlight_off_timeout_item,
+# endif
+#endif /* HAVE_BACKLIGHT */
+#ifdef HAVE_TOUCHSCREEN
+            &list_line_padding,
+#endif
+#ifdef HAVE_LCD_TRANSITIONS
+            &transitions_menu,
+#endif
+#ifdef HAVE_VIDEO
+            &saver_menu,
+#endif
+            );
+
+MAKE_MENU(advanced_display_menu, ID2P(LANG_DISPLAY),
+            NULL, Icon_Display_menu,
+#ifdef HAVE_BACKLIGHT
+            &backlight_on_button_hold,
+            &caption_backlight,
+#if    defined(HAVE_BACKLIGHT_FADING_INT_SETTING) \
+    || defined(HAVE_BACKLIGHT_FADING_BOOL_SETTING)
+            &backlight_fade_in, &backlight_fade_out,
+#endif
+            &sel_backlight,
+# ifdef HAVE_LCD_SLEEP_SETTING
+            &lcd_sleep_after_backlight_off,
+# endif
+#endif /* HAVE_BACKLIGHT */
+#ifdef HAVE_LCD_CONTRAST
+            &contrast,
+#endif
+#ifdef HAVE_LCD_INVERT
+            &invert,
+#endif
+#ifdef HAVE_LCD_FLIP
+            &flip_display,
+#endif
 #ifdef HAVE_REMOTE_LCD
             &lcd_remote_settings,
 #endif
-            &scroll_settings_menu,
             &peak_meter_menu,
             &codepage_setting,
-#ifdef HAVE_TOUCHSCREEN
-            &touchscreen_menu,
+            &browse_fallback_font_item,
+            &theme_show_icons,
+            &browse_sbs,
+#ifdef HAVE_BACKDROP_IMAGE
+            &clear_main_bd,
 #endif
             );

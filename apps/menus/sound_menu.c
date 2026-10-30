@@ -87,7 +87,6 @@ static int volume_limit_callback(int action,
 
 /***********************************/
 /*    SOUND MENU                   */
-MENUITEM_SETTING(volume, &global_status.volume, NULL);
 MENUITEM_SETTING(volume_limit, &global_settings.volume_limit, volume_limit_callback);
 #ifdef AUDIOHW_HAVE_BASS
 MENUITEM_SETTING(bass, &global_settings.bass,
@@ -233,24 +232,29 @@ static int timestretch_callback(int action,
 #endif /* AUDIOHW_HAVE_EQ */
 
 MAKE_MENU(sound_settings, ID2P(LANG_SOUND_SETTINGS), NULL, Icon_Audio,
-          &volume
-          ,&volume_limit
+          &volume_limit
 #ifdef AUDIOHW_HAVE_BASS
           ,&bass
-#endif
-#ifdef AUDIOHW_HAVE_BASS_CUTOFF
-          ,&bass_cutoff
 #endif
 #ifdef AUDIOHW_HAVE_TREBLE
           ,&treble
 #endif
-#ifdef AUDIOHW_HAVE_TREBLE_CUTOFF
-          ,&treble_cutoff
-#endif
 #ifdef AUDIOHW_HAVE_EQ
           ,&audiohw_eq_tone_controls
 #endif
-          ,&balance,&channel_config,&stereo_width
+          ,&balance
+          ,&equalizer_menu, &crossfeed_menu, &replaygain_settings_menu
+          ,&device_sounds_menu
+         );
+
+MAKE_MENU(audio_effects_menu, ID2P(LANG_AUDIO_EFFECTS), NULL, Icon_Audio,
+          &channel_config,&stereo_width
+#ifdef AUDIOHW_HAVE_BASS_CUTOFF
+          ,&bass_cutoff
+#endif
+#ifdef AUDIOHW_HAVE_TREBLE_CUTOFF
+          ,&treble_cutoff
+#endif
 #ifdef AUDIOHW_HAVE_DEPTH_3D
           ,&depth_3d
 #endif
@@ -263,12 +267,11 @@ MAKE_MENU(sound_settings, ID2P(LANG_SOUND_SETTINGS), NULL, Icon_Audio,
 #ifdef AUDIOHW_HAVE_POWER_MODE
           ,&power_mode
 #endif
-          ,&crossfeed_menu, &equalizer_menu, &dithering_enabled
-          ,&surround_menu, &pbe_menu, &afr_enabled
+          ,&dithering_enabled, &afr_enabled
 #ifdef HAVE_PITCHCONTROL
           ,&timestretch_enabled
 #endif
-          ,&compressor_menu
+          ,&surround_menu, &pbe_menu, &compressor_menu
 #ifdef HAVE_SPEAKER
          ,&speaker_mode
 #endif

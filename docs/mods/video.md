@@ -9,7 +9,7 @@ Four things that move, all from one decoder:
 | **Screensavers** | Skins (`.ss`) that come up when the player is left alone — one for battery, one for charging. |
 | **Video player** | Tap a video file and watch it, with sound. |
 
-Everything here is off until you turn it on in **Settings > Video**, and
+Everything here is off until you turn it on in **Settings > Library > Video**, and
 everything needs the decoder installed.
 
 ## Install the decoder
@@ -17,7 +17,7 @@ everything needs the decoder installed.
 The decoder is a separate download because it is a few megabytes:
 **`rockbox-hibyr1-video.zip`** from the release (the `…-sdcard.zip`
 bundle already contains it). Unzip it over the root of the card; it puts
-`/.rockbox/lib/librbvideo.so` there. **Settings > Video > Decoder** says
+`/.rockbox/lib/librbvideo.so` there. **Settings > Library > Video > Decoder** says
 which version is installed, or that it is missing.
 
 It is FFmpeg and libwebp: H.264, HEVC, MPEG-4, MPEG-1/2, VP8, VP9,
@@ -25,7 +25,7 @@ Theora, WMV and MJPEG, in MP4, MKV, WebM, FLV, AVI, MOV, MPEG-TS and
 MPEG-PS, plus animated GIF, WebP and APNG. See
 [tools/rbvideo/README.md](../../tools/rbvideo/README.md).
 
-## Settings > Video
+## Settings > Library > Video
 
 | Setting | What it does |
 |---|---|

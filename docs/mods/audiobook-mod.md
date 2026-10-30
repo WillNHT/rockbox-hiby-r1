@@ -21,6 +21,6 @@ Open the context menu for the M4B file -> *Open with...* -> *mp4chapters_to_cue*
 
 **IMPORTANT**
 Copy audiobooks to the **ABooks** or **Audiobooks** folder (case-sensitive!).
-Audiobook folders can be changed: *General Settings -> Alt Settings -> Alt Settings -> Yes* (this will open the folder selection).
+Audiobook folders can be changed: *Settings -> Library -> Audiobooks -> Alt Settings -> Alt Settings -> Yes* (this will open the folder selection).
 To avoid problems with long file names, try to keep paths short.
 The Alt Settings menu contains settings that apply only to files from the specified folders.

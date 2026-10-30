@@ -649,8 +649,8 @@ void root_menu_apply_title(void)
 
 static struct menu_table menu_table[] = {
     /* Order here represents the default ordering */
-    { "bookmarks", &bookmarks },
-    { "files", &file_browser },
+    { "bookmarks", &bookmarks, true },
+    { "files", &file_browser, true },
 #ifdef HAVE_TAGCACHE
     { "database", &db_browser },
 #endif
@@ -664,15 +664,15 @@ static struct menu_table menu_table[] = {
 #endif
     { "playlists", &playlists },
 #ifdef HAVE_HIBY_BLUETOOTH
-    { "bluetooth", &hiby_bluetooth_root_item },
+    { "bluetooth", &hiby_bluetooth_root_item, true },
 #endif
 #if defined(HIBY_LINUX) && !defined(SIMULATOR)
-    { "wifi", &hiby_wifi_root_item },
+    { "wifi", &hiby_wifi_root_item, true },
 #endif
-    { "plugins", &rocks_browser },
-    { "system_menu", &system_menu_ },
-    { "shortcuts", &shortcut_menu },
-    { "custom folder", &custom_folder_item },
+    { "plugins", &rocks_browser, true },
+    { "system_menu", &system_menu_, true },
+    { "shortcuts", &shortcut_menu, true },
+    { "custom folder", &custom_folder_item, true },
     { "audiobooks", &audiobooks_item },
     { "pseudo radio", &pseudo_radio_item },
 };
@@ -786,7 +786,7 @@ char* root_menu_write_to_cfg(void* setting, char*buf, int buf_len)
 
 void root_menu_set_default(void* setting, void* defaultval)
 {
-    unsigned i;
+    unsigned i, n = 0;
     (void)defaultval;
 
     root_menu_.flags = MENU_HAS_DESC | MT_MENU;
@@ -795,9 +795,10 @@ void root_menu_set_default(void* setting, void* defaultval)
 
     for (i=0; i<MAX_MENU_ITEMS; i++)
     {
-        root_menu__[i] = (struct menu_item_ex *)menu_table[i].item;
+        if (!menu_table[i].hidden)
+            root_menu__[n++] = (struct menu_item_ex *)menu_table[i].item;
     }
-    root_menu_.flags |= MENU_ITEM_COUNT(MAX_MENU_ITEMS);
+    root_menu_.flags |= MENU_ITEM_COUNT(n);
     *(bool*)setting = false;
 }
 
@@ -1101,7 +1102,7 @@ static int item_callback(int action,
 static int get_selection(int last_screen)
 {
     int i;
-    int len = ARRAYLEN(root_menu__);
+    int len = MENU_GET_COUNT(root_menu_.flags);
     for(i=0; i < len; i++)
     {
         if (((root_menu__[i]->flags&MENU_TYPE_MASK) == MT_RETURN_VALUE) &&

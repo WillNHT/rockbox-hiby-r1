@@ -28,6 +28,7 @@ void root_menu(void) NORETURN_ATTR;
 struct menu_table {
     char *string;
     const struct menu_item_ex *item;
+    bool hidden; /* off the default menu, Main Menu Layout can show it */
 };
 
 struct menu_table *root_menu_get_options(int *nb_options);

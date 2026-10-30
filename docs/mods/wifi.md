@@ -15,8 +15,8 @@ address. Nothing listens on the network - Rockbox only ever talks out.
 Networks and passwords are kept by `wpa_supplicant` in `/.rockbox/wifi.conf`, in plain
 text, like HiBy OS keeps its own.
 
-If your main menu has a custom order (`root menu order` in `config.cfg`), add Wi-Fi to
-it from Settings > General Settings > Main Menu Layout.
+Wi-Fi is under Settings > System. To put it back on the main menu, show it in
+Settings > Controls > Main Menu Layout.
 
 Nothing uses the connection yet: this is the base for internet radio, clock sync and
 the rest of [#29](https://github.com/WillNHT/rockbox-hiby-r1/issues/29).

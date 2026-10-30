@@ -70,7 +70,7 @@ everything again, which is what to use after retagging files.
   when it is started again from the library.
 - **Sleep timer:** 15-120 minutes, or *End of Chapter*, which pauses when
   the current file, or the current cue chapter, ends.
-- **Audiobook WPS:** Theme Settings and Audiobook Settings both have it.
+- **Audiobook WPS:** in Audiobook Settings.
   It picks the WPS used while a track from the Audiobooks folder plays;
   *Same as Music* keeps the normal one. Only the WPS changes, not the
   status bar.

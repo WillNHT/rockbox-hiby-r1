@@ -134,6 +134,8 @@ jobs:
     - name: Browse the test library
       if: env.SIM_SCRIPT == 'tools/simctl/tests/smoke.txt'
       run: |
+        # library.txt walks to Files, which the default main menu hides.
+        echo "root menu order: bookmarks, files, database, wps, settings, playlists, bluetooth, plugins, system_menu, shortcuts, custom folder, audiobooks, pseudo radio" >> sim/simdisk/.rockbox/config.cfg
         RBSIM_DIR=$PWD/sim xvfb-run -a bash tools/simctl/simctl.sh "$PWD/tools/simctl/tests/library.txt" "$PWD/shots/library"
 
     # The skins as committed are the skins their sources compile to:

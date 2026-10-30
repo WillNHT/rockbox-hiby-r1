@@ -19,7 +19,7 @@ radio hands you sound, not a menu. Walking into it while that station is
 already playing does nothing at all, which is what stops the entry from
 throwing away the thing you came back to look at.
 
-Picking a station by name is **Settings > Playback > Radio > Stations**,
+Picking a station by name is **Settings > Library > Radio > Stations**,
 which is where the rest of the deliberate choices already are.
 
 ## Stations

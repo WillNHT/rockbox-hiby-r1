@@ -45,7 +45,9 @@ for cfg in "$ROOT"/themes/*.cfg; do
 
   # A fresh config each time: the theme on its own, no transitions, so
   # a dump never lands mid-animation of a screen change.
-  { grep -v '^#' "$cfg"; echo "wps transition: off"; } > "$DISK/.rockbox/config.cfg"
+  # The menu spelled out: library.txt walks to Files, which the default hides.
+  { grep -v '^#' "$cfg"; echo "wps transition: off"
+    echo "root menu order: bookmarks, files, database, wps, settings, playlists, bluetooth, plugins, system_menu, shortcuts, custom folder, audiobooks, pseudo radio"; } > "$DISK/.rockbox/config.cfg"
   # and nothing a previous run left behind: the browse folder, the
   # playlist to resume, bookmarks.
   rm -f "$DISK"/.rockbox/*.dat "$DISK"/.rockbox/nvram.bin \

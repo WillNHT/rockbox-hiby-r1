@@ -297,12 +297,8 @@ MENUITEM_SETTING(db_exclude_audiobooks, &global_settings.db_exclude_audiobooks,
                  db_exclude_audiobooks_cb);
 
 MAKE_MENU(tagcache_menu, ID2P(LANG_TAGCACHE), 0, Icon_NOICON,
-#ifdef HAVE_TC_RAMCACHE
-                &tagcache_ram,
-#endif
-                &tagcache_autoupdate, &tc_init, &tc_update, &runtimedb,
-                &tc_export, &tc_import, &tc_paths,
-                &db_exclude_audiobooks, &tc_excluded
+                &tc_update, &tagcache_autoupdate, &tc_init, &tc_paths,
+                &tc_excluded, &db_exclude_audiobooks
                 );
 #endif /* HAVE_TAGCACHE */
 /*    TAGCACHE MENU                */
@@ -336,13 +332,7 @@ static int filemenu_callback(int action,
                              const struct menu_item_ex *this_item,
                              struct gui_synclist *this_list);
 MAKE_MENU(file_menu, ID2P(LANG_FILE), filemenu_callback, Icon_file_view_menu,
-                &sort_case, &sort_dir, &sort_file, &interpret_numbers,
-                &dirfilter, &show_filename_ext, &browse_current,
-                &show_path_in_browser,
-                &clear_start_directory_item
-#ifdef HAVE_HOTKEY
-                ,&hotkey_tree_item
-#endif
+                &sort_dir, &sort_file, &dirfilter, &show_filename_ext
                 );
 static int filemenu_callback(int action,
                              const struct menu_item_ex *this_item,
@@ -391,14 +381,6 @@ static int usbcharging_callback(int action,
 }
 MENUITEM_SETTING(usb_charging, &global_settings.usb_charging, usbcharging_callback);
 #endif /* HAVE_USB_CHARGING_ENABLE */
-MAKE_MENU(battery_menu, ID2P(LANG_BATTERY_MENU), 0, Icon_NOICON,
-#if BATTERY_CAPACITY_INC > 0
-            &battery_capacity,
-#endif
-#ifdef HAVE_USB_CHARGING_ENABLE
-            &usb_charging,
-#endif
-         );
 #ifdef HAVE_USB_MODE
 MENUITEM_SETTING(usb_mode, &global_settings.usb_mode, NULL);
 #endif
@@ -434,16 +416,6 @@ static int dircache_callback(int action,
 }
 MENUITEM_SETTING(dircache, &global_settings.dircache, dircache_callback);
 #endif
-#if defined(HAVE_DIRCACHE) || defined(HAVE_DISK_STORAGE)
-MAKE_MENU(disk_menu, ID2P(LANG_DISK_MENU), 0, Icon_NOICON,
-#ifdef HAVE_DISK_STORAGE
-          &disk_spindown,
-#endif
-#ifdef HAVE_DIRCACHE
-            &dircache,
-#endif
-         );
-#endif
 
 /* Limits menu */
 MENUITEM_SETTING(max_files_in_dir, &global_settings.max_files_in_dir, NULL);
@@ -456,22 +428,20 @@ MENUITEM_SETTING(hiby_charge_current, &global_settings.hiby_charge_current, NULL
 MENUITEM_SETTING(low_battery_poweroff, &global_settings.low_battery_poweroff_percent, NULL);
 #endif
 MENUITEM_SETTING(default_glyphs, &global_settings.glyphs_to_cache, NULL);
-MAKE_MENU(limits_menu, ID2P(LANG_LIMITS_MENU), 0, Icon_NOICON,
-           &max_files_in_dir, &max_files_in_playlist
+MAKE_MENU(battery_menu, ID2P(LANG_BATTERY_MENU), 0, Icon_NOICON,
+#if BATTERY_CAPACITY_INC > 0
+            &battery_capacity,
+#endif
+#ifdef HAVE_USB_CHARGING_ENABLE
+            &usb_charging,
+#endif
 #ifdef HAVE_HIBY_LINUX_POWER_CHARGE_LIMIT
-           ,&hiby_charge_limit, &hiby_charge_current
+            &hiby_charge_limit, &hiby_charge_current,
 #endif
 #if ((CONFIG_BATTERY_MEASURE & VOLTAGE_MEASURE))
-           ,&low_battery_poweroff
+            &low_battery_poweroff,
 #endif
-           ,&default_glyphs
-           );
-
-#ifdef HAVE_PERCEPTUAL_VOLUME
-/* Volume adjustment */
-MENUITEM_SETTING(volume_adjust_mode, &global_settings.volume_adjust_mode, NULL);
-MENUITEM_SETTING(volume_adjust_norm_steps, &global_settings.volume_adjust_norm_steps, NULL);
-#endif
+         );
 
 /* Keyclick menu */
 MENUITEM_SETTING(keyclick, &global_settings.keyclick, NULL);
@@ -486,7 +456,24 @@ MENUITEM_SETTING(keyclick_src_stick_dial, &global_settings.keyclick_src_stick_di
 MENUITEM_SETTING(keyclick_src_stick_scroll, &global_settings.keyclick_src_stick_scroll, NULL);
 MENUITEM_SETTING(keyclick_src_touch, &global_settings.keyclick_src_touch, NULL);
 MENUITEM_SETTING(keyclick_src_lock, &global_settings.keyclick_src_lock, NULL);
-MAKE_MENU(keyclick_sources_menu, ID2P(LANG_KEYCLICK_SOURCES), 0, Icon_NOICON,
+#ifdef HAVE_HARDWARE_CLICK
+MENUITEM_SETTING(keyclick_hardware, &global_settings.keyclick_hardware, NULL);
+#endif
+MENUITEM_SETTING(beep, &global_settings.beep, NULL);
+
+/* Audio prioritisation menu */
+MENUITEM_SETTING(sound_duck, &global_settings.sound_duck, NULL);
+MENUITEM_SETTING(sound_duck_click, &global_settings.sound_duck_click, NULL);
+MENUITEM_SETTING(sound_duck_alert, &global_settings.sound_duck_alert, NULL);
+MENUITEM_SETTING(sound_duck_cue, &global_settings.sound_duck_cue, NULL);
+
+MAKE_MENU(device_sounds_menu, ID2P(LANG_DEVICE_SOUNDS), 0, Icon_Audio,
+          &keyclick, &keyclick_volume, &beep, &sound_duck);
+MAKE_MENU(advanced_sounds_menu, ID2P(LANG_DEVICE_SOUNDS), 0, Icon_Audio,
+          &keyclick_repeats,
+#ifdef HAVE_HARDWARE_CLICK
+          &keyclick_hardware,
+#endif
           &keyclick_src_button,
           &keyclick_src_button_repeat,
           &keyclick_src_stick_arming,
@@ -495,25 +482,8 @@ MAKE_MENU(keyclick_sources_menu, ID2P(LANG_KEYCLICK_SOURCES), 0, Icon_NOICON,
           &keyclick_src_stick_dial,
           &keyclick_src_stick_scroll,
           &keyclick_src_touch,
-          &keyclick_src_lock);
-#ifdef HAVE_HARDWARE_CLICK
-MENUITEM_SETTING(keyclick_hardware, &global_settings.keyclick_hardware, NULL);
-MAKE_MENU(keyclick_menu, ID2P(LANG_KEYCLICK), 0, Icon_NOICON,
-           &keyclick, &keyclick_volume, &keyclick_hardware, &keyclick_repeats,
-           &keyclick_sources_menu);
-#else
-MAKE_MENU(keyclick_menu, ID2P(LANG_KEYCLICK), 0, Icon_NOICON,
-           &keyclick, &keyclick_volume, &keyclick_repeats,
-           &keyclick_sources_menu);
-#endif
-
-/* Audio prioritisation menu */
-MENUITEM_SETTING(sound_duck, &global_settings.sound_duck, NULL);
-MENUITEM_SETTING(sound_duck_click, &global_settings.sound_duck_click, NULL);
-MENUITEM_SETTING(sound_duck_alert, &global_settings.sound_duck_alert, NULL);
-MENUITEM_SETTING(sound_duck_cue, &global_settings.sound_duck_cue, NULL);
-MAKE_MENU(sound_duck_menu, ID2P(LANG_SOUND_DUCK), 0, Icon_NOICON,
-          &sound_duck, &sound_duck_click, &sound_duck_alert, &sound_duck_cue);
+          &keyclick_src_lock,
+          &sound_duck_click, &sound_duck_alert, &sound_duck_cue);
 
 #if CONFIG_CHARGING
 MENUITEM_SETTING(car_adapter_mode, &global_settings.car_adapter_mode, NULL);
@@ -562,7 +532,6 @@ MENUITEM_SETTING(touchpad_deadzone, &global_settings.touchpad_deadzone, NULL);
 #endif
 
 #ifdef HAVE_QUICKSCREEN
-MENUITEM_SETTING(shortcuts_replaces_quickscreen, &global_settings.shortcuts_replaces_qs, NULL);
 MENUITEM_SETTING(quickscreen_wheel, &global_settings.quickscreen_wheel, NULL);
 #endif
 
@@ -599,68 +568,6 @@ MAKE_MENU(usb_menu, ID2P(LANG_USB_MENU), 0, Icon_NOICON,
 #endif
          );
 
-MAKE_MENU(system_menu, ID2P(LANG_SYSTEM),
-          0, Icon_System_menu,
-#if (BATTERY_CAPACITY_INC > 0) || defined(HAVE_USB_CHARGING_ENABLE)
-            &battery_menu,
-#endif
-#if defined(HAVE_DIRCACHE) || defined(HAVE_DISK_STORAGE)
-            &disk_menu,
-#endif
-            &limits_menu,
-#ifdef HAVE_PERCEPTUAL_VOLUME
-            &volume_adjust_mode,
-            &volume_adjust_norm_steps,
-#endif
-#ifdef HAVE_QUICKSCREEN
-            &shortcuts_replaces_quickscreen,
-            &quickscreen_wheel,
-#endif
-#ifdef HAVE_MORSE_INPUT
-            &morse_input,
-#endif
-#if CONFIG_CHARGING
-            &car_adapter_mode_menu,
-#endif
-#ifdef IPOD_ACCESSORY_PROTOCOL
-            &serial_bitrate,
-#endif
-#ifdef HAVE_ACCESSORY_SUPPLY
-            &accessory_supply,
-#endif
-#ifdef HAVE_LINEOUT_POWEROFF
-            &lineout_onoff,
-#endif
-#ifdef HAVE_BUTTON_LIGHT
-            &buttonlight_timeout,
-#endif
-#ifdef HAVE_BUTTONLIGHT_BRIGHTNESS
-            &buttonlight_brightness,
-#endif
-            &keyclick_menu,
-            &sound_duck_menu,
-#ifdef HAVE_TOUCHPAD_SENSITIVITY_SETTING
-            &touchpad_sensitivity,
-#endif
-#ifdef HAVE_TOUCHPAD_DEADZONE
-            &touchpad_deadzone,
-#endif
-#ifndef HAS_BUTTON_HOLD
-            &sel_softlock,
-#endif
-#if defined(USB_ENABLE_HID) || \
-    defined(USB_ENABLE_AUDIO) || defined(HAVE_HOST_USB_AUDIO) || \
-    (defined(USB_ENABLE_STORAGE) && defined(HAVE_MULTIDRIVE)) || \
-    defined(HAVE_USB_MODE)
-            &usb_menu,
-#endif
-#if defined(DX50) || defined(DX90)
-            &governor,
-#endif
-#if defined(HAVE_GENERAL_PURPOSE_LED)
-            &use_led_indicators,
-#endif
-         );
 
 /*    SYSTEM MENU                  */
 /***********************************/
@@ -730,20 +637,6 @@ MENUITEM_SETTING(clear_settings_on_hold,
                  &global_settings.clear_settings_on_hold, NULL);
 #endif
 
-MAKE_MENU(startup_shutdown_menu, ID2P(LANG_STARTUP_SHUTDOWN),
-          0, Icon_System_menu,
-            &show_shutdown_message,
-            &start_screen,
-            &poweroff,
-            &sleeptimer_toggle,
-            &sleeptimer_duration,
-            &sleeptimer_on_startup,
-            &keypress_restarts_sleeptimer,
-#if defined(SETTINGS_CLEAR_ON_HOLD)
-            &clear_settings_on_hold,
-#undef SETTINGS_CLEAR_ON_HOLD
-#endif
-         );
 
 /*    STARTUP/SHUTDOWN MENU      */
 /***********************************/
@@ -777,9 +670,6 @@ MENUITEM_SETTING(autoupdatebookmark, &global_settings.autoupdatebookmark, NULL);
 MENUITEM_SETTING(autoloadbookmark, &global_settings.autoloadbookmark, NULL);
 MENUITEM_SETTING(usemrb, &global_settings.usemrb, NULL);
 MENUITEM_SETTING(resume_mrb, &global_settings.resume_from_recent_bookmark, NULL);
-MAKE_MENU(bookmark_settings_menu, ID2P(LANG_BOOKMARK_SETTINGS), 0,
-          Icon_Bookmark,
-          &autocreatebookmark, &autoupdatebookmark, &autoloadbookmark, &usemrb, &resume_mrb);
 /*    BOOKMARK MENU                */
 /***********************************/
 
@@ -841,6 +731,14 @@ MAKE_MENU(autoresume_menu, ID2P(LANG_AUTORESUME),
           &autoresume_enable, &autoresume_automatic);
 
 #endif /* HAVE_TAGCACHE */
+
+MAKE_MENU(bookmark_settings_menu, ID2P(LANG_BOOKMARK_SETTINGS), 0,
+          Icon_Bookmark,
+          &autocreatebookmark, &autoupdatebookmark, &autoloadbookmark, &usemrb, &resume_mrb,
+#ifdef HAVE_TAGCACHE
+          &autoresume_menu,
+#endif
+          );
 /*    AUTORESUME MENU              */
 /***********************************/
 
@@ -948,20 +846,11 @@ MENUITEM_FUNCTION(wps_set_context_plugin, 0,
 /***********************************/
 /*    WPS Settings MENU            */
 
-MENUITEM_SETTING(browser_default,
-                 &global_settings.browser_default, NULL);
 
 #ifdef HAVE_HOTKEY
 MENUITEM_SETTING(hotkey_wps_item, &global_settings.hotkey_wps, NULL);
 #endif
 
-MAKE_MENU(wps_settings, ID2P(LANG_WPS), 0, Icon_Playback_menu
-            ,&browser_default
-#ifdef HAVE_HOTKEY
-            ,&hotkey_wps_item
-#endif
-            ,&wps_set_context_plugin
-            );
 
 /*    WPS Settings MENU            */
 /***********************************/
@@ -975,23 +864,139 @@ static struct browse_folder_info langs = { LANG_DIR, SHOW_LNG };
 MENUITEM_FUNCTION_W_PARAM(browse_langs, 0, ID2P(LANG_LANGUAGE),
                           browse_folder, (void*)&langs, NULL, Icon_Language);
 
-MAKE_MENU(settings_menu_item, ID2P(LANG_GENERAL_SETTINGS), 0,
-          Icon_General_settings_menu,
-          &wps_settings,
-          &playlist_settings, &file_menu,
+MENUITEM_SETTING(library_title_only_item, &global_settings.library_title_only, NULL);
+#ifdef HAVE_COVER_VIEWS
+MENUITEM_SETTING(library_view_item, &global_settings.library_view, NULL);
+#endif
+
+MAKE_MENU(library_menu, ID2P(LANG_LIBRARY), 0, Icon_Audio,
+#ifdef HAVE_COVER_VIEWS
+          &library_view_item,
+#endif
+          &library_title_only_item,
+          &ab_settings_menu,
+          &pradio_settings_menu,
+#ifdef HAVE_VIDEO
+          &video_settings_menu,
+#endif
+          &bookmark_settings_menu,
 #ifdef HAVE_TAGCACHE
           &tagcache_menu,
 #endif
-          &display_menu, &system_menu,
-          &startup_shutdown_menu,
-          &bookmark_settings_menu,
-#ifdef HAVE_TAGCACHE
-          &autoresume_menu,
+          &file_menu,
+          );
+
+MAKE_MENU(controls_menu, ID2P(LANG_CONTROLS), 0, Icon_Menu_setting,
+#ifdef HAVE_TOUCHSCREEN
+          &stick_menu,
 #endif
-          &altmenu_menu,
-          &browse_langs, &voice_settings_menu,
           &main_menu_layout_item,
           &main_menu_title_item,
+#ifndef HAS_BUTTON_HOLD
+          &sel_softlock,
+#endif
+#ifdef HAVE_QUICKSCREEN
+          &quickscreen_wheel,
+#endif
+#ifdef HAVE_HOTKEY
+          &hotkey_wps_item,
+          &hotkey_tree_item,
+#endif
+          );
+
+MAKE_MENU(system_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
+#ifdef HAVE_HIBY_BLUETOOTH
+          &hiby_bluetooth_root_item,
+#endif
+#if defined(HIBY_LINUX) && !defined(SIMULATOR)
+          &hiby_wifi_root_item,
+#endif
+#if defined(USB_ENABLE_HID) || \
+    defined(USB_ENABLE_AUDIO) || defined(HAVE_HOST_USB_AUDIO) || \
+    (defined(USB_ENABLE_STORAGE) && defined(HAVE_MULTIDRIVE)) || \
+    defined(HAVE_USB_MODE)
+          &usb_menu,
+#endif
+          &battery_menu,
+#if CONFIG_RTC
+          &timedate_item,
+#endif
+          &browse_langs,
+          &start_screen,
+          &poweroff,
+          &sleeptimer_toggle,
+          &sleeptimer_duration,
+          &manage_settings,
+          &info_menu,
+          );
+
+MAKE_MENU(advanced_library_menu, ID2P(LANG_LIBRARY), 0, Icon_Audio,
+          &playlist_settings,
+          &sort_case, &interpret_numbers, &browse_current,
+          &show_path_in_browser, &clear_start_directory_item,
+#ifdef HAVE_TAGCACHE
+#ifdef HAVE_TC_RAMCACHE
+          &tagcache_ram,
+#endif
+          &runtimedb, &tc_export, &tc_import,
+#endif
+          );
+
+MAKE_MENU(advanced_system_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
+#ifdef HAVE_DISK_STORAGE
+          &disk_spindown,
+#endif
+#ifdef HAVE_DIRCACHE
+          &dircache,
+#endif
+          &max_files_in_dir, &max_files_in_playlist, &default_glyphs,
+          &show_shutdown_message,
+          &sleeptimer_on_startup, &keypress_restarts_sleeptimer,
+#if defined(SETTINGS_CLEAR_ON_HOLD)
+          &clear_settings_on_hold,
+#undef SETTINGS_CLEAR_ON_HOLD
+#endif
+#ifdef HAVE_MORSE_INPUT
+          &morse_input,
+#endif
+#ifdef IPOD_ACCESSORY_PROTOCOL
+          &serial_bitrate,
+#endif
+#ifdef HAVE_ACCESSORY_SUPPLY
+          &accessory_supply,
+#endif
+#ifdef HAVE_LINEOUT_POWEROFF
+          &lineout_onoff,
+#endif
+#ifdef HAVE_BUTTON_LIGHT
+          &buttonlight_timeout,
+#endif
+#ifdef HAVE_BUTTONLIGHT_BRIGHTNESS
+          &buttonlight_brightness,
+#endif
+#ifdef HAVE_TOUCHPAD_SENSITIVITY_SETTING
+          &touchpad_sensitivity,
+#endif
+#ifdef HAVE_TOUCHPAD_DEADZONE
+          &touchpad_deadzone,
+#endif
+#if defined(DX50) || defined(DX90)
+          &governor,
+#endif
+#if defined(HAVE_GENERAL_PURPOSE_LED)
+          &use_led_indicators,
+#endif
+          );
+
+MAKE_MENU(settings_advanced_menu, ID2P(LANG_ADVANCED), 0, Icon_Config,
+          &audio_effects_menu,
+          &advanced_playback_menu,
+          &advanced_sounds_menu,
+          &advanced_input_menu,
+          &advanced_lists_menu,
+          &advanced_display_menu,
+          &advanced_library_menu,
+          &advanced_system_menu,
           );
 /*    SETTINGS MENU                */
 /***********************************/

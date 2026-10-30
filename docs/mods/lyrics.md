@@ -22,11 +22,11 @@ Supported formats:
 - **Plain text:** there are no times, so the view moves through the lyrics at an even pace over the middle 80% of the track.
 - **Lyrics stored in tags** can themselves be LRC. Many taggers do this, and those lyrics are shown synced.
 
-Text can be UTF-8 or UTF-16 (with or without a BOM). Any other text is read in the codepage set in **Settings > General > Display > Default Codepage**.
+Text can be UTF-8 or UTF-16 (with or without a BOM). Any other text is read in the codepage set in **Settings > Advanced > Display > Default Codepage**.
 
 ## Languages and fonts
 
-Lyrics use the WPS's own fonts. If a font lacks a character (Japanese, Chinese or Korean in a Latin font, for example), that character comes from the **fallback font** instead: **Theme Settings > Fallback Font**. The default is `16-GNU-Unifont`, which is in the fonts pack and covers the whole Basic Multilingual Plane. You can pick any other `.fnt`, for example a Noto Sans CJK converted with `tools/convttf`. The fallback works for all text, not only lyrics, and characters are aligned on the line's baseline.
+Lyrics use the WPS's own fonts. If a font lacks a character (Japanese, Chinese or Korean in a Latin font, for example), that character comes from the **fallback font** instead: **Settings > Advanced > Display > Fallback Font**. The default is `16-GNU-Unifont`, which is in the fonts pack and covers the whole Basic Multilingual Plane. You can pick any other `.fnt`, for example a Noto Sans CJK converted with `tools/convttf`. The fallback works for all text, not only lyrics, and characters are aligned on the line's baseline.
 
 Vietnamese and other Latin-script languages need a font that has their characters. The GeistMono faces in the Snappy themes cover them.
 
