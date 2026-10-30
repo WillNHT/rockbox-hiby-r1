@@ -1130,6 +1130,11 @@ static void bt_power_on(void)
         fclose(fp);
     bt_power = BT_ON;
     bt_changed();
+    /* brcm_patchram_plus has nothing left to do but hold the serial line
+     * open, and HiBy's build spins doing it: half the CPU, for as long as
+     * Bluetooth is up. Stopped, it still holds the line. */
+    bt_cmd("for p in $(pidof brcm_patchram_plus); do "
+           "grep -q '^State:.R' /proc/$p/status && kill -STOP $p; done", NULL);
     if (bt_rx_on)
         bt_restart_bluealsa(true);
     bt_reconnect();
