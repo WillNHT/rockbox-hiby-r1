@@ -11,7 +11,7 @@
 Snappy-Animated * 376,20 420,80
 Snappy-V2 * 376,20 420,80
 # Peak meter bar ends: the level of whatever audio has been played.
-Snappy-Animated * 184,610 210,683
+Snappy-Animated * 178,610 210,683
 Snappy-V2 * 179,568 207,649
 # The held stick's band is mid-animation when the shot is taken.
 Snappy-Animated shot06 31,324 449,377
