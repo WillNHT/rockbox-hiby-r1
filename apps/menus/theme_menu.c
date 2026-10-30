@@ -380,7 +380,10 @@ static int showicons_callback(int action,
     return ACTION_REDRAW;
 }
 
-MENUITEM_SETTING(show_icons, &global_settings.show_icons, showicons_callback);
+/* Listed from display_menu.c, and MENUITEM_SETTING would make these static */
+const struct menu_item_ex theme_show_icons =
+    {MT_SETTING, {.variable = (void*)&global_settings.show_icons},
+     {showicons_callback}};
 
 #if defined(HAVE_LCD_COLOR)
 static int emoji_callback(int action,
@@ -398,7 +401,9 @@ static int emoji_callback(int action,
     }
     return action;
 }
-MENUITEM_SETTING(emoji_item, &global_settings.emoji_enabled, emoji_callback);
+const struct menu_item_ex emoji_item =
+    {MT_SETTING, {.variable = (void*)&global_settings.emoji_enabled},
+     {emoji_callback}};
 #endif
 
 /* Fallback Font: a font from FONT_DIR whose glyphs fill in for the ones
@@ -434,19 +439,8 @@ static int browse_fallback_font(void)
 MENUITEM_FUNCTION(browse_fallback_font_item, 0, ID2P(LANG_FALLBACK_FONT),
                   browse_fallback_font, NULL, Icon_Font);
 
-static int audiobook_wps(void)
-{
-    return audiobooks_choose_wps();
-}
-MENUITEM_FUNCTION(browse_audiobook_wps, 0, ID2P(LANG_AB_WPS),
-                  audiobook_wps, NULL, Icon_Wps);
 MENUITEM_FUNCTION_W_PARAM(browse_themes, 0, ID2P(LANG_CUSTOM_THEME),
                           browse_folder, (void*)&themes, NULL, Icon_Config);
-MENUITEM_SETTING(cursor_style, &global_settings.cursor_style, NULL);
-MENUITEM_SETTING(library_title_only_item, &global_settings.library_title_only, NULL);
-#ifdef HAVE_COVER_VIEWS
-MENUITEM_SETTING(library_view_item, &global_settings.library_view, NULL);
-#endif
 #ifdef HAVE_LCD_TRANSITIONS
 MENUITEM_SETTING(menu_transition, &global_settings.menu_transition, NULL);
 MENUITEM_SETTING(menu_transition_ms, &global_settings.menu_transition_ms, NULL);
@@ -459,50 +453,3 @@ MAKE_MENU(transitions_menu, ID2P(LANG_TRANSITIONS), NULL, Icon_NOICON,
           &wps_transition, &wps_transition_ms,
           &book_transition, &radio_transition);
 #endif
-#if LCD_DEPTH > 1
-MENUITEM_SETTING(sep_menu, &global_settings.list_separator_height, NULL);
-#endif
-
-MAKE_MENU(theme_menu, ID2P(LANG_THEME_MENU),
-            NULL, Icon_Wps,
-            &browse_themes,
-            &browse_fonts,
-            &browse_fallback_font_item,
-            &browse_wps,
-            &browse_audiobook_wps,
-#ifdef HAVE_REMOTE_LCD
-            &browse_rwps,
-#endif
-#if CONFIG_TUNER
-            &browse_fms,
-#ifdef HAVE_REMOTE_LCD
-            &browse_rfms,
-#endif
-#endif
-            &browse_sbs,
-#ifdef HAVE_REMOTE_LCD
-            &browse_rsbs,
-#endif
-            &show_icons,
-#if defined(HAVE_LCD_COLOR)
-            &emoji_item,
-#endif
-#ifdef HAVE_BACKDROP_IMAGE
-            &clear_main_bd,
-#endif
-            &bars_menu,
-            &cursor_style,
-#if LCD_DEPTH > 1
-            &sep_menu,
-#endif
-#ifdef HAVE_COVER_VIEWS
-            &library_view_item,
-#endif
-            &library_title_only_item,
-#ifdef HAVE_LCD_TRANSITIONS
-            &transitions_menu,
-#endif
-#ifdef HAVE_LCD_COLOR
-            &colors_settings,
-#endif
-);

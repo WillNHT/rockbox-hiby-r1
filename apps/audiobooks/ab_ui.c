@@ -1396,9 +1396,11 @@ MENUITEM_SETTING(ab_rewind_after_item, &global_settings.ab_rewind_after, NULL);
 MENUITEM_SETTING(ab_rewind_amount_item, &global_settings.ab_rewind_amount, NULL);
 MENUITEM_SETTING(ab_finished_item, &global_settings.ab_finished_pct, NULL);
 MENUITEM_SETTING(ab_autoscan_item, &global_settings.ab_autoscan, NULL);
+extern const struct menu_item_ex altmenu_menu; /* settings_menu.c */
 MAKE_MENU(ab_settings_menu, ID2P(LANG_AB_SETTINGS), NULL, Icon_Config,
           &ab_folder_item, &ab_wps_item, &ab_rewind_after_item,
-          &ab_rewind_amount_item, &ab_finished_item, &ab_autoscan_item);
+          &ab_rewind_amount_item, &ab_finished_item, &ab_autoscan_item,
+          &altmenu_menu);
 
 /* ====================================================================== */
 /* root                                                                   */

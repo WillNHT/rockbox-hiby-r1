@@ -1,0 +1,310 @@
+# The trimmed main menu, then Settings and each of its seven pages. A short
+# drag up is one row down, a slow drag right opens, a slow drag left goes back.
+# Run it with: gh workflow run build.yml --ref <branch> -f sim_script=tools/simctl/tests/settings.txt
+sleep 3000
+dump
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 100
+sleep 300
+up
+sleep 1200
+dump
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 100
+sleep 300
+up
+sleep 1200
+dump
+down 240 500
+sleep 100
+move 220 500
+sleep 100
+move 200 500
+sleep 100
+move 180 500
+sleep 100
+move 160 500
+sleep 100
+move 140 500
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 100
+sleep 300
+up
+sleep 1200
+dump
+down 240 500
+sleep 100
+move 220 500
+sleep 100
+move 200 500
+sleep 100
+move 180 500
+sleep 100
+move 160 500
+sleep 100
+move 140 500
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 100
+sleep 300
+up
+sleep 1200
+dump
+down 240 500
+sleep 100
+move 220 500
+sleep 100
+move 200 500
+sleep 100
+move 180 500
+sleep 100
+move 160 500
+sleep 100
+move 140 500
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 100
+sleep 300
+up
+sleep 1200
+dump
+down 240 500
+sleep 100
+move 220 500
+sleep 100
+move 200 500
+sleep 100
+move 180 500
+sleep 100
+move 160 500
+sleep 100
+move 140 500
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 100
+sleep 300
+up
+sleep 1200
+dump
+down 240 500
+sleep 100
+move 220 500
+sleep 100
+move 200 500
+sleep 100
+move 180 500
+sleep 100
+move 160 500
+sleep 100
+move 140 500
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 100
+sleep 300
+up
+sleep 1200
+dump
+down 240 500
+sleep 100
+move 220 500
+sleep 100
+move 200 500
+sleep 100
+move 180 500
+sleep 100
+move 160 500
+sleep 100
+move 140 500
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 240 480
+sleep 100
+move 240 460
+sleep 100
+sleep 300
+up
+sleep 1200
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 100
+sleep 300
+up
+sleep 1200
+dump
+down 240 500
+sleep 100
+move 220 500
+sleep 100
+move 200 500
+sleep 100
+move 180 500
+sleep 100
+move 160 500
+sleep 100
+move 140 500
+sleep 100
+sleep 300
+up
+sleep 1200

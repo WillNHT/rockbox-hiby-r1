@@ -1,6 +1,6 @@
 # Hiby charge limit placeholder
 
-The option is shown under General Settings -> System -> Limits on Hiby R1 and Hiby R3 Pro II builds.
+The option is shown under Settings -> System -> Battery on Hiby R1 and Hiby R3 Pro II builds.
 
 ## Supported values
 

@@ -1,8 +1,8 @@
 # Touch Controls
 
 
-If you have trouble tapping the right element in lists, you can increase line height with the `Line Padding in Lists` setting (in `Settings > General Settings > Display > Touchscreen Settings`).
-It's also useful to set the `Line Separator` to `Auto` (in `Settings > Theme Settings`) to see the element tap zones:
+If you have trouble tapping the right element in lists, you can increase line height with the `Line Padding in Lists` setting (in `Settings > Display`).
+It's also useful to set the `Line Separator` to `Auto` (in `Settings > Advanced > Lists & Scrolling`) to see the element tap zones:
 <p align="center">
 <img width="120" height="200" alt="list_100px_padding" src="docs/mods/screenshots/list_100px_padding.png" />
 </p>

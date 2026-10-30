@@ -1,6 +1,6 @@
 # Transitions
 
-Screen changes can be animated. Settings are in **Theme Settings > Transitions**:
+Screen changes can be animated. Settings are in **Settings > Display > Transitions**:
 
 | Setting | What it does | Default |
 |---|---|---|

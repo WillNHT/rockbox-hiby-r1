@@ -20818,3 +20818,115 @@
     *: "Wired Level"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_LIBRARY
+  desc: in the settings menu: the page for what is on the player
+  user: core
+  <source>
+    *: "Library"
+  </source>
+  <dest>
+    *: "Library"
+  </dest>
+  <voice>
+    *: "Library"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CONTROLS
+  desc: in the settings menu: the page for the stick, the keys and the main menu
+  user: core
+  <source>
+    *: "Controls"
+  </source>
+  <dest>
+    *: "Controls"
+  </dest>
+  <voice>
+    *: "Controls"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ADVANCED
+  desc: in the settings menu: everything rarely changed
+  user: core
+  <source>
+    *: "Advanced"
+  </source>
+  <dest>
+    *: "Advanced"
+  </dest>
+  <voice>
+    *: "Advanced"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ABOUT
+  desc: in the settings menu: version, credits, running time and debug
+  user: core
+  <source>
+    *: "About"
+  </source>
+  <dest>
+    *: "About"
+  </dest>
+  <voice>
+    *: "About"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DEVICE_SOUNDS
+  desc: in the settings menu: keyclick, beep and ducking
+  user: core
+  <source>
+    *: "Device Sounds"
+  </source>
+  <dest>
+    *: "Device Sounds"
+  </dest>
+  <voice>
+    *: "Device Sounds"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AUDIO_EFFECTS
+  desc: in the advanced settings: channels, dithering, surround, compressor
+  user: core
+  <source>
+    *: "Audio Effects"
+  </source>
+  <dest>
+    *: "Audio Effects"
+  </dest>
+  <voice>
+    *: "Audio Effects"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_INPUT
+  desc: in the advanced settings: stick tuning, volume steps, calibration
+  user: core
+  <source>
+    *: "Input"
+  </source>
+  <dest>
+    *: "Input"
+  </dest>
+  <voice>
+    *: "Input"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LISTS_SCROLLING
+  desc: in the advanced settings: scrolling, bars, cursor and separators
+  user: core
+  <source>
+    *: "Lists & Scrolling"
+  </source>
+  <dest>
+    *: "Lists & Scrolling"
+  </dest>
+  <voice>
+    *: "Lists and Scrolling"
+  </voice>
+</phrase>

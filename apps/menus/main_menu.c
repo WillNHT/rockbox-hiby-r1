@@ -491,20 +491,11 @@ MENUITEM_FUNCTION(debug_menu_item, 0, ID2P(LANG_DEBUG),
 MENUITEM_FUNCTION(show_legal_item, 0, ID2P(LANG_LEGAL_NOTICES),
                   show_legal, NULL, Icon_NOICON);
 
-MAKE_MENU(info_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
+MAKE_MENU(info_menu, ID2P(LANG_ABOUT), 0, Icon_System_menu,
           &show_info_item, &show_credits_item,
           &show_runtime_item, &show_legal_item, &debug_menu_item);
 /*      INFO MENU                  */
 /***********************************/
-
-static int main_menu_config(void)
-{
-    plugin_load(PLUGIN_APPS_DIR "/main_menu_config.rock", NULL);
-    return 0;
-}
-
-MENUITEM_FUNCTION(main_menu_config_item, 0, ID2P(LANG_MAIN_MENU),
-                  main_menu_config, NULL, Icon_Rockbox);
 
 /***********************************/
 /*    MAIN MENU                    */
@@ -513,18 +504,14 @@ MAKE_MENU(main_menu_, ID2P(LANG_SETTINGS), NULL,
         Icon_Submenu_Entered,
         &sound_settings,
         &playback_settings,
-        &settings_menu_item, &theme_menu,
-#ifdef HAVE_VIDEO
-        &video_settings_menu,
-#endif
+        &library_menu,
+        &display_menu,
+        &controls_menu,
 #ifdef HAVE_RECORDING
         &recording_settings,
 #endif
-#if CONFIG_RTC
-        &timedate_item,
-#endif
-        &main_menu_config_item,
-        &manage_settings,
+        &system_menu,
+        &settings_advanced_menu,
         );
 /*    MAIN MENU                    */
 /***********************************/

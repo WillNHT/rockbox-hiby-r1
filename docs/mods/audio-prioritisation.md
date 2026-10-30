@@ -14,7 +14,7 @@ and the channel comes back a fraction of a second later.
 
 ## The settings
 
-**Settings - General Settings - System - Audio Prioritisation**
+**Settings > Sound > Device Sounds** and **Settings > Advanced > Device Sounds**
 
 | Setting | Default | What it does |
 | --- | --- | --- |

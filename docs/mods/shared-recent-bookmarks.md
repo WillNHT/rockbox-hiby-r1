@@ -18,7 +18,7 @@ Ensure the Playlists folder on each player (accessed via **Main Menu > Playlists
 * *Note: This feature reuses the configured Playlists directory to store recent bookmarks, eliminating the need for an additional setting in the UI.*
 
 **2. Configure Bookmark Settings**
-On each player, navigate to **Settings > General Settings > Bookmarks** and apply the following options:
+On each player, navigate to **Settings > Library > Bookmarks** and apply the following options:
 * **Maintain a List of Recent Bookmarks:** Set to anything except *No*. (Selecting *One per playlist* keeps minimal records).
 * **Bookmark on Stop:** Set to anything except *No*. To prevent the creation of standard folder bookmarks and only use this cross-device feature, select *Yes - Recent only*.
 * **Resume Recent Bookmark:** Set to *Yes*.
