@@ -409,9 +409,17 @@ void lcd_update(void)
      * every second "partial" update was a full one. Paying the second
      * 750 KiB here instead costs the same copy once, on an update that is
      * already full-screen, and leaves partial updates genuinely partial.
-     * Safe because the plane being written is the one *not* on display. */
+     * The other plane is the one on display, so it gets the finished
+     * frame from the back plane: copied from the framebuffer, it would
+     * show the backdrop until the layers were blended back over it - a
+     * whole-screen flicker on every full update. */
     if (doublebuf)
-        copy_to_plane(!fb_plane, FBADDR(0, 0), 0, 0, LCD_WIDTH, LCD_HEIGHT);
+    {
+        lcd_copy_buffer_rect(LCD_FRAMEBUF_ADDR(0, 0) + !fb_plane * FB_PLANE_PIXELS,
+                             LCD_FRAMEBUF_ADDR(0, 0) + fb_plane * FB_PLANE_PIXELS,
+                             LCD_WIDTH * LCD_HEIGHT, 1);
+        STAT(stats.px_copied += (unsigned long long)LCD_WIDTH * LCD_HEIGHT);
+    }
 
     dirty_clear(&plane_dirty[0]);
     dirty_clear(&plane_dirty[1]);
