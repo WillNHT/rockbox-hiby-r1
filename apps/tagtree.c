@@ -1810,7 +1810,8 @@ static int retrieve_entries(struct tree_context *c, int offset, bool init)
                 {
                     namebufused += strlen(dptr->name)+1;
                     dptr->album_name = core_get_data(c->cache.name_buffer_handle)+namebufused;
-                    if ((c->cache.name_buffer_size - namebufused) > 0 &&
+                    /* title_only would show the album in place of the name */
+                    if (!title_only && (c->cache.name_buffer_size - namebufused) > 0 &&
                         tagcache_retrieve(&tcs, tcs.idx_id, tag_album, dptr->album_name,
                                     c->cache.name_buffer_size - namebufused))
                         namebufused += strlen(dptr->album_name)+1;
@@ -1936,6 +1937,19 @@ entry_skip_formatter:
         );
     }
 
+    /* Sorted by the whole format - track number and all - and then shown
+     * as the bare title, which title_only fetched in place of the album.
+     * Only the entries loaded: a library over max_files_in_dir has more
+     * tracks than the entries buffer has room for. */
+    if (title_only)
+    {
+        dptr = get_entries(c);
+        for (i = 0; i < current_entry_count; i++, dptr++)
+            if (dptr->album_name)
+                dptr->name = dptr->album_name;
+        strip = 0;
+    }
+
     if (!init)
     {
         tagcache_search_finish(&tcs);
@@ -1971,21 +1985,10 @@ entry_skip_formatter:
     if (sort_limit)
         total_count = MIN(total_count, sort_limit);
 
-    /* Sorted by the whole format - track number and all - and then shown
-     * as the bare title, which title_only fetched in place of the album. */
-    if (title_only)
-    {
-        dptr = get_entries(c);
-        for (i = c->special_entry_count; i < total_count; i++, dptr++)
-            if (dptr->album_name)
-                dptr->name = dptr->album_name;
-        strip = 0;
-    }
-
     if (strip)
     {
         dptr = get_entries(c);
-        for (i = c->special_entry_count; i < total_count; i++, dptr++)
+        for (i = c->special_entry_count; i < current_entry_count; i++, dptr++)
         {
             int len = strlen(dptr->name);
 

@@ -22,4 +22,9 @@
  * time it was taken: 2026-09-22-04-20-20-utc0-odml2.jpg. */
 void screenshot_take(void);
 
+#ifdef HAVE_LCD_LAYERS
+/* Takes the last shot's thumbnail down when its time is up. */
+void screenshot_tick(void);
+#endif
+
 #endif /* _SCREENSHOT_H_ */

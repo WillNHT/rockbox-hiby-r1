@@ -172,6 +172,12 @@ static void draw_text(struct screen *d, struct cv_state *st, int tile,
     ld.height = fh;
     set_selected_style(cursor_style, &ld, selected);
     ld.scroll = selected;
+#ifdef HAVE_TOUCHSCREEN
+    /* As in list_draw(): a line that scrolls is redrawn by the scroll engine
+     * as well, a frame behind the list. Not until the list is still. */
+    if (st->list->scroll_mode != 0)
+        ld.scroll = false;
+#endif
     put_line(d, centre ? centred_x(d, name, tv->width) : 0, ty, &ld,
              "$t", name);
     if (lines == 2)

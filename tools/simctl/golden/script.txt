@@ -1,0 +1,11 @@
+# Appended to tests/library.txt by golden.sh, which leaves the WPS playing.
+# Shots after library.txt's: the WPS paused, then the WPS with a thumb held
+# down on it (the stick armed, its overlay up).
+key play
+sleep 1500
+dump
+down 240 400
+sleep 600
+dump
+up
+sleep 800

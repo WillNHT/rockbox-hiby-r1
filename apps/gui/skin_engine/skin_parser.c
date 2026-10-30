@@ -400,6 +400,12 @@ static int parse_art_fx(struct skin_element *element,
     if (token->type == SKIN_TOKEN_ALBUMART_BACKDROP)
         skin_art_fx_reserve();
 #endif
+#ifdef HAVE_LCD_LAYERS
+    /* Nothing it holds reaches the panel but through the backdrop, so a
+     * viewport over it is over the backdrop, not over it (skin_layer.c). */
+    if (token->type == SKIN_TOKEN_ALBUMART_BACKDROP && curr_vp)
+        curr_vp->builds_backdrop = true;
+#endif
 
     token->value.data = PTRTOSKINOFFSET(skin_buffer, fx);
     return 0;
@@ -821,6 +827,69 @@ static int parse_listitemviewport(struct skin_element *element,
         !strcmp(get_param_text(element, 3), "tile"))
         cfg->tile = true;
     token->value.data = PTRTOSKINOFFSET(skin_buffer, (void*)cfg);
+#endif
+    return 0;
+}
+
+/* %Vo(label, n), %Vx(label, dx, dy) */
+static int parse_viewport_compose(struct skin_element *element,
+                                  struct wps_token *token,
+                                  struct wps_data *wps_data)
+{
+    struct viewport_compose *c = skin_buffer_alloc(sizeof(*c));
+    (void)wps_data;
+
+    if (!c)
+        return WPS_ERROR_INVALID_PARAM;
+    c->label = get_param(element, 0)->data.text;
+    c->a = get_param(element, 1)->data.number;
+    c->b = 0;
+    if (token->type == SKIN_TOKEN_VIEWPORT_OFFSET)
+        c->b = get_param(element, 2)->data.number;
+    else
+        /* Clamped like %Vt: a bad number is not worth the failsafe WPS. */
+        c->a = MAX(0, MIN(c->a, 100));
+    token->value.data = PTRTOSKINOFFSET(skin_buffer, c);
+    return 0;
+}
+
+/* %Va(o|x, ms [, linear|out|inout]) */
+static int parse_viewport_animate(struct skin_element *element,
+                                  struct wps_token *token,
+                                  struct wps_data *wps_data)
+{
+    const char *prop = get_param_text(element, 0);
+    int ms = MAX(0, MIN(get_param(element, 1)->data.number, 60000));
+    (void)token; (void)wps_data;
+
+    if ((*prop != 'o' && *prop != 'x') || prop[1])
+        return WPS_ERROR_INVALID_PARAM;
+#if defined(HAVE_LCD_LAYERS) && !defined(__PCTOOL__)
+    {
+        const char *ease = element->params_count > 2 ?
+                           get_param_text(element, 2) : "out";
+        unsigned char e;
+        if (!strcmp(ease, "linear"))
+            e = CANVAS_EASE_LINEAR;
+        else if (!strcmp(ease, "out"))
+            e = CANVAS_EASE_OUT_CUBIC;
+        else if (!strcmp(ease, "inout"))
+            e = CANVAS_EASE_IN_OUT_CUBIC;
+        else
+            return WPS_ERROR_INVALID_PARAM;
+        if (*prop == 'o')
+        {
+            curr_vp->fade_ms = ms;
+            curr_vp->fade_ease = e;
+        }
+        else
+        {
+            curr_vp->move_ms = ms;
+            curr_vp->move_ease = e;
+        }
+    }
+#else
+    (void)ms;
 #endif
     return 0;
 }
@@ -2510,6 +2579,17 @@ static int convert_viewport(struct wps_data *data, struct skin_element* element)
     skin_vp->output_to_backdrop_buffer = false;
     skin_vp->clear_veil = -1; /* no %Vt: the old opaque clear */
 #endif
+#ifdef HAVE_LCD_LAYERS
+    skin_vp->lifted = false;
+    skin_vp->builds_backdrop = false;
+#ifndef __PCTOOL__
+    memset(&skin_vp->fade, 0, sizeof(skin_vp->fade));
+    memset(&skin_vp->move_x, 0, sizeof(skin_vp->move_x));
+    memset(&skin_vp->move_y, 0, sizeof(skin_vp->move_y));
+    skin_vp->fade.to = 255;
+    skin_vp->fade_ms = skin_vp->move_ms = 0;
+#endif
+#endif
 #ifdef HAVE_LCD_COLOR
     skin_vp->start_gradient.start = global_settings.lss_color;
     skin_vp->start_gradient.end = global_settings.lse_color;
@@ -2760,6 +2840,13 @@ static int skin_element_callback(struct skin_element* element, void* data)
                 case SKIN_TOKEN_VIEWPORT_ENABLE:
                 case SKIN_TOKEN_UIVIEWPORT_ENABLE:
                     token->value.data = get_param(element, 0)->data.text;
+                    break;
+                case SKIN_TOKEN_VIEWPORT_OPACITY:
+                case SKIN_TOKEN_VIEWPORT_OFFSET:
+                    function = parse_viewport_compose;
+                    break;
+                case SKIN_TOKEN_VIEWPORT_ANIMATE:
+                    function = parse_viewport_animate;
                     break;
                 case SKIN_TOKEN_ANIMATION_FRAME:
                     function = parse_animation;

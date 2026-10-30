@@ -533,6 +533,11 @@ struct lcd_present_stats
     unsigned long long px_copied;   /* pixels copied into a plane */
     unsigned long copy_us_total;
     unsigned long copy_us_max;
+    unsigned long copy_cpu_us_max;  /* copy_us_max in CPU time, not wall time */
+    unsigned long full_us_total;    /* the part of copy_us from lcd_update() */
+    unsigned long full_us_max;
+    unsigned long blend_us_total;   /* the part of copy_us blending layers */
+    unsigned long blend_us_max;
     unsigned long present_us_total; /* vsync wait + pan ioctl */
     unsigned long present_us_max;
     unsigned long vsync_waits;      /* successful FBIO_WAITFORVSYNC calls */

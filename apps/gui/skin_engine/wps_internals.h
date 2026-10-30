@@ -64,6 +64,9 @@ bool skin_data_load(enum screen_type screen, struct wps_data *wps_data,
 #include "screen_access.h"
 #include "statusbar.h"
 #include "metadata.h"
+#if defined(HAVE_LCD_LAYERS) && !defined(__PCTOOL__)
+#include "canvas.h"
+#endif
 
 #define TOKEN_VALUE_ONLY 0x0DEADC0D
 
@@ -116,6 +119,12 @@ struct gui_img {
  * bottom alpha. See skin_art_fx.c. */
 struct skin_art_fx {
     int16_t x, y, w, h;
+    int16_t a, b;
+};
+
+/* %Vo(label, n): a is the opacity in percent. %Vx(label, dx, dy). */
+struct viewport_compose {
+    OFFSETTYPE(char*) label;
     int16_t a, b;
 };
 
@@ -235,6 +244,21 @@ struct skin_viewport {
      * the backdrop if there is one, fill the background if there is not.
      * See skin_layer.c. */
     int8_t clear_veil;
+#ifdef HAVE_LCD_LAYERS
+    /* Declared after a viewport it overlaps, so it draws into a surface
+     * of its own (skin_layer.c); bg_pattern is the surface's key while it
+     * does, and this is the colour it stands for. */
+    bool lifted;
+    bool builds_backdrop;       /* has %Cb: draws into the backdrop */
+    unsigned layer_bg;
+#ifndef __PCTOOL__
+    /* %Vo and %Vx: the layer's opacity (0..255) and offset, each easing
+     * towards what the skin last asked for over %Va's time. */
+    struct canvas_anim fade, move_x, move_y;
+    unsigned short fade_ms, move_ms;
+    unsigned char fade_ease, move_ease;
+#endif
+#endif
 #ifdef HAVE_LCD_COLOR
     struct gradient_config start_gradient;
 #endif

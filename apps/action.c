@@ -58,6 +58,10 @@
 #endif
 #endif /* HAVE_BACKLIGHT */
 
+#ifdef HAVE_LCD_LAYERS
+#include "screenshot.h"
+#endif
+
 /*#define LOGF_ENABLE*/
 #include "logf.h"
 
@@ -1252,6 +1256,11 @@ static int get_action_worker(action_last_t *last, action_cur_t *cur)
     /* After the screen has finished reacting to the previous action, which
      * is the only moment an overlay drawn over it will survive. */
     stick_draw_overlay();
+#endif
+
+#ifdef HAVE_LCD_LAYERS
+    /* The screenshot's thumbnail, taken down when its time is up. */
+    screenshot_tick();
 #endif
 
     /*if button = none/special; returns immediately*/

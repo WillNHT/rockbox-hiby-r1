@@ -33,6 +33,7 @@
 
 static SDL_TimerID tick_timer_id;
 long start_tick;
+bool sim_ctrl_clock;
 
 #ifndef HAVE_SDL_THREADS
 /* for the wait_for_interrupt function */
@@ -162,6 +163,9 @@ Uint32 tick_timer(Uint32 interval, void *param)
 
     (void) interval;
     (void) param;
+
+    if (sim_ctrl_clock)
+        return interval;
 
     new_tick = (SDL_GetTicks() - start_tick) / (1000/HZ);
 

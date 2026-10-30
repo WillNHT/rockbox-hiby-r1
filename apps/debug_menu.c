@@ -28,6 +28,9 @@
 #include "lang.h"
 #include "menu.h"
 #include "debug_menu.h"
+#ifdef HAVE_LCD_LAYERS
+#include "lcd-layers.h"
+#endif
 #include "kernel.h"
 #include "action.h"
 #include "debug.h"
@@ -3088,6 +3091,7 @@ static bool dbg_display_doublebuf(void)
 
     return false;
 }
+
 #endif /* HAVE_LCD_PRESENT_STATS */
 
 /****** The menu *********/

@@ -122,7 +122,7 @@ static bool do_non_text_tags(struct gui_wps *gwps, struct skin_draw_info *info,
             if (!col) return false;
             if (token->type == SKIN_TOKEN_VIEWPORT_FGCOLOUR)
                 skin_vp->vp.fg_pattern = col->colour;
-            else
+            else if (!skin_layer_set_bg(skin_vp, col->colour))
                 skin_vp->vp.bg_pattern = col->colour;
             skin_vp->fgbg_changed = true;
         }
@@ -187,6 +187,19 @@ static bool do_non_text_tags(struct gui_wps *gwps, struct skin_draw_info *info,
                 }
                 viewport = SKINOFFSETTOPTR(skin_buffer, viewport->next);
             }
+        }
+        break;
+        case SKIN_TOKEN_VIEWPORT_OPACITY:
+        case SKIN_TOKEN_VIEWPORT_OFFSET:
+        {
+            struct viewport_compose *c =
+                    SKINOFFSETTOPTR(skin_buffer, token->value.data);
+            struct skin_viewport *svp = c ? skin_find_item(
+                    SKINOFFSETTOPTR(skin_buffer, c->label), SKIN_FIND_VP,
+                    gwps->data) : NULL;
+            if (svp)
+                skin_layer_compose_to(svp, token->type ==
+                        SKIN_TOKEN_VIEWPORT_OPACITY, c->a, c->b);
         }
         break;
         case SKIN_TOKEN_LIST_ITEM_CFG:
@@ -563,7 +576,7 @@ static void do_tags_in_hidden_conditional(struct skin_element* branch,
                             }
 
                             gwps->display->set_viewport_ex(&skin_viewport->vp, VP_FLAG_VP_SET_CLEAN);
-                            skin_layer_clear_viewport(gwps->display, skin_viewport);
+                            skin_layer_hide(gwps->display, skin_viewport);
                             gwps->display->set_viewport_ex(&info->skin_vp->vp, VP_FLAG_VP_SET_CLEAN);
 
                             if (skin_viewport->output_to_backdrop_buffer)
@@ -1006,6 +1019,7 @@ void skin_render(struct gui_wps *gwps, unsigned refresh_mode)
     char *label;
 
     int old_refresh_mode = refresh_mode;
+    int z = 0;
     skin_buffer = get_skin_buffer(gwps->data);
 
     /* Settle the album-art backdrop before anything clears onto it. */
@@ -1039,6 +1053,8 @@ void skin_render(struct gui_wps *gwps, unsigned refresh_mode)
             display->clear_viewport();
         }
     }
+
+    skin_layer_begin(gwps, (refresh_mode&SKIN_REFRESH_ALL) == SKIN_REFRESH_ALL);
 
     viewport = SKINOFFSETTOPTR(skin_buffer, data->tree);
     if (!viewport) return;
@@ -1097,6 +1113,10 @@ void skin_render(struct gui_wps *gwps, unsigned refresh_mode)
             skin_viewport->hidden_flags = VP_DRAW_HIDEABLE;
         }
 
+        /* A new surface is empty: everything in it has to be drawn. */
+        if (skin_layer_enter(gwps, skin_viewport, z++) && vp_refresh_mode)
+            vp_refresh_mode = SKIN_REFRESH_ALL;
+
         display->set_viewport_ex(&skin_viewport->vp, VP_FLAG_VP_SET_CLEAN);
 
         if ((vp_refresh_mode&SKIN_REFRESH_ALL) == SKIN_REFRESH_ALL)
@@ -1107,12 +1127,16 @@ void skin_render(struct gui_wps *gwps, unsigned refresh_mode)
         if (viewport->children_count)
             skin_render_viewport(get_child(viewport->children, 0), gwps,
                                  skin_viewport, vp_refresh_mode);
+        skin_layer_exit(skin_viewport);
         refresh_mode = old_refresh_mode;
     }
 #if (LCD_DEPTH > 1) || (defined(HAVE_REMOTE_LCD) && (LCD_REMOTE_DEPTH > 1))
     skin_backdrop_set_buffer(-1, skin_viewport);
     skin_backdrop_show(data->backdrop_id);
 #endif
+    if (skin_viewport)
+        skin_layer_exit(skin_viewport);
+    skin_layer_compose(gwps);
 
     dirty[display->screen_type] = defer_rendering;
     if (((refresh_mode&SKIN_REFRESH_ALL) == SKIN_REFRESH_ALL))

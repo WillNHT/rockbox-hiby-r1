@@ -51,6 +51,7 @@ void wait_for_interrupt(void);
 
 void sim_enter_irq_handler(void);
 void sim_exit_irq_handler(void);
+extern bool sim_ctrl_clock; /* ticks come from sim_ctrl, not the wall */
 void sim_kernel_shutdown(void);
 void sys_poweroff(void);
 void sys_handle_argv(int argc, char *argv[]);

@@ -33,6 +33,12 @@ CONVERT=$(command -v convert-im6.q16 || command -v convert)
 
 rm -f $FIFO
 rm -f "$DISK"/dump*.bmp
+
+# A script can bring its own setup - a theme, a config - as foo.sh next to
+# foo.txt. It runs first, with the simdisk in $DISK.
+if [ -f "${SCRIPT%.txt}.sh" ]; then
+  DISK=$DISK sh "${SCRIPT%.txt}.sh"
+fi
 mkdir -p "$OUT"
 rm -f "$OUT"/*.png
 
@@ -48,10 +54,9 @@ done
 if ! grep -q "sim_ctrl: listening" /tmp/sim.log; then
   echo "simctl: control channel never came up" >&2
   tail -20 /tmp/sim.log >&2
-  kill $SP 2>/dev/null || true
+  kill -9 $SP 2>/dev/null || true   # it ignores TERM
   exit 1
 fi
-sleep 2   # let the boot screen settle before the first command
 
 # The script's own sleeps run in the simulator's control thread, so the
 # writer finishing says nothing about the script finishing. Every run ends
@@ -59,14 +64,16 @@ sleep 2   # let the boot screen settle before the first command
 # silently truncated scripts and produced screenshots of a half-run test.
 # A dump is only a request; one straight before "quit" is served after the
 # screen has been torn down and comes out blank, hence the sleep.
-{ cat "$SCRIPT"; echo; echo "sleep 500"; echo quit; } > $FIFO
+# The first sleep lets the boot screen settle; it is in the script, not
+# here, so that under RBSIM_CLOCK it moves the simulator's clock too.
+{ echo "sleep 2000"; cat "$SCRIPT"; echo; echo "sleep 500"; echo quit; } > $FIFO
 for i in $(seq 1 600); do
   kill -0 $SP 2>/dev/null || break
   sleep 0.1
 done
 if kill -0 $SP 2>/dev/null; then
   echo "simctl: script did not finish in 60 s; killing" >&2
-  kill $SP 2>/dev/null || true
+  kill -9 $SP 2>/dev/null || true   # it ignores TERM
 fi
 wait $SP 2>/dev/null || true
 

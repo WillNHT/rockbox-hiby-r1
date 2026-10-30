@@ -23,6 +23,10 @@
 #include "lcd-sdl.h"
 #include "sim-ui-defines.h"
 #include "system.h" /* for MIN() and MAX() */
+#ifdef HAVE_LCD_LAYERS
+#include <string.h>
+#include "lcd-layers.h"
+#endif
 #if SDL_MAJOR_VERSION > 1
 #include "window-sdl.h"
 #endif
@@ -39,8 +43,25 @@ void sdl_update_rect(SDL_Surface *surface, int x_start, int y_start, int width,
     (void)max_x;
     (void)max_y;
     (void)getpixel;
+#ifdef HAVE_LCD_LAYERS
+    /* The layers - and a running transition - are blended in on the way
+     * to the window, as the device's driver does on the way to the panel
+     * (lcd-layers.c). The main buffer by hand: FBADDR() follows the
+     * current viewport, which may be drawing into a surface. */
+    extern struct frame_buffer_t lcd_framebuffer_default;
+    static fb_data composed[LCD_FBHEIGHT * LCD_FBWIDTH];
+    const fb_data *fb = lcd_framebuffer_default.fb_ptr;
+    int row;
+    for (row = y_start; row < y_start + height; row++)
+        memcpy(composed + row * LCD_FBWIDTH + x_start,
+               fb + row * LCD_FBWIDTH + x_start, width * sizeof(fb_data));
+    lcd_layers_blend(composed + y_start * LCD_FBWIDTH + x_start, LCD_FBWIDTH,
+                     x_start, y_start, width, height);
+    SDL_Surface *lcd = SDL_CreateRGBSurfaceFrom(composed, LCD_FBWIDTH,
+#else
     /* Update complete screen via one blit operation (fast) */
     SDL_Surface *lcd = SDL_CreateRGBSurfaceFrom(FBADDR(0, 0), LCD_FBWIDTH,
+#endif
                                                 LCD_FBHEIGHT, LCD_DEPTH,
                                                 LCD_FBWIDTH * LCD_DEPTH/8,
                                                 0, 0, 0, 0);

@@ -24,6 +24,7 @@
 #include "config.h"
 #include "system.h"
 #include "lcd.h"
+#include "lcd-layers.h"
 #include "font.h"
 #include "button.h"
 #include "touchscreen.h"
@@ -239,6 +240,9 @@ void list_draw(struct screen *display, struct gui_synclist *list)
         callback_draw_item = _default_listdraw_fn;
 
     struct viewport * last_vp = display->set_viewport(parent);
+#ifdef HAVE_LCD_LAYERS
+    lcd_present_hold(true);
+#endif
     display->clear_viewport();
 
     /* Stopping every marquee on every draw is what stopped long names from
@@ -288,6 +292,9 @@ void list_draw(struct screen *display, struct gui_synclist *list)
         {
             skin_render_deferred(display, parent);
             display->set_viewport(last_vp);
+#ifdef HAVE_LCD_LAYERS
+            lcd_present_hold(false);
+#endif
             return;
         }
         display->set_viewport(parent);
@@ -516,6 +523,9 @@ void list_draw(struct screen *display, struct gui_synclist *list)
     }
     skin_render_deferred(display, parent);
     display->set_viewport(last_vp);
+#ifdef HAVE_LCD_LAYERS
+    lcd_present_hold(false);
+#endif
 }
 
 #if defined(HAVE_TOUCHSCREEN)

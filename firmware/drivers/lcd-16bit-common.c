@@ -28,6 +28,10 @@
 #error ROW_INC or COL_INC not defined
 #endif
 
+#ifdef HAVE_LCD_LAYERS
+#include "lcd-layers.h"
+#endif
+
 /* Clear the current viewport */
 void lcd_clear_viewport(void)
 {
@@ -443,6 +447,46 @@ static inline unsigned blend_two_colors(unsigned c1, unsigned c2, unsigned a)
 }
 #endif /* HAVE_GAMMA_AWARE_TEXT */
 
+#ifdef HAVE_LCD_LAYERS
+/* blend_two_colors(c1, c2, a) into a surface pixel *d with coverage *c.
+ * Where one side is the transparent key, the other side is written whole
+ * and the weight it would have had becomes its coverage. */
+static inline void surface_mix(fb_data *d, unsigned char *c,
+                               unsigned c1, unsigned c2, unsigned a,
+                               bool c1_dst)
+{
+    unsigned w = a + (a >> (ALPHA_BPP - 1));    /* of 16, towards c1 */
+    unsigned old = c1_dst ? *c : 255;
+
+    if (c1 == LCD_LAYER_KEY && (c2 == LCD_LAYER_KEY || w >= 16))
+    {
+        *d = LCD_LAYER_KEY;
+        *c = 255;
+    }
+    else if (c1 == LCD_LAYER_KEY)
+    {
+        *d = c2;
+        *c = (16 - w) * 255 / 16;
+    }
+    else if (c2 == LCD_LAYER_KEY)
+    {
+        if (w == 0)
+        {
+            *d = LCD_LAYER_KEY;
+            *c = 255;
+            return;
+        }
+        *d = c1;
+        *c = old * w / 16;
+    }
+    else
+    {
+        *d = blend_two_colors(c1, c2, a);
+        *c = old + (255 - old) * (16 - w) / 16;
+    }
+}
+#endif
+
 static void ICODE_ATTR lcd_alpha_bitmap_part_mix(
     const fb_data* image, const unsigned char *alpha,
     int src_x, int src_y,
@@ -587,6 +631,50 @@ static void ICODE_ATTR lcd_alpha_bitmap_part_mix(
     unsigned int bg = vp->bg_pattern;
     INIT_ALPHA();
     BLEND_INIT;
+
+#ifdef HAVE_LCD_LAYERS
+    /* In a compositor surface the key is not a colour to blend towards:
+     * an edge over it keeps the ink and records its coverage, and is
+     * blended with what is really beneath when the panel is updated. */
+    if (drmode != DRMODE_COMPLEMENT && !(drmode & DRMODE_INT_BD) &&
+        lcd_surface_coverage(dst))
+    {
+        do
+        {
+            int col = width;
+            fb_data *dst_row = dst;
+            unsigned char *cov = lcd_surface_coverage(dst);
+            intptr_t io = image - dst;
+            START_ALPHA();
+            do
+            {
+                unsigned a = READ_ALPHA();
+                unsigned c1, c2;
+                bool c1_dst = false;
+                switch (drmode)
+                {
+                case DRMODE_BG:
+                    c1 = bg; c2 = *dst; break;
+                case DRMODE_FG:
+                    c1 = *dst; c2 = fg; c1_dst = true; break;
+                case DRMODE_FG|DRMODE_INT_IMG:
+                    c1 = *dst; c2 = *(dst + io); c1_dst = true; break;
+                case DRMODE_SOLID|DRMODE_INT_IMG:
+                    c1 = bg; c2 = *(dst + io); break;
+                default: /* DRMODE_SOLID */
+                    c1 = bg; c2 = fg; break;
+                }
+                surface_mix(dst, cov + (dst - dst_row), c1, c2, a, c1_dst);
+                dst += COL_INC;
+            } while (--col);
+            END_ALPHA();
+            image += STRIDE_MAIN(stride_image, 1);
+            dst = dst_row + ROW_INC;
+        } while (--height);
+        BLEND_FINISH;
+        return;
+    }
+#endif
 
     do
     {

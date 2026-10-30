@@ -20,10 +20,17 @@ while IFS=$TAB read -r artist album track title secs; do
   mkdir -p "$dir"
   # In the background: the tones are most of a simulator run otherwise.
   ffmpeg -nostdin -loglevel error -y     -f lavfi -i "sine=frequency=$((220 + track * 40)):duration=$secs"     -ac 1 -c:a aac -b:a 24k     -metadata artist="$artist" -metadata album="$album"     -metadata title="$title" -metadata track="$track"     "$dir/$(printf '%02d' "$track") $title.m4a" &
-  # One flat colour per album, picked by its name, so covers can be told
-  # apart in a screenshot.
+  # A generated picture per album, picked by its name: detail, gradients
+  # and hard edges for blur, cover edges and text over art to act on,
+  # which a flat colour hid. Generated, so nothing copyrighted.
+  n=$((0x$(printf '%s' "$album" | md5sum | cut -c1-6)))
+  if [ $((n % 2)) = 0 ]; then
+    art="mandelbrot=s=300x300:start_x=-0.743643887:start_y=0.131825904:start_scale=0.0$((n % 5 + 1)):inner=period"
+  else
+    art="gradients=s=300x300:n=5:seed=$n:type=$((n % 4)),drawgrid=w=30:h=30:t=2:c=white@0.6"
+  fi
   [ -e "$dir/cover.jpg" ] ||
-    ffmpeg -nostdin -loglevel error -y -f lavfi       -i "color=c=0x$(printf '%s' "$album" | md5sum | cut -c1-6):s=300x300"       -frames:v 1 "$dir/cover.jpg"
+    ffmpeg -nostdin -loglevel error -y -f lavfi -i "$art" -frames:v 1 "$dir/cover.jpg"
 done
 wait
 }

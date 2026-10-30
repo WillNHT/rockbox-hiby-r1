@@ -105,7 +105,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential libsdl2-dev zip gawk xvfb imagemagick ffmpeg
+        sudo apt-get install -y build-essential libsdl2-dev zip gawk xvfb imagemagick ffmpeg libfaketime
 
     - name: Build the simulator
       run: |
@@ -135,6 +135,30 @@ jobs:
       if: env.SIM_SCRIPT == 'tools/simctl/tests/smoke.txt'
       run: |
         RBSIM_DIR=$PWD/sim xvfb-run -a bash tools/simctl/simctl.sh "$PWD/tools/simctl/tests/library.txt" "$PWD/shots/library"
+
+    # The skins as committed are the skins their sources compile to:
+    # themes/src/*.html through themes/wpsc.py, the rest gen_skins.py.
+    - name: Skins up to date
+      run: |
+        python3 themes/gen_skins.py
+        git diff --exit-code themes/wps
+
+    # Every theme through the same script, compared with the committed
+    # goldens (tools/simctl/golden.sh). A change that is meant: copy
+    # shots/golden/new over tools/simctl/golden in the same PR.
+    - name: Golden images
+      if: env.SIM_SCRIPT == 'tools/simctl/tests/smoke.txt'
+      run: |
+        FAKETIME_LIB=$(ls /usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1) \
+        RBSIM_DIR=$PWD/sim OUT=$PWD/shots/golden \
+          xvfb-run -a bash tools/simctl/golden.sh
+
+    # Viewports over viewports (skin_layer.c). After the goldens: its setup
+    # replaces the simdisk's theme and config.
+    - name: Layering
+      if: env.SIM_SCRIPT == 'tools/simctl/tests/smoke.txt'
+      run: |
+        RBSIM_DIR=$PWD/sim xvfb-run -a bash tools/simctl/simctl.sh "$PWD/tools/simctl/tests/layering.txt" "$PWD/shots/layering"
 
     - name: Simulator log
       if: always()

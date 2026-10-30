@@ -19,6 +19,7 @@
 #define __LCD_TRANSITION_H__
 
 #include "config.h"
+#include "lcd.h"
 
 /* Screen transitions. See lcd-transition.c. The values are stored in
  * settings, so only ever append. */
@@ -55,6 +56,12 @@ void lcd_transition_idle(void);
 
 /* Called by lcd_update*(): true if the present is to be held back. */
 bool lcd_transition_hold(void);
+
+/* Called as a rectangle goes to the panel: while a transition runs, its
+ * frame replaces the framebuffer and the surfaces there, under the
+ * layers. False when none is running. */
+bool lcd_transition_paint(fb_data *dst, int dst_stride,
+                          int x, int y, int w, int h);
 
 #else
 static inline void lcd_transition_arm(enum lcd_transition type, int dir,

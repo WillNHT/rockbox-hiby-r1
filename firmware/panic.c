@@ -32,6 +32,7 @@
 #include "system.h"
 #include "logf.h"
 #include "rbversion.h"
+#include "lcd-transition.h"
 
 #ifdef HAVE_RB_BACKTRACE
 #include "gcc_extensions.h"
@@ -127,6 +128,10 @@ void panicf( const char *fmt, ...)
     logf_panic_dump(&y);
 #endif
 
+#if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
+    /* a screen armed to animate holds every present back, this one too */
+    lcd_transition_cancel();
+#endif
     lcd_update();
     DEBUGF("%s", panic_buf);
 

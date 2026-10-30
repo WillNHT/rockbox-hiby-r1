@@ -1,0 +1,25 @@
+# Rectangles golden.sh paints out of a shot and its golden before comparing,
+# for whatever moves on its own between two runs of the same build.
+#
+#   <theme-slug> <shotNN|*> x0,y0 x1,y1
+#
+# Keep them tight: a masked pixel is one a regression can hide in. The
+# simulator's tick follows the script (RBSIM_CLOCK), so what is left here
+# follows audio or the wall clock instead.
+
+# Battery level: the simulated battery drains on the wall clock.
+Snappy-Animated * 376,20 420,80
+Snappy-V2 * 376,20 420,80
+# Peak meter bar ends: the level of whatever audio has been played.
+Snappy-Animated * 178,610 210,683
+Snappy-V2 * 179,568 207,649
+# The held stick's band is mid-animation when the shot is taken.
+Snappy-Animated shot06 31,324 449,377
+# The selected line scrolls on the scroll thread's own timer.
+Snappy-Animated shot03 184,200 443,249
+Snappy-V2 shot03 184,200 443,249
+# The cover's sheen: its frame comes from the tick of the last render
+# before the shot, which the UI thread reaches at its own pace. shot04
+# still checks the cover.
+Snappy-Animated shot05 31,150 449,600
+Snappy-Animated shot06 31,150 449,600

@@ -27,11 +27,10 @@
  *
  * So the overlay does not go into the framebuffer at all. It lives in a
  * layer of its own, and the only place the two meet is the copy to the
- * panel: lcd_update() and lcd_update_rect() lay the layers over the
- * framebuffer, let the target present it, and put the framebuffer's own
- * pixels straight back. The framebuffer never holds overlay pixels outside
- * that call, so a screen repainting underneath cannot eat the overlay and
- * dismissing the overlay is clearing its layer.
+ * panel: the driver hands each rectangle it copies to lcd_layers_blend().
+ * The framebuffer never holds overlay pixels, so a screen repainting
+ * underneath cannot eat the overlay and dismissing the overlay is clearing
+ * its layer.
  *
  * All layers are composed on every update while they have content, not only
  * inside the updated rectangle: a page-flipping driver replays regions the
@@ -45,6 +44,7 @@
 #include "config.h"
 #include <string.h>
 #include "system.h"
+#include "thread.h"
 #include "lcd.h"
 #include "lcd-layers.h"
 #include "lcd-transition.h"
@@ -63,6 +63,11 @@ struct layer
 };
 
 static fb_data overlay_px[LCD_HEIGHT * LCD_WIDTH];
+/* How much of each non-key pixel is ink, 255 = all of it. A glyph edge
+ * keeps its colour and records its coverage here (lcd-16bit-common.c), so
+ * it is blended with what is really beneath it when the panel is updated
+ * instead of with the key's near-black when it is drawn. */
+static unsigned char overlay_cov[LCD_HEIGHT * LCD_WIDTH];
 /* What the composed pixels replaced, at the same offsets. */
 static fb_data saved_px[LCD_HEIGHT * LCD_WIDTH];
 
@@ -90,6 +95,7 @@ static struct layer *get(enum lcd_layer l)
         size_t i;
         for (i = 0; i < ARRAYLEN(overlay_px); i++)
             ly->px[i] = LCD_LAYER_KEY;
+        memset(overlay_cov, 255, sizeof(overlay_cov));
         /* Same geometry as the framebuffer, and the same address function:
          * it resolves against the current viewport's buffer, which is this
          * one while the owner draws. */
@@ -164,9 +170,11 @@ void lcd_layer_clear(enum lcd_layer layer,
         struct lrect *r = &ly->r[i];
         for (row = 0; row < r->h; row++)
         {
-            fb_data *p = ly->px + (size_t)(r->y + row) * LAYER_STRIDE + r->x;
+            size_t off = (size_t)(r->y + row) * LAYER_STRIDE + r->x;
+            fb_data *p = ly->px + off;
             for (col = 0; col < r->w; col++)
                 p[col] = LCD_LAYER_KEY;
+            memset(overlay_cov + off, 255, r->w);
         }
         if (cleared)
             cleared(r->x, r->y, r->w, r->h);
@@ -174,22 +182,304 @@ void lcd_layer_clear(enum lcd_layer layer,
     ly->n = 0;
 }
 
+/* Surfaces.
+ *
+ * One arena two panels tall holds them all - every viewport of a skin
+ * and of the status bar over it. A surface keeps its own
+ * columns and is given rows of the arena: its own rows if nothing is
+ * there, the first free ones that fit if something is. The viewport
+ * addresses it with panel coordinates through a buffer whose origin is
+ * moved by the difference, so everything that writes a buffer at
+ * absolute coordinates - the lcd driver, skin_art_fx.c, skin_layer.c -
+ * works on a surface unchanged. */
+#define MAX_SURFACES 64
+
+/* Pages of these that no surface has touched are never made resident on
+ * a hosted target, so a skin that lifts little costs little. */
+#define ARENA_ROWS (2 * LCD_HEIGHT)
+static fb_data arena_px[ARENA_ROWS * LCD_WIDTH];
+static unsigned char arena_cov[ARENA_ROWS * LCD_WIDTH];
+static struct lcd_surface surfaces[MAX_SURFACES];
+/* The ones in use, in ascending z. */
+static struct lcd_surface *zorder[MAX_SURFACES];
+static int nsurfaces;
+
+static inline fb_data *arena_row(const struct lcd_surface *s, int row)
+{
+    return arena_px + (size_t)(s->row + row) * LAYER_STRIDE + s->x;
+}
+
+static bool arena_free(int x, int row, int w, int h)
+{
+    int i;
+    for (i = 0; i < nsurfaces; i++)
+    {
+        const struct lcd_surface *s = zorder[i];
+        if (x < s->x + s->w && s->x < x + w &&
+            row < s->row + s->h && s->row < row + h)
+            return false;
+    }
+    return true;
+}
+
+struct lcd_surface *lcd_surface_find(const void *owner)
+{
+    int i;
+    for (i = 0; i < nsurfaces; i++)
+        if (zorder[i]->owner == owner)
+            return zorder[i];
+    return NULL;
+}
+
+struct lcd_surface *lcd_surface_from_fb(const struct frame_buffer_t *fb)
+{
+    const struct lcd_surface *s = (const struct lcd_surface *)fb;
+    if (s < surfaces || s >= surfaces + MAX_SURFACES || !s->owner)
+        return NULL;
+    return (struct lcd_surface *)s;
+}
+
+void lcd_surface_clear(struct lcd_surface *s)
+{
+    int row, col;
+    for (row = 0; row < s->h; row++)
+    {
+        fb_data *p = arena_row(s, row);
+        for (col = 0; col < s->w; col++)
+            p[col] = LCD_LAYER_KEY;
+        memset(arena_cov + (p - arena_px), 255, s->w);
+    }
+    s->nveils = 0;
+}
+
+struct lcd_surface *lcd_surface_get(const void *owner, int tag, int x, int y,
+                                    int w, int h, int z)
+{
+    struct lcd_surface *s = lcd_surface_find(owner);
+    int row, i;
+
+    if (!clip(&x, &y, &w, &h))
+        return NULL;
+    if (s && s->x == x && s->y == y && s->w == w && s->h == h)
+        return s;
+    if (s)
+        lcd_surface_put(s);
+    if (nsurfaces == MAX_SURFACES)
+        return NULL;
+
+    /* Its own rows, or the first that are free. */
+    row = y;
+    if (!arena_free(x, row, w, h))
+    {
+        for (row = 0; row + h <= ARENA_ROWS; row++)
+            if (arena_free(x, row, w, h))
+                break;
+        if (row + h > ARENA_ROWS)
+            return NULL;
+    }
+
+    for (s = surfaces; s->owner; s++)
+        ;
+    s->owner = owner;
+    s->x = x; s->y = y; s->w = w; s->h = h;
+    s->row = row;
+    s->z = z;
+    s->tag = tag;
+    s->dx = s->dy = 0;
+    s->opacity = 255;
+    s->fresh = true;
+    s->fb = lcd_framebuffer_default;
+    s->fb.fb_ptr = arena_px + (ptrdiff_t)(row - y) * LAYER_STRIDE;
+    lcd_surface_clear(s);
+
+    for (i = nsurfaces; i > 0 && zorder[i - 1]->z > z; i--)
+        zorder[i] = zorder[i - 1];
+    zorder[i] = s;
+    nsurfaces++;
+    return s;
+}
+
+void lcd_surface_put(struct lcd_surface *s)
+{
+    int i;
+    for (i = 0; i < nsurfaces && zorder[i] != s; i++)
+        ;
+    if (i == nsurfaces)
+        return;
+    for (; i < nsurfaces - 1; i++)
+        zorder[i] = zorder[i + 1];
+    nsurfaces--;
+    s->owner = NULL;
+}
+
+void lcd_surface_put_tag(int tag)
+{
+    int i = 0;
+    while (i < nsurfaces)
+    {
+        if (zorder[i]->tag == tag)
+            lcd_surface_put(zorder[i]);
+        else
+            i++;
+    }
+}
+
+void lcd_surface_put_all(void)
+{
+    while (nsurfaces)
+        lcd_surface_put(zorder[0]);
+}
+
+void lcd_surface_veil(struct lcd_surface *s, int x, int y, int w, int h,
+                      fb_data top, fb_data bottom, unsigned alpha,
+                      const fb_data *src)
+{
+    struct lcd_veil *v;
+    int i;
+
+    if (!src && alpha == 0)
+        return;
+    /* A partial redraw lays the same veil again; it must not darken. */
+    for (i = 0; i < s->nveils; i++)
+    {
+        v = &s->veil[i];
+        if (v->x == x && v->y == y && v->w == w && v->h == h &&
+            v->top == top && v->bottom == bottom && v->alpha == alpha &&
+            v->src == src)
+            return;
+    }
+    /* shortcut: a surface's ninth veil is dropped; raise
+     * LCD_SURFACE_VEILS if a skin needs more. */
+    if (s->nveils == LCD_SURFACE_VEILS)
+        return;
+    v = &s->veil[s->nveils++];
+    v->x = x; v->y = y; v->w = w; v->h = h;
+    v->top = top; v->bottom = bottom;
+    v->alpha = MIN(alpha, 255);
+    v->src = src;
+}
 
 static bool any_content(void)
 {
     int l;
+    if (nsurfaces)
+        return true;
     for (l = 0; l < LCD_LAYER_COUNT; l++)
         if (layers[l].n)
             return true;
     return false;
 }
 
-enum pass { SAVE, PAINT, RESTORE };
-
-static void run_pass(enum pass pass)
+unsigned char *lcd_surface_coverage(const fb_data *px)
 {
-    fb_data *base = base_px();
-    int l, i, row, c;
+    if (px >= overlay_px && px < overlay_px + ARRAYLEN(overlay_px))
+        return overlay_cov + (px - overlay_px);
+    if (px >= arena_px && px < arena_px + ARRAYLEN(arena_px))
+        return arena_cov + (px - arena_px);
+    return NULL;
+}
+
+/* src over dst with a of 255 of src, RGB565, one multiply per channel
+ * pair: red and blue in one word, green in another. */
+static inline fb_data blend_px(fb_data dst, fb_data src, unsigned a)
+{
+    unsigned w = (a + (a >> 7)) >> 3;           /* 0..32 */
+    uint32_t d = (dst | ((uint32_t)dst << 16)) & 0x07e0f81f;
+    uint32_t s = (src | ((uint32_t)src << 16)) & 0x07e0f81f;
+    d = ((s * w + d * (32 - w)) >> 5) & 0x07e0f81f;
+    return (fb_data)(d | (d >> 16));
+}
+
+static inline void paint_row(fb_data *dst, const fb_data *lp,
+                             const unsigned char *cov, int w)
+{
+    int c;
+    for (c = 0; c < w; c++)
+    {
+        if (lp[c] == LCD_LAYER_KEY)
+            continue;
+        dst[c] = cov[c] == 255 ? lp[c] : blend_px(dst[c], lp[c], cov[c]);
+    }
+}
+
+/* Painter's order, for one row of the panel, columns x0..x1, onto dp:
+ * the veils - the surface's background - over what is beneath, wherever
+ * any of it shows through, then the surface's own pixels over that, by
+ * their coverage. */
+static void paint_surface_row(const struct lcd_surface *s, fb_data *dp,
+                              int row, int x0, int x1)
+{
+    const fb_data *sp = arena_row(s, row - s->y - s->dy) +
+                        (x0 - s->x - s->dx);
+    const unsigned char *cp = arena_cov + (sp - arena_px);
+    int i, c;
+
+    for (i = 0; i < s->nveils; i++)
+    {
+        const struct lcd_veil *v = &s->veil[i];
+        int vy = v->y + s->dy;
+        int c0 = MAX(v->x + s->dx, x0) - x0;
+        int c1 = MIN(v->x + s->dx + v->w, x1) - x0;
+        const fb_data *src;
+        fb_data colour;
+
+        if (row < vy || row >= vy + v->h || c1 <= c0)
+            continue;
+        src = v->src ? v->src + (size_t)row * LAYER_STRIDE + x0 : NULL;
+        colour = blend_px(v->top, v->bottom, v->h > 1 ?
+                          (row - vy) * 255 / (v->h - 1) : 0);
+        for (c = c0; c < c1; c++)
+        {
+            if (sp[c] != LCD_LAYER_KEY && cp[c] == 255)
+                continue;
+            dp[c] = src ? src[c] : blend_px(dp[c], colour, v->alpha);
+        }
+    }
+    paint_row(dp, sp, cp, x1 - x0);
+}
+
+/* Inside (x, y, w, h) of dst as for lcd_layers_blend(). A surface that is
+ * not opaque is painted over a copy of the row, and the copy blended
+ * back by its opacity. */
+static void paint_surface(const struct lcd_surface *s, fb_data *dst,
+                          int dst_stride, int x, int y, int w, int h)
+{
+    static fb_data row_px[LCD_WIDTH];
+    int ox = s->x + s->dx, oy = s->y + s->dy;
+    int sx = MAX(x, ox), sy = MAX(y, oy);
+    int sx2 = MIN(x + w, ox + s->w), sy2 = MIN(y + h, oy + s->h);
+    int row, c;
+
+    if (sx2 <= sx || sy2 <= sy || !s->opacity)
+        return;
+
+    for (row = sy; row < sy2; row++)
+    {
+        fb_data *dp = dst + (size_t)(row - y) * dst_stride + (sx - x);
+        if (s->opacity == 255)
+        {
+            paint_surface_row(s, dp, row, sx, sx2);
+            continue;
+        }
+        memcpy(row_px, dp, (sx2 - sx) * sizeof(fb_data));
+        paint_surface_row(s, row_px, row, sx, sx2);
+        for (c = 0; c < sx2 - sx; c++)
+            dp[c] = blend_px(dp[c], row_px[c], s->opacity);
+    }
+}
+
+static void blend_all(fb_data *dst, int dst_stride,
+                      int x, int y, int w, int h)
+{
+    int l, i, row;
+
+    /* Surfaces first: they are under the layers. A running transition
+     * stands in for them and the framebuffer both. */
+#if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
+    if (!lcd_transition_paint(dst, dst_stride, x, y, w, h))
+#endif
+    for (i = 0; i < nsurfaces; i++)
+        paint_surface(zorder[i], dst, dst_stride, x, y, w, h);
 
     for (l = 0; l < LCD_LAYER_COUNT; l++)
     {
@@ -197,33 +487,81 @@ static void run_pass(enum pass pass)
         for (i = 0; i < ly->n; i++)
         {
             const struct lrect *r = &ly->r[i];
-            for (row = 0; row < r->h; row++)
+            int x1 = MAX(x, r->x), y1 = MAX(y, r->y);
+            int x2 = MIN(x + w, r->x + r->w), y2 = MIN(y + h, r->y + r->h);
+            if (x2 <= x1 || y2 <= y1)
+                continue;
+            for (row = y1; row < y2; row++)
             {
-                size_t off = (size_t)(r->y + row) * LAYER_STRIDE + r->x;
-                switch (pass)
-                {
-                case SAVE:
-                    memcpy(saved_px + off, base + off,
-                           r->w * sizeof(fb_data));
-                    break;
-                case RESTORE:
-                    memcpy(base + off, saved_px + off,
-                           r->w * sizeof(fb_data));
-                    break;
-                case PAINT:
-                {
-                    const fb_data *lp = ly->px + off;
-                    fb_data *bp = base + off;
-                    for (c = 0; c < r->w; c++)
-                        if (lp[c] != LCD_LAYER_KEY)
-                            bp[c] = lp[c];
-                    break;
-                }
-                }
+                size_t off = (size_t)row * LAYER_STRIDE + x1;
+                paint_row(dst + (size_t)(row - y) * dst_stride + (x1 - x),
+                          ly->px + off, overlay_cov + off, x2 - x1);
             }
         }
     }
 }
+
+/* Blend every surface and layer inside (x, y, w, h) onto dst, which holds
+ * the framebuffer's pixels for that rectangle at dst_stride. Called by the
+ * driver as it copies a rectangle into the panel plane, so whatever it
+ * copies - the update itself or a replay of what the other plane missed -
+ * carries the layers, and the framebuffer is never touched. */
+void lcd_layers_blend(fb_data *dst, int dst_stride,
+                      int x, int y, int w, int h)
+{
+    /* Composed, the framebuffer already holds them: a transition's frames
+     * and a screen dump are the finished picture. */
+    if (!composed)
+        blend_all(dst, dst_stride, x, y, w, h);
+#if defined(HAVE_LCD_TRANSITIONS) && !defined(BOOTLOADER)
+    else
+        lcd_transition_paint(dst, dst_stride, x, y, w, h);
+#endif
+}
+
+/* The composed colour of one pixel, for a driver that fetches pixels one
+ * at a time (the simulator). */
+fb_data lcd_layers_pixel(int x, int y, fb_data base)
+{
+    lcd_layers_blend(&base, 1, x, y, 1, 1);
+    return base;
+}
+
+static void copy_rect(bool save, const struct lrect *r)
+{
+    fb_data *base = base_px();
+    int row;
+
+    for (row = 0; row < r->h; row++)
+    {
+        size_t off = (size_t)(r->y + row) * LAYER_STRIDE + r->x;
+        if (save)
+            memcpy(saved_px + off, base + off, r->w * sizeof(fb_data));
+        else
+            memcpy(base + off, saved_px + off, r->w * sizeof(fb_data));
+    }
+}
+
+/* Save (or restore) every rectangle a surface or a layer covers. */
+static void save_pass(bool save)
+{
+    int l, i;
+
+    for (i = 0; i < nsurfaces; i++)
+    {
+        const struct lcd_surface *s = zorder[i];
+        int x = s->x + s->dx, y = s->y + s->dy, w = s->w, h = s->h;
+        struct lrect r;
+        if (!clip(&x, &y, &w, &h))
+            continue;
+        r.x = x; r.y = y; r.w = w; r.h = h;
+        copy_rect(save, &r);
+    }
+    for (l = 0; l < LCD_LAYER_COUNT; l++)
+        for (i = 0; i < layers[l].n; i++)
+            copy_rect(save, &layers[l].r[i]);
+}
+
 
 /* Lay the layers over the framebuffer, or take them back off.
  *
@@ -239,12 +577,46 @@ void lcd_layers_compose(bool on)
 
     if (on)
     {
-        run_pass(SAVE);
-        run_pass(PAINT);
+        save_pass(true);
+        blend_all(base_px(), LAYER_STRIDE, 0, 0, LCD_WIDTH, LCD_HEIGHT);
     }
     else
-        run_pass(RESTORE);
+        save_pass(false);
     composed = on;
+}
+
+void lcd_layers_snapshot(fb_data *dst)
+{
+    int i;
+    memcpy(dst, base_px(), sizeof(fb_data) * LCD_WIDTH * LCD_HEIGHT);
+    if (composed)
+        return;
+    for (i = 0; i < nsurfaces; i++)
+        paint_surface(zorder[i], dst, LAYER_STRIDE,
+                      0, 0, LCD_WIDTH, LCD_HEIGHT);
+}
+
+bool lcd_surface_flatten(void)
+{
+    int i;
+    if (composed || !nsurfaces)
+        return false;
+    for (i = 0; i < nsurfaces; i++)
+        paint_surface(zorder[i], base_px(), LAYER_STRIDE,
+                      0, 0, LCD_WIDTH, LCD_HEIGHT);
+    lcd_surface_put_all();
+    return true;
+}
+
+static bool present_held, present_owed;
+static unsigned int present_owner;
+
+static bool present_put_off(void)
+{
+    if (!present_held || thread_self() == present_owner)
+        return false;
+    present_owed = true;
+    return true;
 }
 
 /* The update functions everything calls. The target's own are renamed to
@@ -255,14 +627,9 @@ void lcd_update(void)
     if (lcd_transition_hold())
         return;
 #endif
-    if (composed || !any_content())
-    {
-        lcd_update_base();
+    if (present_put_off())
         return;
-    }
-    lcd_layers_compose(true);
     lcd_update_base();
-    lcd_layers_compose(false);
 }
 
 void lcd_update_rect(int x, int y, int width, int height)
@@ -271,12 +638,18 @@ void lcd_update_rect(int x, int y, int width, int height)
     if (lcd_transition_hold())
         return;
 #endif
-    if (composed || !any_content())
-    {
-        lcd_update_rect_base(x, y, width, height);
+    if (present_put_off())
         return;
-    }
-    lcd_layers_compose(true);
     lcd_update_rect_base(x, y, width, height);
-    lcd_layers_compose(false);
+}
+
+void lcd_present_hold(bool on)
+{
+    present_held = on;
+    present_owner = thread_self();
+    if (!on && present_owed)
+    {
+        present_owed = false;
+        lcd_update();
+    }
 }

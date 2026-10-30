@@ -397,6 +397,16 @@ enum skin_token_type {
     SKIN_TOKEN_VIDEO_ART,
     SKIN_TOKEN_VIDEO_ART_KIND,
     SKIN_TOKEN_VIDEO_CLIP,
+
+    /* How a viewport's layer is composed - see skin_layer.c.
+     * %Vo(label, n)          its opacity, 0..100 percent
+     * %Vx(label, dx, dy)     where it sits, moved from where it is declared
+     * %Va(o|x, ms [, ease])  in a viewport: changes to its opacity (o) or
+     *                        offset (x) ease over ms instead of jumping
+     * Appended, like everything else here - see the note above. */
+    SKIN_TOKEN_VIEWPORT_OPACITY,
+    SKIN_TOKEN_VIEWPORT_OFFSET,
+    SKIN_TOKEN_VIEWPORT_ANIMATE,
 };
 
 /*

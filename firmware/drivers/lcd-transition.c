@@ -32,7 +32,14 @@
  *
  * The animation runs in the caller's thread and blocks it for its length.
  * A few hundred milliseconds at the moment the user asked for a new screen
- * is the transition, not a stall in front of it. */
+ * is the transition, not a stall in front of it.
+ *
+ * The frames are never written anywhere. The two screens are taken
+ * composed - framebuffer and surfaces - and while the run lasts every
+ * rectangle the driver copies to the panel gets the frame instead of the
+ * framebuffer (lcd_transition_paint(), from lcd-layers.c), with the
+ * layers still painted live on top of it: the stick overlay follows the
+ * thumb through the animation instead of freezing in it. */
 
 #include "config.h"
 #include <string.h>
@@ -64,6 +71,7 @@ static fb_data to_px[NPIX];
 
 static bool armed;
 static bool running;
+static int t_p;                 /* eased progress of the frame showing */
 static enum lcd_transition t_type;
 static int t_dir;
 static int t_ticks;
@@ -71,11 +79,6 @@ static long armed_tick;
 static unsigned int owner;
 
 extern struct frame_buffer_t lcd_framebuffer_default;
-
-static inline fb_data *base_px(void)
-{
-    return lcd_framebuffer_default.fb_ptr;
-}
 
 static bool geometry_ok(void)
 {
@@ -90,17 +93,10 @@ void lcd_transition_arm(enum lcd_transition type, int dir, int duration_ms)
 
     if (!armed)
     {
-        /* The old frame as it was on the panel, layers and all - run()
-         * takes the new one composed, and an old one without the layers
-         * made whatever a skin keeps in them vanish at the start of the
-         * animation and pop back at its end. */
-#ifdef HAVE_LCD_LAYERS
-        lcd_layers_compose(true);
-#endif
-        memcpy(from_px, base_px(), sizeof(from_px));
-#ifdef HAVE_LCD_LAYERS
-        lcd_layers_compose(false);
-#endif
+        /* The old frame as it was on the panel, surfaces and all - an old
+         * one without them made whatever a skin keeps in them vanish at
+         * the start of the animation and pop back at its end. */
+        lcd_layers_snapshot(from_px);
         armed = true;
     }
     t_type = type;
@@ -145,83 +141,53 @@ static int ease(int t)
     return 1024 - (int)(((long long)u * u * u) >> 20);
 }
 
-static void blend_row(fb_data *d, const fb_data *a, const fb_data *b,
-                      int n, unsigned w)
+/* Pixel x of a row of `to` moved right by s (negative: left) over the
+ * same row of `from`, with `to` at weight w. */
+static inline fb_data shifted_px(const fb_data *to, const fb_data *from,
+                                 int x, int s, unsigned w)
 {
-    int i;
-    if (w >= 32)
-        memcpy(d, a, n * sizeof(fb_data));
-    else if (w == 0)
-        memcpy(d, b, n * sizeof(fb_data));
-    else
-        for (i = 0; i < n; i++)
-            d[i] = blend(a[i], b[i], w);
+    int tx = x - s;
+    if (tx < 0 || tx >= LCD_WIDTH)
+        return from[x];
+    return blend(to[tx], from[x], w);
 }
 
-/* One row of `to` shifted right by s (negative: left) over `from`, with
- * `to` at weight w. */
-static void shifted_row(fb_data *d, const fb_data *to, const fb_data *from,
-                        int s, unsigned w)
-{
-    const int W = LCD_WIDTH;
-    if (s >= W || s <= -W)
-    {
-        memcpy(d, from, W * sizeof(fb_data));
-        return;
-    }
-    if (s >= 0)
-    {
-        memcpy(d, from, s * sizeof(fb_data));
-        blend_row(d + s, to, from + s, W - s, w);
-    }
-    else
-    {
-        blend_row(d, to - s, from, W + s, w);
-        memcpy(d + W + s, from + W + s, -s * sizeof(fb_data));
-    }
-}
-
-static void frame(int p)        /* p: eased progress, 0..1024 */
+/* Columns x0..x1 of row y of the frame at eased progress p (0..1024),
+ * into d. Per row and range rather than per screen, so it can be painted
+ * straight into whatever the driver is copying to the panel. */
+static void frame_row(int p, int y, fb_data *d, int x0, int x1)
 {
     const int W = LCD_WIDTH, H = LCD_HEIGHT;
-    fb_data *d = base_px();
-    int y;
+    const fb_data *f = from_px + y * W, *t = to_px + y * W;
+    int x;
 
     switch (t_type)
     {
     case LCD_TRANSITION_FADE:
     {
         unsigned w = (unsigned)(p * 32 / 1024);
-        for (y = 0; y < H; y++)
-            blend_row(d + y * W, to_px + y * W, from_px + y * W, W, w);
+        for (x = x0; x < x1; x++)
+            d[x - x0] = blend(t[x], f[x], w);
         break;
     }
     case LCD_TRANSITION_SLIDE:
     {
         /* forward: in from the right edge */
         int s = t_dir * (W - W * p / 1024);
-        for (y = 0; y < H; y++)
-            shifted_row(d + y * W, to_px + y * W, from_px + y * W, s, 32);
+        for (x = x0; x < x1; x++)
+            d[x - x0] = shifted_px(t, f, x, s, 32);
         break;
     }
     case LCD_TRANSITION_PUSH:
     {
         int off = W * p / 1024;         /* how far the new one is in */
         int n = W - off;                /* old pixels still showing */
-        for (y = 0; y < H; y++)
+        for (x = x0; x < x1; x++)
         {
-            fb_data *r = d + y * W;
-            const fb_data *f = from_px + y * W, *t = to_px + y * W;
             if (t_dir > 0)
-            {
-                memcpy(r, f + off, n * sizeof(fb_data));
-                memcpy(r + n, t, off * sizeof(fb_data));
-            }
+                d[x - x0] = x < n ? f[x + off] : t[x - n];
             else
-            {
-                memcpy(r, t + n, off * sizeof(fb_data));
-                memcpy(r + off, f, n * sizeof(fb_data));
-            }
+                d[x - x0] = x < off ? t[x + n] : f[x - off];
         }
         break;
     }
@@ -231,18 +197,12 @@ static void frame(int p)        /* p: eased progress, 0..1024 */
          * new screen is drawn on behind it, nothing moves. */
         const int soft = W / 10;
         int edge = (W + soft) * p / 1024 - soft;    /* new up to here */
-        int x;
-        for (y = 0; y < H; y++)
+        for (x = x0; x < x1; x++)
         {
-            fb_data *r = d + y * W;
-            const fb_data *f = from_px + y * W, *t = to_px + y * W;
-            for (x = 0; x < W; x++)
-            {
-                int k = t_dir > 0 ? x : W - 1 - x;
-                int w = k < edge ? 32 : k >= edge + soft ? 0
-                                      : 32 - (k - edge) * 32 / soft;
-                r[x] = blend(t[x], f[x], (unsigned)w);
-            }
+            int k = t_dir > 0 ? x : W - 1 - x;
+            int w = k < edge ? 32 : k >= edge + soft ? 0
+                                  : 32 - (k - edge) * 32 / soft;
+            d[x - x0] = blend(t[x], f[x], (unsigned)w);
         }
         break;
     }
@@ -254,16 +214,11 @@ static void frame(int p)        /* p: eased progress, 0..1024 */
         static const uint8_t bayer[4][4] =
             { { 0, 8, 2, 10 }, { 12, 4, 14, 6 },
               { 3, 11, 1, 9 }, { 15, 7, 13, 5 } };
-        int x;
-        for (y = 0; y < H; y++)
+        for (x = x0; x < x1; x++)
         {
-            fb_data *r = d + y * W;
-            const fb_data *f = from_px + y * W, *t = to_px + y * W;
-            for (x = 0; x < W; x++)
-            {
-                int w = (p - bayer[y & 3][x & 3] * 48) * 32 / 256;
-                r[x] = blend(t[x], f[x], (unsigned)(w < 0 ? 0 : MIN(w, 32)));
-            }
+            int w = (p - bayer[y & 3][x & 3] * 48) * 32 / 256;
+            d[x - x0] = blend(t[x], f[x],
+                              (unsigned)(w < 0 ? 0 : MIN(w, 32)));
         }
         break;
     }
@@ -273,12 +228,10 @@ static void frame(int p)        /* p: eased progress, 0..1024 */
          * back, all at once, with its leading row half blended. */
         const int slat = H / 16;
         int open = slat * p / 1024;
-        for (y = 0; y < H; y++)
-        {
-            int k = t_dir > 0 ? y % slat : slat - 1 - y % slat;
-            unsigned w = k < open ? 32 : k == open ? 16 : 0;
-            blend_row(d + y * W, to_px + y * W, from_px + y * W, W, w);
-        }
+        int k = t_dir > 0 ? y % slat : slat - 1 - y % slat;
+        unsigned w = k < open ? 32 : k == open ? 16 : 0;
+        for (x = x0; x < x1; x++)
+            d[x - x0] = blend(t[x], f[x], w);
         break;
     }
     case LCD_TRANSITION_CASCADE:
@@ -290,66 +243,67 @@ static void frame(int p)        /* p: eased progress, 0..1024 */
          * top to bottom, back bottom to top. */
         const int band_h = (H + CASCADE_BANDS - 1) / CASCADE_BANDS;
         const int reach = W / 5;
-        int b;
-        for (b = 0; b < CASCADE_BANDS; b++)
-        {
-            int order = t_dir > 0 ? b : CASCADE_BANDS - 1 - b;
-            int start = CASCADE_SPREAD * order / (CASCADE_BANDS - 1);
-            int local = (p - start) * 1024 / (1024 - CASCADE_SPREAD);
-            if (local < 0) local = 0;
-            if (local > 1024) local = 1024;
-            local = ease(local);
-            int s = t_dir * (reach - reach * local / 1024);
-            unsigned w = (unsigned)(local * 32 / 1024);
-            int y0 = b * band_h, y1 = MIN(H, y0 + band_h);
-            for (y = y0; y < y1; y++)
-                shifted_row(d + y * W, to_px + y * W, from_px + y * W, s, w);
-        }
+        int b = y / band_h;
+        int order = t_dir > 0 ? b : CASCADE_BANDS - 1 - b;
+        int start = CASCADE_SPREAD * order / (CASCADE_BANDS - 1);
+        int local = (p - start) * 1024 / (1024 - CASCADE_SPREAD);
+        int s;
+        unsigned w;
+        if (local < 0) local = 0;
+        if (local > 1024) local = 1024;
+        local = ease(local);
+        s = t_dir * (reach - reach * local / 1024);
+        w = (unsigned)(local * 32 / 1024);
+        for (x = x0; x < x1; x++)
+            d[x - x0] = shifted_px(t, f, x, s, w);
         break;
     }
     }
 }
 
+bool lcd_transition_paint(fb_data *dst, int dst_stride,
+                          int x, int y, int w, int h)
+{
+    int row;
+    if (!running)
+        return false;
+    for (row = 0; row < h; row++)
+        frame_row(t_p, y + row, dst + (size_t)row * dst_stride, x, x + w);
+    return true;
+}
+
 static void run(void)
 {
-    fb_data *base = base_px();
     long start, now;
 
     armed = false;
-
-#ifdef HAVE_LCD_LAYERS
-    lcd_layers_compose(true);
-#endif
-    memcpy(to_px, base, sizeof(to_px));
+    lcd_layers_snapshot(to_px);
 
     if (memcmp(to_px, from_px, sizeof(to_px)))
     {
-        running = true;
         /* Frames are timed off the clock, not counted, so a slow frame
          * shortens the run instead of stretching it. The first frame goes
          * out at once: the key press that asked for this wants an answer
          * in the same instant. */
         start = current_tick;
         now = start;
+        t_p = 0;
+        running = true;
         do
         {
             int t = (int)((now - start) * 1024 / t_ticks);
             if (t > 1024)
                 break;
             /* The cascade eases each band itself. */
-            frame(t_type == LCD_TRANSITION_CASCADE ? t : ease(t));
+            t_p = t_type == LCD_TRANSITION_CASCADE ? t : ease(t);
             lcd_update_base();
             yield();
             now = current_tick;
         } while (now - start < t_ticks);
         running = false;
-        memcpy(base, to_px, sizeof(to_px));
     }
 
     lcd_update_base();
-#ifdef HAVE_LCD_LAYERS
-    lcd_layers_compose(false);
-#endif
 }
 
 void lcd_transition_idle(void)
