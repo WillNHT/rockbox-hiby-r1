@@ -131,6 +131,10 @@ void backlight_hw_brightness_fine(int permille)
     raw = (permille * max + 500) / 1000;
     if (raw < 1)
         raw = 1;
+    /* The panel stays dark after boot until the value really changes, and
+     * the driver takes a write of the value it already has as no change:
+     * with brightness at 100 % that lasted until the first dim. */
+    sysfs_set_int(sysfs_bl_brightness, raw > 1 ? raw - 1 : raw + 1);
     sysfs_set_int(sysfs_bl_brightness, raw);
 }
 #endif
