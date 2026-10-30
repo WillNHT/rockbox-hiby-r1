@@ -138,6 +138,11 @@ bool lcd_surface_flatten(void);
  * screen as a transition animates it. dst is LCD_WIDTH x LCD_HEIGHT. */
 void lcd_layers_snapshot(fb_data *dst);
 
+/* The caller is redrawing and can yield halfway, on a cover's file read:
+ * until it says otherwise, another thread's present would put the half-drawn
+ * screen on the panel, so those are put off. */
+void lcd_present_hold(bool on);
+
 /* Coverage of a layer or surface pixel, or NULL if px is in neither. */
 unsigned char *lcd_surface_coverage(const fb_data *px);
 

@@ -44,6 +44,7 @@
 #include "config.h"
 #include <string.h>
 #include "system.h"
+#include "thread.h"
 #include "lcd.h"
 #include "lcd-layers.h"
 #include "lcd-transition.h"
@@ -607,6 +608,17 @@ bool lcd_surface_flatten(void)
     return true;
 }
 
+static bool present_held, present_owed;
+static unsigned int present_owner;
+
+static bool present_put_off(void)
+{
+    if (!present_held || thread_self() == present_owner)
+        return false;
+    present_owed = true;
+    return true;
+}
+
 /* The update functions everything calls. The target's own are renamed to
  * *_base by its driver. */
 void lcd_update(void)
@@ -615,6 +627,8 @@ void lcd_update(void)
     if (lcd_transition_hold())
         return;
 #endif
+    if (present_put_off())
+        return;
     lcd_update_base();
 }
 
@@ -624,5 +638,18 @@ void lcd_update_rect(int x, int y, int width, int height)
     if (lcd_transition_hold())
         return;
 #endif
+    if (present_put_off())
+        return;
     lcd_update_rect_base(x, y, width, height);
+}
+
+void lcd_present_hold(bool on)
+{
+    present_held = on;
+    present_owner = thread_self();
+    if (!on && present_owed)
+    {
+        present_owed = false;
+        lcd_update();
+    }
 }
