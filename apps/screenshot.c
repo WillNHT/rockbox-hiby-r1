@@ -547,12 +547,17 @@ void screenshot_take(void)
         if (fd >= 0)
         {
             fdprintf(fd, "frames %lu full %lu partial %lu promoted %lu\n"
-                         "copy_us avg %lu max %lu\n"
+                         "copy_us avg %lu max %lu cpu_max %lu\n"
+                         "full_us avg %lu max %lu\n"
+                         "blend_us avg %lu max %lu\n"
                          "present_us avg %lu max %lu\n"
                          "px_per_frame %llu doublebuf %d vsync %d\n",
                      st.frames, st.full_frames, st.partial_frames,
                      st.promoted_frames,
-                     st.copy_us_total / n, st.copy_us_max,
+                     st.copy_us_total / n, st.copy_us_max, st.copy_cpu_us_max,
+                     st.full_us_total / (st.full_frames ? st.full_frames : 1),
+                     st.full_us_max,
+                     st.blend_us_total / n, st.blend_us_max,
                      st.present_us_total / n, st.present_us_max,
                      st.px_copied / n, st.doublebuf, st.vsync);
             close(fd);

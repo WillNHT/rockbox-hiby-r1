@@ -110,12 +110,29 @@ static inline unsigned long now_us(void)
     return (unsigned long)ts.tv_sec * 1000000ul + (unsigned long)(ts.tv_nsec / 1000);
 }
 
+/* This thread's CPU time: a copy that took far longer on the wall clock
+ * than here was not working, it was off the CPU. */
+static inline unsigned long cpu_us(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+    return (unsigned long)ts.tv_sec * 1000000ul + (unsigned long)(ts.tv_nsec / 1000);
+}
+
 static inline void stat_time(unsigned long *total, unsigned long *max,
                              unsigned long us)
 {
     *total += us;
     if (us > *max)
         *max = us;
+}
+
+static inline void stat_copy(unsigned long t0, unsigned long c0)
+{
+    unsigned long cpu = cpu_us() - c0;
+    stat_time(&stats.copy_us_total, &stats.copy_us_max, now_us() - t0);
+    if (cpu > stats.copy_cpu_us_max)
+        stats.copy_cpu_us_max = cpu;
 }
 
 void lcd_get_present_stats(struct lcd_present_stats *out)
@@ -238,20 +255,13 @@ static inline fb_data *main_fb_addr(int x, int y)
            (size_t)y * LCD_NATIVE_STRIDE(lcd_framebuffer_default.stride) + x;
 }
 
-#ifdef HAVE_LCD_LAYERS
-/* The finished frame. The planes are mapped device memory and slow to read,
- * and a blend reads every pixel it lands on, so the layers go on here in
- * ordinary RAM and the planes are only ever written. */
-static fb_data frame_px[FB_PLANE_PIXELS];
-#define FINISHED_FRAME frame_px
-#else
-#define FINISHED_FRAME FBADDR(0, 0)
-#endif
-
-static inline void copy_rows(fb_data *dst, const fb_data *src,
-                             int width, int height)
+/* Copy a rectangle into one plane. src is already the top-left corner. */
+static void copy_to_plane(int plane, const fb_data *src,
+                          int x, int y, int width, int height)
 {
-    if (width == LCD_WIDTH)
+    fb_data *dst = LCD_FRAMEBUF_ADDR(x, y) + plane * FB_PLANE_PIXELS;
+
+    if (x == 0 && width == LCD_WIDTH)
     {
         /* Full width - the rows are contiguous, copy as one line */
         lcd_copy_buffer_rect(dst, src, LCD_WIDTH * height, 1);
@@ -260,23 +270,14 @@ static inline void copy_rows(fb_data *dst, const fb_data *src,
     {
         lcd_copy_buffer_rect(dst, src, width, height);
     }
-}
-
-/* Copy a rectangle into one plane. src is already the top-left corner. */
-static void copy_to_plane(int plane, const fb_data *src,
-                          int x, int y, int width, int height)
-{
-    fb_data *dst = LCD_FRAMEBUF_ADDR(x, y) + plane * FB_PLANE_PIXELS;
 
 #ifdef HAVE_LCD_LAYERS
-    fb_data *frame = frame_px + (size_t)y * LCD_WIDTH + x;
-
-    copy_rows(frame, src, width, height);
-    lcd_layers_blend(frame, LCD_WIDTH, x, y, width, height);
-    src = frame;
+#ifdef HAVE_LCD_PRESENT_STATS
+    unsigned long t0 = now_us();
 #endif
-
-    copy_rows(dst, src, width, height);
+    lcd_layers_blend(dst, LCD_WIDTH, x, y, width, height);
+    STAT(stat_time(&stats.blend_us_total, &stats.blend_us_max, now_us() - t0));
+#endif
 
     STAT(stats.px_copied += (unsigned long long)width * height);
 }
@@ -415,7 +416,7 @@ void lcd_update(void)
 #endif
 
 #ifdef HAVE_LCD_PRESENT_STATS
-    unsigned long t0 = now_us();
+    unsigned long t0 = now_us(), c0 = cpu_us();
 #endif
 
     copy_to_plane(fb_plane, FBADDR(0, 0), 0, 0, LCD_WIDTH, LCD_HEIGHT);
@@ -430,13 +431,13 @@ void lcd_update(void)
      * 750 KiB here instead costs the same copy once, on an update that is
      * already full-screen, and leaves partial updates genuinely partial.
      * The other plane is the one on display, so it gets the finished
-     * frame: copied from the framebuffer, it would show the backdrop until
-     * the layers were blended back over it - a whole-screen flicker on
-     * every full update. */
+     * frame from the back plane: copied from the framebuffer, it would
+     * show the backdrop until the layers were blended back over it - a
+     * whole-screen flicker on every full update. */
     if (doublebuf)
     {
         lcd_copy_buffer_rect(LCD_FRAMEBUF_ADDR(0, 0) + !fb_plane * FB_PLANE_PIXELS,
-                             FINISHED_FRAME,
+                             LCD_FRAMEBUF_ADDR(0, 0) + fb_plane * FB_PLANE_PIXELS,
                              LCD_WIDTH * LCD_HEIGHT, 1);
         STAT(stats.px_copied += (unsigned long long)LCD_WIDTH * LCD_HEIGHT);
     }
@@ -446,7 +447,8 @@ void lcd_update(void)
 #endif
 
 #ifdef HAVE_LCD_PRESENT_STATS
-    stat_time(&stats.copy_us_total, &stats.copy_us_max, now_us() - t0);
+    stat_time(&stats.full_us_total, &stats.full_us_max, now_us() - t0);
+    stat_copy(t0, c0);
     stats.frames++;
     stats.full_frames++;
 #endif
@@ -472,7 +474,7 @@ void lcd_update_rect(int x, int y, int width, int height)
         return;
 
 #ifdef HAVE_LCD_PRESENT_STATS
-    unsigned long t0 = now_us();
+    unsigned long t0 = now_us(), c0 = cpu_us();
 #endif
 
 #ifdef FB_DOUBLEBUF
@@ -513,7 +515,7 @@ void lcd_update_rect(int x, int y, int width, int height)
     copy_to_plane(fb_plane, FBADDR(x, y), x, y, width, height);
 
 #ifdef HAVE_LCD_PRESENT_STATS
-    stat_time(&stats.copy_us_total, &stats.copy_us_max, now_us() - t0);
+    stat_copy(t0, c0);
     stats.frames++;
     stats.partial_frames++;
 #endif
