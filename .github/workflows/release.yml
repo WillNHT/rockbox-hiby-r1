@@ -196,9 +196,10 @@ jobs:
   # The video decoder: FFmpeg and libwebp behind apps/video/rbvideo.h,
   # cross-compiled for the player and packed as one shared object. It is
   # its own download because it is several megabytes and only the video
-  # features need it (Settings > Video).
+  # features need it (Settings > Video). Runs after build, which saves the
+  # toolchain: this job has none of the packages needed to build its own.
   video:
-    needs: version
+    needs: [version, build]
     if: needs.version.outputs.bump != 'none'
     runs-on: ubuntu-latest
     name: Package video decoder
