@@ -373,6 +373,101 @@ static void encode(void)
     flush();
 }
 
+#ifdef HAVE_LCD_LAYERS
+/* --- the feedback ------------------------------------------------------- */
+
+/* As a phone does it: the screen flashes white, and the shot sits in the
+ * corner as a framed thumbnail for a moment before it fades. Both are
+ * surfaces above everything, so nothing under them has to redraw. */
+#define THUMB_SCALE   4
+#define THUMB_BORDER  3
+#define THUMB_W       (LCD_WIDTH / THUMB_SCALE + 2 * THUMB_BORDER)
+#define THUMB_H       (LCD_HEIGHT / THUMB_SCALE + 2 * THUMB_BORDER)
+#define THUMB_X       16
+#define THUMB_Y       (LCD_HEIGHT - THUMB_H - 64)
+#define THUMB_TICKS   (2 * HZ)
+#define FEEDBACK_Z    3000
+
+static const char flash_owner, thumb_owner;
+static long thumb_until;
+
+static fb_data *surface_px(struct lcd_surface *s, int x, int y)
+{
+    return s->fb.fb_ptr + (size_t)y * LCD_NATIVE_STRIDE(s->fb.stride) + x;
+}
+
+/* While the layers are composed into the framebuffer: what the JPEG got. */
+static void thumb_fill(struct lcd_surface *s)
+{
+    for (int y = 0; y < THUMB_H; y++)
+    {
+        fb_data *dp = surface_px(s, THUMB_X, THUMB_Y + y);
+        int sy = (y - THUMB_BORDER) * THUMB_SCALE;
+        for (int x = 0; x < THUMB_W; x++)
+        {
+            int sx = (x - THUMB_BORDER) * THUMB_SCALE;
+            fb_data p = LCD_WHITE;
+            if (sy >= 0 && sy < LCD_HEIGHT && sx >= 0 && sx < LCD_WIDTH)
+                p = *FBADDR(sx, sy);
+            dp[x] = p == LCD_LAYER_KEY ? 0 : p;
+        }
+    }
+}
+
+static void flash(void)
+{
+    static const unsigned char steps[] = { 230, 160, 100, 50, 0 };
+    struct lcd_surface *s = lcd_surface_get(&flash_owner, -1, 0, 0,
+                                            LCD_WIDTH, LCD_HEIGHT,
+                                            FEEDBACK_Z - 1);
+    if (!s)
+        return;     /* no room in the arena: the thumbnail still shows */
+    for (int y = 0; y < LCD_HEIGHT; y++)
+    {
+        fb_data *dp = surface_px(s, 0, y);
+        for (int x = 0; x < LCD_WIDTH; x++)
+            dp[x] = LCD_WHITE;
+    }
+    for (unsigned i = 0; i < sizeof(steps); i++)
+    {
+        s->opacity = steps[i];
+        lcd_update();
+        sleep(HZ / 50);
+    }
+    lcd_surface_put(s);
+}
+
+/* Called from the UI thread's action loop: takes the thumbnail down once
+ * its time is up, fading over the last few calls.
+ * shortcut: a screen blocked in get_action() keeps it up until a key,
+ * move to a timer if that shows. */
+void screenshot_tick(void)
+{
+    struct lcd_surface *s;
+    long left;
+
+    if (!thumb_until)
+        return;
+    s = lcd_surface_find(&thumb_owner);
+    left = thumb_until - current_tick;
+    if (s && left > 0)
+    {
+        if (left < HZ / 2)
+        {
+            s->opacity = left * 255 / (HZ / 2);
+            lcd_update_rect(THUMB_X, THUMB_Y, THUMB_W, THUMB_H);
+        }
+        return;
+    }
+    thumb_until = 0;
+    if (s)
+    {
+        lcd_surface_put(s);
+        lcd_update_rect(THUMB_X, THUMB_Y, THUMB_W, THUMB_H);
+    }
+}
+#endif /* HAVE_LCD_LAYERS */
+
 /* --- the shot ----------------------------------------------------------- */
 
 void screenshot_take(void)
@@ -381,6 +476,9 @@ void screenshot_take(void)
     char path[MAX_PATH], suffix[6];
     time_t now = time(NULL);
     struct tm tm;
+#ifdef HAVE_LCD_LAYERS
+    struct lcd_surface *thumb;
+#endif
 
     gmtime_r(&now, &tm);
     for (int i = 0; i < 5; i++)
@@ -399,11 +497,18 @@ void screenshot_take(void)
         return;
 
 #ifdef HAVE_LCD_LAYERS
+    /* The last shot's thumbnail is not part of this one. */
+    thumb_until = 1;
+    screenshot_tick();
+    thumb = lcd_surface_get(&thumb_owner, -1, THUMB_X, THUMB_Y,
+                            THUMB_W, THUMB_H, FEEDBACK_Z);
     /* The panel is the framebuffer with the layers over it. */
     lcd_layers_compose(true);
 #endif
     encode();
 #ifdef HAVE_LCD_LAYERS
+    if (thumb)
+        thumb_fill(thumb);
     lcd_layers_compose(false);
 #endif
 
@@ -411,8 +516,21 @@ void screenshot_take(void)
     if (enc.failed)
     {
         remove(path);
+#ifdef HAVE_LCD_LAYERS
+        if (thumb)
+            lcd_surface_put(thumb);
+#endif
         return;
     }
+
+#ifdef HAVE_LCD_LAYERS
+    flash();
+    if (thumb)
+    {
+        thumb_until = current_tick + THUMB_TICKS;
+        lcd_update_rect(THUMB_X, THUMB_Y, THUMB_W, THUMB_H);
+    }
+#endif
 
 #ifdef HAVE_LCD_PRESENT_STATS
     /* What it cost to put frames on the panel since the last shot, next
