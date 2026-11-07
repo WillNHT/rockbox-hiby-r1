@@ -2021,8 +2021,10 @@ const struct settings_list settings[] = {
     TEXT_SETTING(0, altmenu_paths, "alt settings paths",
                  "/ABooks:/Audiobooks", NULL, NULL),
 
-    OFFON_SETTING(0, runtimedb, LANG_RUNTIMEDB_ACTIVE, false,
+    OFFON_SETTING(0, runtimedb, LANG_RUNTIMEDB_ACTIVE, true,
                   "gather runtime data", NULL),
+    OFFON_SETTING(0, listen_log, LANG_LISTEN_LOG, true,
+                  "listening history", NULL),
     TEXT_SETTING(0, tagcache_scan_paths, "database scan paths",
                  DEFAULT_TAGCACHE_SCAN_PATHS, NULL, NULL),
     TEXT_SETTING(0, tagcache_db_path, "database path",

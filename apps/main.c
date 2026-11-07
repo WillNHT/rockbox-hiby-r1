@@ -66,6 +66,7 @@
 #include "plugin.h"
 #include "misc.h"
 #include "dircache.h"
+#include "listens.h"
 #ifdef HAVE_TAGCACHE
 #include "tagcache.h"
 #include "tagtree.h"
@@ -481,6 +482,7 @@ static void init(void)
     if (global_settings.emoji_enabled)
         emoji_init();
     audiobooks_init();
+    listens_init();
 #ifdef HAVE_VIDEO
     screensaver_init();
 #endif
@@ -802,6 +804,7 @@ static void init(void)
     if (global_settings.emoji_enabled)
         emoji_init();
     audiobooks_init();
+    listens_init();
 
     CHART(">audio_init");
     audio_init();

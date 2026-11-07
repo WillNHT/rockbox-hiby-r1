@@ -155,6 +155,7 @@ MENUITEM_FUNCTION(tc_init, 0, ID2P(LANG_TAGCACHE_FORCE_UPDATE),
 MENUITEM_FUNCTION(tc_update, 0, ID2P(LANG_TAGCACHE_UPDATE),
                   (int(*)(void))tagcache_update_with_splash, NULL, Icon_NOICON);
 MENUITEM_SETTING(runtimedb, &global_settings.runtimedb, NULL);
+MENUITEM_SETTING(listen_log, &global_settings.listen_log, NULL);
 
 MENUITEM_FUNCTION(tc_export, 0, ID2P(LANG_TAGCACHE_EXPORT),
                   tagtree_export,
@@ -904,7 +905,7 @@ MAKE_MENU(advanced_library_menu, ID2P(LANG_LIBRARY), 0, Icon_Audio,
 #ifdef HAVE_TC_RAMCACHE
           &tagcache_ram,
 #endif
-          &runtimedb, &tc_export, &tc_import,
+          &runtimedb, &listen_log, &tc_export, &tc_import,
 #endif
           );
 

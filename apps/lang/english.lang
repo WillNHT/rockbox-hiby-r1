@@ -20932,3 +20932,17 @@
     *: "Lists and Scrolling"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_LISTEN_LOG
+  desc: in the database settings: keep a log of every listen in listens.tsv
+  user: core
+  <source>
+    *: "Listening History"
+  </source>
+  <dest>
+    *: "Listening History"
+  </dest>
+  <voice>
+    *: "Listening History"
+  </voice>
+</phrase>
