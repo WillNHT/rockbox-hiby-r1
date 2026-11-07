@@ -5070,6 +5070,11 @@ static bool check_dir(const char *dirname, int add_files)
     /* Recursively scan the dir. */
     while (!check_event_queue())
     {
+        /* Threads only switch when one gives way. On a hosted target the
+           file calls below never do, so without this the scan holds the
+           CPU and the UI stops until it is done. */
+        yield();
+
         struct dirent *entry = readdir(dir);
         if (entry == NULL)
         {
@@ -5364,22 +5369,13 @@ static void tagcache_thread(void)
     bool check_done = false;
     cpu_boost(true);
     /* If the previous cache build/update was interrupted, commit
-     * the changes first in foreground. */
+     * the changes first. No question asked: this thread is not the UI's,
+     * and nobody wants a database that is left half built. */
     if (db_file_exists(TAGCACHE_FILE_TEMP))
     {
-#if !(defined(__APPLE__) && (CONFIG_PLATFORM & PLATFORM_SDL))
-        static const char *lines[] = {ID2P(LANG_TAGCACHE_BUSY),
-                                      ID2P(LANG_TAGCACHE_UPDATE)};
-        static const struct text_message message = {lines, 2};
-
-        if (gui_syncyesno_run_w_tmo(HZ * 5, YESNO_YES, str(LANG_TAGCACHE),
-                                    &message, NULL, NULL) == YESNO_YES)
-#endif
-        {
-            allocate_tempbuf();
-            commit();
-            free_tempbuf();
-        }
+        allocate_tempbuf();
+        commit();
+        free_tempbuf();
     }
 
 #ifdef HAVE_TC_RAMCACHE
@@ -5407,6 +5403,10 @@ static void tagcache_thread(void)
         sleep(HZ);
         tagcache_commit_finalize();
     }
+
+    /* No database, or a broken one: build it, as asking would. */
+    if (!tc_stat.ready)
+        tagcache_rebuild();
 
     while (1)
     {
@@ -5443,6 +5443,7 @@ static void tagcache_thread(void)
                 if (check_done || !tc_stat.ready)
                     break ;
 
+                building = true; /* for the status bar's %Dd */
 #ifdef HAVE_TC_RAMCACHE
                 if (!tc_stat.ramcache && global_settings.tagcache_ram)
                 {
@@ -5466,6 +5467,7 @@ static void tagcache_thread(void)
 
                 logf("tagcache check done");
 
+                building = false;
                 check_done = true;
                 break ;
 
@@ -5560,8 +5562,9 @@ void tagcache_start_scan(void)
 
 bool tagcache_update(void)
 {
+    /* Nothing to update yet: build it instead of doing nothing. */
     if (!tc_stat.ready)
-        return false;
+        return tagcache_rebuild();
 
     building = true;
     queue_post(&tagcache_queue, Q_UPDATE, 0);

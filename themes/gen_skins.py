@@ -770,8 +770,38 @@ def rx_bmp():
     return head + pix
 
 
+# db.bmp: the database, %?Dd<|%xd(db,1)|%xd(db,2)>. A drum of three discs,
+# 21x22 like the rune: white while it builds, amber when it is not ready.
+# Nothing is drawn once it is ready.
+def db_bmp():
+    fw, fh = 21, 22
+    rows = []
+    for colour in ((0xef, 0xeb, 0xe7), (0xff, 0xa0, 0x30)):
+        f = [[(0xff, 0x00, 0xff)] * fw for _ in range(fh)]
+        for y in range(fh):
+            for x in range(fw):
+                dx = (x - 10) / 8.0
+                side = x in (2, 3, 17, 18) and 5 <= y <= 17
+                rim = False
+                for cy, whole in ((5, True), (11, False), (17, False)):
+                    d = dx * dx + ((y - cy) / 3.0) ** 2
+                    if 0.55 <= d <= 1.05 and (whole or y >= cy):
+                        rim = True
+                if side or rim:
+                    f[y][x] = colour
+        rows += f
+    pad = (4 - fw * 3 % 4) % 4
+    pix = b"".join(bytes(c for p in r for c in p[::-1]) + b"\0" * pad
+                   for r in reversed(rows))
+    head = b"BM" + struct.pack("<IHHI", 54 + len(pix), 0, 0, 54)
+    head += struct.pack("<IiiHHIIiiII", 40, fw, len(rows), 1, 24, 0,
+                        len(pix), 2835, 2835, 0, 0)
+    return head + pix
+
+
 for skin in ("SnappyV2", "SnappyAnimated", "SnappyRadio"):
     io.open("themes/wps/%s/bt.bmp" % skin, "wb").write(bt_bmp())
     io.open("themes/wps/%s/wired.bmp" % skin, "wb").write(wired_bmp())
     io.open("themes/wps/%s/rx.bmp" % skin, "wb").write(rx_bmp())
-print("wrote bt.bmp, wired.bmp, rx.bmp")
+    io.open("themes/wps/%s/db.bmp" % skin, "wb").write(db_bmp())
+print("wrote bt.bmp, wired.bmp, rx.bmp, db.bmp")
