@@ -486,7 +486,8 @@ static const char graphic_numeric[] = "graphic,numeric";
  * larger maximums.
  */
 #if MEMORYSIZE >= 16
-# define MAX_FILES_IN_DIR_DEFAULT   5000
+/* a library past 5000 tracks lost sorting in [All tracks]; ~1.4 MiB more */
+# define MAX_FILES_IN_DIR_DEFAULT   20000
 # define MAX_FILES_IN_DIR_MAX       100000
 # define MAX_FILES_IN_DIR_STEP      1000
 #elif MEMORYSIZE >= 8

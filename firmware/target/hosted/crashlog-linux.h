@@ -22,5 +22,7 @@
 void crashlog_init(const char *ospath);
 /* Async-signal-safe. Appends one entry and fsyncs. */
 void crashlog_write(int sig, unsigned long pc, void *addr);
+/* Appends the panicf() message and a backtrace, and fsyncs. */
+void crashlog_panic(const char *msg);
 
 #endif
