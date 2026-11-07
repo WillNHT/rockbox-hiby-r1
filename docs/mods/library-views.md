@@ -64,3 +64,5 @@ Covers are loaded from a path by `apps/gui/covers.c`. The path can be an image f
 The database keeps itself built. A missing or broken one is rebuilt at boot, an interrupted build is finished, and new files are picked up in the background (*Auto update* is on by default). Nothing asks first and nothing waits: opening the database while it builds says how far it has got and goes back, and *Initialize Now* / *Update Now* start in the background.
 
 The status bar shows it with `%?Dd<ready|building|not ready>`. Both Snappy skins draw a drum beside the Bluetooth rune, white while it builds and amber when it is not ready, and nothing once it is ready.
+
+![The drum, left of the speaker and the Bluetooth rune, while the database builds](screenshots/database-drum.png)
