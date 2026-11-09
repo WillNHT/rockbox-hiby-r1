@@ -125,50 +125,24 @@ int mask = global_settings.bt_selective_softlock_actions_mask;
 /*    TAGCACHE MENU                */
 #ifdef HAVE_TAGCACHE
 
-/* Shows the scan counting up until it is done. The seconds tick on their
- * own, so a screen that stops changing is a hang, not a long scan. Back
- * leaves it running in the background. */
-static void tagcache_show_progress(void)
-{
-    long start = current_tick;
-    char buf[64];
-
-    while (tagcache_is_building())
-    {
-        snprintf(buf, sizeof(buf), str(LANG_BUILDING_DATABASE),
-                 tagcache_get_stat()->processed_entries);
-        splashf(0, "%s %lds", buf, (current_tick - start) / HZ);
-        if (get_action(CONTEXT_STD, HZ/4) == ACTION_STD_CANCEL)
-        {
-            splash(HZ*2, ID2P(LANG_TAGCACHE_FORCE_UPDATE_SPLASH));
-            return;
-        }
-    }
-}
-
+/* Both run in the background; the status bar's database icon (%Dd) shows
+ * the build, so nothing here waits for it. */
 static void tagcache_rebuild_with_splash(void)
 {
     tagcache_rebuild();
-    tagcache_show_progress();
+    splash(HZ*2, ID2P(LANG_TAGCACHE_FORCE_UPDATE_SPLASH));
 }
 
 static void tagcache_update_with_splash(void)
 {
     tagcache_update();
-    tagcache_show_progress();
+    splash(HZ*2, ID2P(LANG_TAGCACHE_FORCE_UPDATE_SPLASH));
 }
 
 static int dirs_to_scan(void)
 {
     if(plugin_load(VIEWERS_DIR"/db_folder_select.rock", NULL) > PLUGIN_OK)
-    {
-        static const char *lines[] = {ID2P(LANG_TAGCACHE_BUSY),
-                                      ID2P(LANG_TAGCACHE_FORCE_UPDATE)};
-        static const struct text_message message = {lines, 2};
-
-        if (gui_syncyesno_run(&message, NULL, NULL) == YESNO_YES)
-            tagcache_rebuild_with_splash();
-    }
+        tagcache_rebuild_with_splash();
     return 0;
 }
 
@@ -181,6 +155,7 @@ MENUITEM_FUNCTION(tc_init, 0, ID2P(LANG_TAGCACHE_FORCE_UPDATE),
 MENUITEM_FUNCTION(tc_update, 0, ID2P(LANG_TAGCACHE_UPDATE),
                   (int(*)(void))tagcache_update_with_splash, NULL, Icon_NOICON);
 MENUITEM_SETTING(runtimedb, &global_settings.runtimedb, NULL);
+MENUITEM_SETTING(listen_log, &global_settings.listen_log, NULL);
 
 MENUITEM_FUNCTION(tc_export, 0, ID2P(LANG_TAGCACHE_EXPORT),
                   tagtree_export,
@@ -243,8 +218,7 @@ static const char *excluded_name(int selected_item, void *data,
 
 void tagcache_offer_update(void)
 {
-    if (yesno_pop(ID2P(LANG_DB_UPDATE_NOW)))
-        tagcache_update_with_splash();
+    tagcache_update_with_splash();
 }
 
 static int excluded_action(int action, struct gui_synclist *lists)
@@ -686,15 +660,8 @@ static int autoresume_callback(int action,
 
     if (action == ACTION_EXIT_MENUITEM  /* on exit */
         && global_settings.autoresume_enable
-        && !tagcache_is_usable())
-    {
-        static const char *lines[] = {ID2P(LANG_TAGCACHE_BUSY),
-                                      ID2P(LANG_TAGCACHE_FORCE_UPDATE)};
-        static const struct text_message message = {lines, 2};
-
-        if (gui_syncyesno_run(&message, NULL, NULL) == YESNO_YES)
-            tagcache_rebuild_with_splash();
-    }
+        && !tagcache_is_usable() && !tagcache_is_building())
+        tagcache_rebuild_with_splash();
     return action;
 }
 
@@ -938,7 +905,7 @@ MAKE_MENU(advanced_library_menu, ID2P(LANG_LIBRARY), 0, Icon_Audio,
 #ifdef HAVE_TC_RAMCACHE
           &tagcache_ram,
 #endif
-          &runtimedb, &tc_export, &tc_import,
+          &runtimedb, &listen_log, &tc_export, &tc_import,
 #endif
           );
 

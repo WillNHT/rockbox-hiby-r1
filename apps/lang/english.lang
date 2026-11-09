@@ -2094,6 +2094,7 @@
     gogearsa9200: "Building database... %d found (REW to return)"
     ipod*,iriverh10,iriverh10_5gb,sansac200*,sansae200*,sansafuze*,vibe500: "Building database... %d found (PREV to return)"
     iriverh100,iriverh120,iriverh300: "Building database... %d found (STOP to return)"
+    hibyr1: "Building database... %d found"
   </source>
   <dest>
     *: "Building database... %d found (OFF to return)"
@@ -2101,6 +2102,7 @@
     gogearsa9200: "Building database... %d found (REW to return)"
     ipod*,iriverh10,iriverh10_5gb,sansac200*,sansae200*,sansafuze*,vibe500: "Building database... %d found (PREV to return)"
     iriverh100,iriverh120,iriverh300: "Building database... %d found (STOP to return)"
+    hibyr1: "Building database... %d found"
   </dest>
   <voice>
     *: "entries found for database"
@@ -20928,5 +20930,19 @@
   </dest>
   <voice>
     *: "Lists and Scrolling"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_LISTEN_LOG
+  desc: in the database settings: keep a log of every listen in listens.tsv
+  user: core
+  <source>
+    *: "Listening History"
+  </source>
+  <dest>
+    *: "Listening History"
+  </dest>
+  <voice>
+    *: "Listening History"
   </voice>
 </phrase>

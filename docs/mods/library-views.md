@@ -58,3 +58,11 @@ If there is no such image, the playlist uses the cover of its first track. Cover
 A list opts in with `coverview_attach(list, &source, style)`. The `coverview_source` provides two callbacks: one draws an item's cover, the other returns its second line. The layouts don't know what the items are, so artists, or anything else with a picture, can be added with a new source.
 
 Covers are loaded from a path by `apps/gui/covers.c`. The path can be an image file, a playlist, or an audio file (embedded art first, then folder art). They are kept in two caches - twelve large pictures and thirty-two thumbnails, so a page of the thumbnail view fits - and a list decodes at most one uncached cover per redraw, drawing the rest as placeholders and asking for another redraw, so a scroll answers the key at once and the pictures fill in behind it.
+
+## Database status
+
+The database keeps itself built. A missing or broken one is rebuilt at boot, an interrupted build is finished, and new files are picked up in the background (*Auto update* is on by default). Nothing asks first and nothing waits: opening the database while it builds says how far it has got and goes back, and *Initialize Now* / *Update Now* start in the background.
+
+The status bar shows it with `%?Dd<ready|building|not ready>`. Both Snappy skins draw a drum beside the Bluetooth rune, white while it builds and amber when it is not ready, and nothing once it is ready.
+
+![The drum, left of the speaker and the Bluetooth rune, while the database builds](screenshots/database-drum.png)

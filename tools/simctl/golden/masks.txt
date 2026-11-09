@@ -23,3 +23,7 @@ Snappy-V2 shot03 184,200 443,249
 # still checks the cover.
 Snappy-Animated shot05 31,150 449,600
 Snappy-Animated shot06 31,150 449,600
+# The database drum: the simulator's database builds itself at boot, and
+# whether a shot lands while it does depends on the card scan's pace.
+Snappy-Animated * 238,30 264,62
+Snappy-V2 * 238,30 264,62

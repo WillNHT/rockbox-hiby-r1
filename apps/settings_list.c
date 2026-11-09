@@ -486,7 +486,8 @@ static const char graphic_numeric[] = "graphic,numeric";
  * larger maximums.
  */
 #if MEMORYSIZE >= 16
-# define MAX_FILES_IN_DIR_DEFAULT   5000
+/* a library past 5000 tracks lost sorting in [All tracks]; ~1.4 MiB more */
+# define MAX_FILES_IN_DIR_DEFAULT   20000
 # define MAX_FILES_IN_DIR_MAX       100000
 # define MAX_FILES_IN_DIR_STEP      1000
 #elif MEMORYSIZE >= 8
@@ -2020,8 +2021,10 @@ const struct settings_list settings[] = {
     TEXT_SETTING(0, altmenu_paths, "alt settings paths",
                  "/ABooks:/Audiobooks", NULL, NULL),
 
-    OFFON_SETTING(0, runtimedb, LANG_RUNTIMEDB_ACTIVE, false,
+    OFFON_SETTING(0, runtimedb, LANG_RUNTIMEDB_ACTIVE, true,
                   "gather runtime data", NULL),
+    OFFON_SETTING(0, listen_log, LANG_LISTEN_LOG, true,
+                  "listening history", NULL),
     TEXT_SETTING(0, tagcache_scan_paths, "database scan paths",
                  DEFAULT_TAGCACHE_SCAN_PATHS, NULL, NULL),
     TEXT_SETTING(0, tagcache_db_path, "database path",
@@ -2230,7 +2233,7 @@ const struct settings_list settings[] = {
                    NULL, 3,
                    ID2P(LANG_OFF), ID2P(LANG_ON), ID2P(LANG_QUICK_IGNORE_DIRACHE)),
 #endif
-    OFFON_SETTING(F_BANFROMQS, tagcache_autoupdate, LANG_TAGCACHE_AUTOUPDATE, false,
+    OFFON_SETTING(F_BANFROMQS, tagcache_autoupdate, LANG_TAGCACHE_AUTOUPDATE, true,
                   "tagcache_autoupdate", NULL),
 #endif
     CHOICE_SETTING(F_TEMPVAR, default_codepage, LANG_DEFAULT_CODEPAGE, 14,

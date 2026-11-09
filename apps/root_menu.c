@@ -205,98 +205,13 @@ static int browser(void* param)
         case GO_TO_DBBROWSER:
             if (!tagcache_is_usable())
             {
-                bool reinit_attempted = false;
-
-                /* Now display progress until it's ready or the user exits */
-                while(!tagcache_is_usable())
-                {
-                    struct tagcache_stat *stat = tagcache_get_stat();
-
-                    /* Allow user to exit */
-                    if (action_userabort(HZ/2))
-                        break;
-
-                    /* Maybe just needs to reboot due to delayed commit */
-                    if (stat->commit_delayed)
-                    {
-                        splash(HZ*2, ID2P(LANG_PLEASE_REBOOT));
-                        break;
-                    }
-
-                    /* Check if ready status is known */
-                    if (!stat->readyvalid)
-                    {
-                        splash(0, ID2P(LANG_TAGCACHE_BUSY));
-                        continue;
-                    }
-
-                    /* Re-init if required */
-                    if (!reinit_attempted && !stat->ready &&
-                        stat->processed_entries == 0 && stat->commit_step == 0)
-                    {
-                        /* Prompt the user */
-                        reinit_attempted = true;
-                        static const char *lines[]={
-                            ID2P(LANG_TAGCACHE_BUSY), ID2P(LANG_TAGCACHE_FORCE_UPDATE)};
-                        static const struct text_message message={lines, 2};
-                        if(gui_syncyesno_run(&message, NULL, NULL) == YESNO_NO)
-                            break;
-                        FOR_NB_SCREENS(i)
-                            screens[i].clear_display();
-
-                        /* Start initialisation */
-                        tagcache_rebuild();
-                    }
-
-                    /* Display building progress */
-                    static long talked_tick = 0;
-                    if(global_settings.talk_menu &&
-                       (talked_tick == 0
-                        || TIME_AFTER(current_tick, talked_tick+7*HZ)))
-                    {
-                        talked_tick = current_tick;
-                        if (stat->commit_step > 0)
-                        {
-                            talk_id(LANG_TAGCACHE_INIT, false);
-                            talk_number(stat->commit_step, true);
-                            talk_id(VOICE_OF, true);
-                            talk_number(tagcache_get_max_commit_step(), true);
-                        } else if(stat->processed_entries)
-                        {
-                            talk_number(stat->processed_entries, false);
-                            talk_id(LANG_BUILDING_DATABASE, true);
-                        }
-                    }
-                    if (stat->commit_step > 0)
-                    {
-                        /* (prevent redundant voicing by splash_progress */
-                        bool tmp = global_settings.talk_menu;
-                        global_settings.talk_menu = false;
-
-                        if (lang_is_rtl())
-                        {
-                            splash_progress(stat->commit_step,
-                                            tagcache_get_max_commit_step(),
-                                            "[%d/%d] %s", stat->commit_step,
-                                            tagcache_get_max_commit_step(),
-                                            str(LANG_TAGCACHE_INIT));
-                        }
-                        else
-                        {
-                            splash_progress(stat->commit_step,
-                                            tagcache_get_max_commit_step(),
-                                            "%s [%d/%d]", str(LANG_TAGCACHE_INIT),
-                                            stat->commit_step,
-                                            tagcache_get_max_commit_step());
-                        }
-                        global_settings.talk_menu = tmp;
-                    }
-                    else
-                    {
-                        splashf(0, str(LANG_BUILDING_DATABASE),
-                                   stat->processed_entries); /* (voiced above) */
-                    }
-                }
+                /* The database keeps itself built in the background and the
+                 * status bar shows how it is doing (%Dd), so never wait here:
+                 * start a build if none is running, say so and go back. */
+                if (tagcache_is_fully_initialized() && !tagcache_is_building())
+                    tagcache_rebuild();
+                splashf(HZ*2, str(LANG_BUILDING_DATABASE),
+                        tagcache_get_stat()->processed_entries);
             }
             if (!tagcache_is_usable())
                 return GO_TO_PREVIOUS;

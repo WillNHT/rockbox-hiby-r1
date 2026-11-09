@@ -1,52 +1,36 @@
-### Keymap Changes: Touchless Rockbox Navigation
+### Keymap: the five physical keys
 
-The goal of this keymap is to make Rockbox fully functional without a touchscreen (applying to the core and a few key plugins) and add a **Rewind** button.
+The R1's five buttons mean the same thing on every screen. They are resolved
+globally in `apps/rpkeys.c`, before any keymap context, so none of them
+navigates a list or a menu - the stick and the touchscreen do that.
 
-Essentially, we have 4 navigation keys + the **Power** button. Pretty limited.  
-So consider the following mapping:
+| Key | Press | Action |
+| :--- | :--- | :--- |
+| **Power** | tap | Play / pause on the WPS; from any other screen, go to the WPS |
+| | hold 0.5 s | Lock / unlock the touchscreen, on release |
+| | hold 2 s | Screen off, on release; any press wakes it |
+| | hold 4 s | Shut down |
+| **Vol Up / Vol Down** | tap | One volume step |
+| | hold | Continuous volume change |
+| **Next** | press | Back five seconds |
+| | hold | Previous track |
+| **Play** | press | Forward five seconds |
+| | hold | Next track |
+| **Power** + **Vol Up** | | Screenshot, on any screen, locked or not |
 
-#### 1. In Lists and Menus
+The R1 has no previous key, so the two transport keys are previous and next
+the way they fall under the thumb, whatever the silkscreen says. Play / pause
+is the stick's centre tap. `BUTTON_PREV` and `BUTTON_NEXT` exist on this
+target for Bluetooth remotes only.
 
-| Button / Combo | Action |
-| :--- | :--- |
-| **Power** | Resume Playback *(Acts as **Cancel** in menus)* |
-| **Long Power** | Stop Playback |
-| **Vol Up / Vol Down** | Move Up / Down in List |
-| **Play** (Left) | Go Back |
-| **Long Play** | **Main Menu** *(Think of it as a "Long Back")* |
-| **Next** (Right) | Select |
-| **Long Next** | **Context Menu** *(Think of it as a "Long Select")* |
-| **Power** + **Vol Up** | **Lock** Device |
-| **Power** + **Vol Down** | **Quickscreen** |
-| **Next** + **Vol Up/Down** | Tree Scrolling *(To test: try **Next** + **Vol Down** on a long filename in the File/DB Browser)* |
-
----
-
-#### 2. While Playing Screen (WPS)
-This keymap restores standard media controls while keeping essential Rockbox menus accessible.
-
-| Button / Combo                     | Action                                                                                  |
-|:-----------------------------------|:----------------------------------------------------------------------------------------|
-| **Power**                          | Play / Pause                                                                            |
-| **Long Power**                     | **WPS Context Menu** *(Stops playback if the device is locked)*                         |
-| **Play**                           | Previous Track / Rewind                                                                 |
-| **Next**                           | Next Track / Fast Forward                                                               |
-| **Vol Up**                         | Browse *(Acts as Volume Up if the device is locked)*                                    |
-| **Long Vol Up**                    | Volume Up                                                                               |
-| **Vol Down**                       | **WPS Hotkey** (View Current Playlist/Cue by Default) *(Acts as Volume Down if locked)* |
-| **Long Vol Down**                  | Volume Down                                                                             |
-| **Power** + **Vol Up**             | **Screenshot** - on every screen, see below                                             |
-| **Power** + **Vol Down**           | **Quickscreen** *(Note: **Long Power** inside **Quickscreen** opens **Shortcuts**)*     |
-| **Power** + **Play**               | **Main Menu**                                                                           |
-| **Next/Play** + **Long Next/Play** | Go to the next/previous directory (disabled for audiobooks)                             |
-
----
+In the Bluetooth receiver view (a PC or phone playing to the R1) the Power
+tap, the volume keys and the track keys control the sender instead.
 
 #### Notes
 
-- **Power** + **Vol Up** takes a screenshot of whatever is on the panel, on any screen, locked or not. It is saved as a JPEG in `/screenshots` on the card, named for the time in UTC plus a random suffix - `2026-09-22-04-20-20-utc0-odml2.jpg` - and the screen flashes white, then shows a thumbnail of the shot bottom left for about 2 s.
-- I had to sacrifice single presses of the volume buttons in WPS (but they still work after **Lock**). So use long presses for volume changes.
-- Quickest way to stop playback - long press **Power** twice (the first opens the **Context Menu**, the second stops playback).
-- If you just want to turn on the screen, press **Power** + **Vol Up** (**Lock** combo).
-- In **Pitchscreen**, use **Long Power** to change mode (or tap right **OK** on screen).
-- In most non-WPS contexts, **OK** = **Next** and **Cancel** = **Play**. This takes some getting used to. If Left/Right buttons are required in current context, try **Power** + **Play**/**Next** (one example - keyboard).
+- The screenshot is saved as a JPEG in `/screenshots` on the card, named for
+  the time in UTC plus a random suffix -
+  `2026-09-22-04-20-20-utc0-odml2.jpg` - with a `.txt` of the display
+  present stats beside it. The screen flashes white, then shows a thumbnail
+  of the shot bottom left for about 2 s.
+- With the screen off, a Power press only wakes it, however long it is held.

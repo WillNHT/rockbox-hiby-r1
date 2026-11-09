@@ -108,3 +108,27 @@ void crashlog_write(int sig, unsigned long pc, void *addr)
     fsync(fd);
     close(fd);
 }
+
+/* panicf() leaves no signal behind, so its message was only ever on the
+ * screen. Not called from a signal handler, but kept to the same calls. */
+void crashlog_panic(const char *msg)
+{
+    if (!crashlog_path[0])
+        return;
+
+    int fd = open(crashlog_path, O_WRONLY | O_CREAT | O_APPEND, 0666);
+    if (fd < 0)
+        return;
+
+    put_str(fd, "=== panic: ");
+    put_str(fd, msg);
+    put_str(fd, "\nbacktrace:\n");
+
+    void *frames[64];
+    int count = backtrace(frames, sizeof(frames) / sizeof(frames[0]));
+    backtrace_symbols_fd(frames, count, fd);
+    put_str(fd, "\n");
+
+    fsync(fd);
+    close(fd);
+}

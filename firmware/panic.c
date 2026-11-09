@@ -34,6 +34,11 @@
 #include "rbversion.h"
 #include "lcd-transition.h"
 
+#if (defined(HIBY_LINUX) || defined(FIIO_M3K_LINUX)) && !defined(SIMULATOR)
+/* target/hosted/crashlog-linux.h, which is not on this file's include path */
+void crashlog_panic(const char *msg);
+#endif
+
 #ifdef HAVE_RB_BACKTRACE
 #include "gcc_extensions.h"
 #include "backtrace.h"
@@ -134,6 +139,9 @@ void panicf( const char *fmt, ...)
 #endif
     lcd_update();
     DEBUGF("%s", panic_buf);
+#if (defined(HIBY_LINUX) || defined(FIIO_M3K_LINUX)) && !defined(SIMULATOR)
+    crashlog_panic(panic_buf);
+#endif
 
 #ifdef HAVE_ADJUSTABLE_CPU_FREQ
     if (cpu_boost_lock())

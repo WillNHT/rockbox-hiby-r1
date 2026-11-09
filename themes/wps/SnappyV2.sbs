@@ -30,6 +30,7 @@
 %xl(bt,bt.bmp,70,6,4)
 %xl(wired,wired.bmp,46,6)
 %xl(rx,rx.bmp,22,6,2)
+%xl(db,db.bmp,0,6,2)
 %xl(vb,vb.bmp)
 %xl(vb_backdrop,vb_backdrop.bmp)
 %xl(vb_too_loud,vb_too_loud.bmp)
@@ -58,9 +59,10 @@
 %Vl(status,30,30,-240,34,3)
 %?mh<%Vs(invert)%acLOCKED|%?if(%cs,!=,10)<|%?cf<%cH:%cM|%cl:%cM %cP>>>
 #
-# Battery text and icon, and the Bluetooth rune beside the battery
+# Battery text and icon, and the Bluetooth rune beside the battery, and the
+# database drum while it builds or is not ready
 %V(-240,30,-30,32,3)
-%ar%bl%%%?bp<%xd(batt_chg)|%xd(batt,%bl)>%?Br<|%xd(rx,1)|%xd(rx,2)>%?Bw<%xd(wired)|>%xd(bt,%BT)
+%ar%bl%%%?bp<%xd(batt_chg)|%xd(batt,%bl)>%?Br<|%xd(rx,1)|%xd(rx,2)>%?Bw<%xd(wired)|>%xd(bt,%BT)%?Dd<|%xd(db,1)|%xd(db,2)>
 #
 # Title
 %Vl(title, 30,62,-30,60,5)

@@ -1398,6 +1398,19 @@ const char *get_token_value(struct gui_wps *gwps,
 #endif
             return NULL;
 
+        case SKIN_TOKEN_DATABASE:
+            /* %?Dd<ready|building|not ready> */
+            numeric_ret = 1;
+#ifdef HAVE_TAGCACHE
+            if (tagcache_is_building() || !tagcache_is_fully_initialized())
+                numeric_ret = 2;
+            else if (!tagcache_is_usable())
+                numeric_ret = 3;
+#endif
+            itoa_buf(buf, buf_size, numeric_ret);
+            numeric_buf = buf;
+            goto gtv_ret_numeric_tag_info;
+
         case SKIN_TOKEN_BT_RECEIVE:
             /* %?Br<off|waiting|receiving> */
             numeric_ret = 1;

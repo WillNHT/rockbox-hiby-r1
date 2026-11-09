@@ -708,6 +708,7 @@ struct user_settings
                                  2=custom */
     unsigned char autoresume_paths[MAX_PATHLIST+1]; /* colon-separated list */
     bool runtimedb;           /* runtime database active? */
+    bool listen_log;          /* append every listen to listens.tsv */
     unsigned char tagcache_scan_paths[MAX_PATHLIST+1];
     /* Folders the database scan skips, ':'-separated (FAT names cannot
        hold a colon). Kept short enough for a config.cfg line, which is
