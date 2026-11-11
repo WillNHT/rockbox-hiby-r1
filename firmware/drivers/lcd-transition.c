@@ -69,8 +69,9 @@
 static fb_data from_px[NPIX];
 static fb_data to_px[NPIX];
 
-static bool armed;
-static bool running;
+/* Armed: the old frame is held, waiting for the new one to be drawn.
+ * Running: animating between the two. Never both. */
+static enum { T_IDLE, T_ARMED, T_RUNNING } t_state;
 static int t_p;                 /* eased progress of the frame showing */
 static enum lcd_transition t_type;
 static int t_dir;
@@ -87,17 +88,17 @@ static bool geometry_ok(void)
 
 void lcd_transition_arm(enum lcd_transition type, int dir, int duration_ms)
 {
-    if (running || type <= LCD_TRANSITION_NONE || type >= LCD_TRANSITION_COUNT
+    if (t_state == T_RUNNING || type <= LCD_TRANSITION_NONE || type >= LCD_TRANSITION_COUNT
         || duration_ms <= 0 || !geometry_ok())
         return;
 
-    if (!armed)
+    if (t_state == T_IDLE)
     {
         /* The old frame as it was on the panel, surfaces and all - an old
          * one without them made whatever a skin keeps in them vanish at
          * the start of the animation and pop back at its end. */
         lcd_layers_snapshot(from_px);
-        armed = true;
+        t_state = T_ARMED;
     }
     t_type = type;
     t_dir = dir < 0 ? -1 : 1;
@@ -110,9 +111,9 @@ void lcd_transition_arm(enum lcd_transition type, int dir, int duration_ms)
 
 void lcd_transition_cancel(void)
 {
-    if (!armed)
+    if (t_state != T_ARMED)
         return;
-    armed = false;
+    t_state = T_IDLE;
     lcd_update();
 }
 
@@ -265,7 +266,7 @@ bool lcd_transition_paint(fb_data *dst, int dst_stride,
                           int x, int y, int w, int h)
 {
     int row;
-    if (!running)
+    if (t_state != T_RUNNING)
         return false;
     for (row = 0; row < h; row++)
         frame_row(t_p, y + row, dst + (size_t)row * dst_stride, x, x + w);
@@ -276,7 +277,7 @@ static void run(void)
 {
     long start, now;
 
-    armed = false;
+    t_state = T_IDLE;
     lcd_layers_snapshot(to_px);
 
     if (memcmp(to_px, from_px, sizeof(to_px)))
@@ -288,7 +289,7 @@ static void run(void)
         start = current_tick;
         now = start;
         t_p = 0;
-        running = true;
+        t_state = T_RUNNING;
         do
         {
             int t = (int)((now - start) * 1024 / t_ticks);
@@ -300,7 +301,7 @@ static void run(void)
             yield();
             now = current_tick;
         } while (now - start < t_ticks);
-        running = false;
+        t_state = T_IDLE;
     }
 
     lcd_update_base();
@@ -308,19 +309,19 @@ static void run(void)
 
 void lcd_transition_idle(void)
 {
-    if (armed && !running && thread_self() == owner)
+    if (t_state == T_ARMED && thread_self() == owner)
         run();
 }
 
 bool lcd_transition_hold(void)
 {
-    if (!armed || running)
+    if (t_state != T_ARMED)
         return false;
     if (TIME_AFTER(current_tick, armed_tick + STALE_TICKS))
     {
         if (thread_self() != owner)
         {
-            armed = false;  /* not ours to run; just stop holding */
+            t_state = T_IDLE;   /* not ours to run; just stop holding */
             return false;
         }
         run();
