@@ -20960,3 +20960,59 @@
     *: "Pairing"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_WIFI_UPDATE
+  desc: Hiby Wi-Fi: fetch and install the latest release
+  user: core
+  <source>
+    *: "Update Rockbox"
+  </source>
+  <dest>
+    *: "Update Rockbox"
+  </dest>
+  <voice>
+    *: "Update Rockbox"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_WIFI_UP_TO_DATE
+  desc: Hiby Wi-Fi: the installed version is the latest release
+  user: core
+  <source>
+    *: "Up to date"
+  </source>
+  <dest>
+    *: "Up to date"
+  </dest>
+  <voice>
+    *: "Up to date"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_WIFI_DOWNLOADING
+  desc: Hiby Wi-Fi: splash while an update downloads
+  user: core
+  <source>
+    *: "Downloading..."
+  </source>
+  <dest>
+    *: "Downloading..."
+  </dest>
+  <voice>
+    *: "Downloading"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_WIFI_UPDATE_FAILED
+  desc: Hiby Wi-Fi: the update could not be checked, fetched or unpacked
+  user: core
+  <source>
+    *: "Update failed"
+  </source>
+  <dest>
+    *: "Update failed"
+  </dest>
+  <voice>
+    *: "Update failed"
+  </voice>
+</phrase>

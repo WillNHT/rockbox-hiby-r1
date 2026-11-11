@@ -1,8 +1,10 @@
 # Wi-Fi
 
-Settings > **Wi-Fi** brings the R1's radio up the way HiBy OS does: the driver is
-already loaded at boot, `wpa_supplicant` joins a network and `udhcpc` asks it for an
-address. Nothing listens on the network - Rockbox only ever talks out.
+Settings > **Wi-Fi** brings the R1's radio up the way HiBy OS does: `wpa_supplicant`
+joins a network and `udhcpc` asks it for an address. The bootloader takes the Wi-Fi
+chip away from its driver before Rockbox starts, so switching on gives it back and
+switching off lets go again. Nothing listens on the network - Rockbox only ever
+talks out.
 
 * **Wi-Fi: On/Off** - select to switch it. It starts off on every boot: the radio
   is the biggest battery cost the player has, so leave it off when nothing needs it.
@@ -11,6 +13,43 @@ address. Nothing listens on the network - Rockbox only ever talks out.
   next time Wi-Fi comes on. Long-press a saved one to forget it. A password that
   fails is not kept.
 * **IP Address** - what the network gave the player.
+* **Update Rockbox** - see below.
+
+If the radio does not come up, the reason is written to `rockbox-wifi-debug.log` in
+the root of the card.
+
+## Updating over Wi-Fi
+
+**Update Rockbox** asks GitHub which release of this fork is the latest. If it is
+not the one installed, it offers it, downloads `rockbox-hibyr1-<version>-sdcard.zip`
+(about 30 MB: firmware, fonts, themes), unpacks it over the card and restarts.
+Playback stops while it works. Settings, the database and music are not in the
+archive and stay as they are. A download that fails or is cut short changes nothing.
+
+The player only needs a way out to the internet, so either of these works:
+
+* **iPhone** - turn on Personal Hotspot (with *Maximise Compatibility*: the R1 is
+  2.4 GHz only) and join it from **Network**.
+* **Laptop** - join the same Wi-Fi as the laptop, or the laptop's own hotspot.
+
+To install a build that is not a release - one made on the laptop, or downloaded
+from CI - serve the zip from the laptop and tell the player where it is:
+
+```sh
+python3 -m http.server 8000        # in the folder holding rockbox.zip
+```
+
+and put the address in `/.rockbox/update.url`, one line:
+
+```
+http://192.168.1.20:8000/rockbox.zip
+```
+
+While that file exists **Update Rockbox** installs from it, whatever the version;
+delete it to go back to releases.
+
+The download is not authenticated: the player's `wget` speaks HTTPS but cannot check
+certificates. Update on a network you trust.
 
 Networks and passwords are kept by `wpa_supplicant` in `/.rockbox/wifi.conf`, in plain
 text, like HiBy OS keeps its own.
@@ -20,5 +59,4 @@ Settings > Controls > Main Menu Layout.
 
 ![Settings, Bluetooth at the top (the simulator has no Wi-Fi)](screenshots/settings-top.png)
 
-Nothing uses the connection yet: this is the base for internet radio, clock sync and
-the rest of [#29](https://github.com/WillNHT/rockbox-hiby-r1/issues/29).
+This is the base for internet radio, clock sync and the rest of [#29](https://github.com/WillNHT/rockbox-hiby-r1/issues/29).
