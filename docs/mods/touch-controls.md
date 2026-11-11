@@ -49,3 +49,12 @@ The countdown says what letting go now will do and, under it, what holding on ge
 <img width="160" alt="Let go to lock" src="screenshots/power-hold-lock.png" />
 <img width="160" alt="Let go for screen off" src="screenshots/power-hold-screen-off.png" />
 </p>
+
+## Quickscreen
+
+Four cards down the screen - up, left, right, down - each the full width, so a name fits on its line. The arrow and the side the text sits on say which way a card is. Between left and right is the name of the page you are on.
+
+<p align="center">
+<img width="160" alt="Quickscreen" src="screenshots/quickscreen.png" />
+<img width="160" alt="Quickscreen, the Playback page" src="screenshots/quickscreen-page.png" />
+</p>
