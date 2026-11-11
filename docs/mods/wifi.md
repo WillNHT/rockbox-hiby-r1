@@ -45,11 +45,21 @@ and put the address in `/.rockbox/update.url`, one line:
 http://192.168.1.20:8000/rockbox.zip
 ```
 
+A second line, if there is one, is the SHA-256 the zip must have (`sha256sum
+rockbox.zip` on the laptop, lower case as printed); a download that does not match
+is thrown away. Without it the player installs whatever that address serves.
+
+```
+http://192.168.1.20:8000/rockbox.zip
+9f86d081884c7d659a2feac5c3f1e0a8b4f1b2b0b822cd15d6c15b0f00a08f3e
+```
+
 While that file exists **Update Rockbox** installs from it, whatever the version;
 delete it to go back to releases.
 
 The download is not authenticated: the player's `wget` speaks HTTPS but cannot check
-certificates. Update on a network you trust.
+certificates, and a release is not checked against anything. Update on a network
+you trust.
 
 Networks and passwords are kept by `wpa_supplicant` in `/.rockbox/wifi.conf`, in plain
 text, like HiBy OS keeps its own.

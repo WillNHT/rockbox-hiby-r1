@@ -429,12 +429,15 @@ static void wifi_line(const char *cmd, char *out, size_t len)
 /* Fetch a release zip and unpack it over the card, then restart into it */
 static void wifi_update(void)
 {
-    char url[300], tag[40], cmd[500];
+    char url[300], tag[40], sum[70], cmd[700];
 
-    tag[0] = '\0';
+    tag[0] = sum[0] = '\0';
     splash(0, ID2P(LANG_WAIT));
     wifi_line("head -n 1 " UPDATE_URL " 2>/dev/null", url, sizeof(url));
-    if (!url[0])
+    if (url[0])
+        /* its second line, if there is one: the sha256 the zip must have */
+        wifi_line("sed -n 2p " UPDATE_URL, sum, sizeof(sum));
+    else
     {
         /* releases/latest redirects to releases/tag/<version> */
         wifi_line("wget -q -S --spider -T 15 " UPDATE_RELEASES "/latest 2>&1 | "
@@ -460,7 +463,9 @@ static void wifi_update(void)
     /* the codecs are about to be replaced */
     audio_stop();
     splash(0, ID2P(LANG_WIFI_DOWNLOADING));
-    snprintf(cmd, sizeof(cmd), "wget -q -T 30 -O " UPDATE_ZIP " '%s'", url);
+    snprintf(cmd, sizeof(cmd), "wget -q -T 30 -O " UPDATE_ZIP " '%s'%s%s%s", url,
+             sum[0] ? " && [ \"$(sha256sum < " UPDATE_ZIP " | cut -c1-64)\" = \"" : "",
+             sum, sum[0] ? "\" ]" : "");
     /* unpacked beside the install and moved in file by file: a download cut
      * short changes nothing, and a library in use is replaced, not rewritten */
     if (system(cmd) ||
