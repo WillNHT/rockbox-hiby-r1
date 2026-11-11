@@ -75,6 +75,7 @@
 #include "settings.h"
 #include "skin_engine/skin_engine.h"
 #include "sound.h"
+#include "splash.h"
 #include "system.h"
 #include "viewport.h"
 #ifdef HAVE_GENERAL_PURPOSE_LED
@@ -687,6 +688,10 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
 #if defined(BUTTON_TOUCH_WAKES) && !defined(SIMULATOR)
             button_set_touch_wake(!locked);
 #endif
+            splash(HZ/2, locked ? "Locked" : "Unlocked");
+            /* The splash leaves ink the same way the countdown does. */
+            countdown_drawn = true;
+            countdown_clear();
             return true;
         }
 
