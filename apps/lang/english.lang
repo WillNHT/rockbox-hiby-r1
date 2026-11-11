@@ -21016,3 +21016,17 @@
     *: "Update failed"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_RADIO_HISTORY
+  desc: radio: plays, time listened and last heard, per station
+  user: core
+  <source>
+    *: "Station History"
+  </source>
+  <dest>
+    *: "Station History"
+  </dest>
+  <voice>
+    *: "Station History"
+  </voice>
+</phrase>

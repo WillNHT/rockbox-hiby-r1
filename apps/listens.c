@@ -15,7 +15,8 @@
  *
  * An append with no structure to corrupt, written when a track finishes
  * for any reason. Nothing here reads it back; no query ever runs on the
- * playback path. Tab separated, so a spreadsheet opens it as it is.
+ * playback path. The station column is the radio's: a dynamic station
+ * plays library tracks, so the path alone does not say which it was. Tab separated, so a spreadsheet opens it as it is.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -39,8 +40,6 @@
 #include "audiobooks/audiobooks.h"
 #include "listens.h"
 
-#define LISTENS_FILE     ROCKBOX_DIR "/listens.tsv"
-#define LISTENS_OLD_FILE ROCKBOX_DIR "/listens.1.tsv"
 /* About 70000 listens; the older ones move aside, once */
 #define LISTENS_ROTATE   (8L * 1024 * 1024)
 
@@ -60,20 +59,26 @@ static void listens_track_finish(unsigned short id, void *ev_data)
 
     off_t size = lseek(fd, 0, SEEK_END);
     if (size == 0)
-        fdprintf(fd, "path\tstarted\tplayed_ms\tlength_ms\tended\tsource\n");
+        fdprintf(fd, "path\tstarted\tplayed_ms\tlength_ms\tended\tsource"
+                     "\tstation\n");
 
     const char *source = "music";
+    char station[MAX_PATH] = "";
     if (pradio_is_station_track(id3->path))
+    {
         source = "radio";
+        pradio_station_name(id3->path, station, sizeof(station));
+    }
     else if (audiobooks_is_book(id3->path))
         source = "audiobook";
 
     /* shortcut: a tab or newline in a file name splits the row; FAT names
        cannot hold either, so only a card formatted otherwise would */
-    fdprintf(fd, "%s\t%ld\t%lu\t%lu\t%s\t%s\n", id3->path,
+    fdprintf(fd, "%s\t%ld\t%lu\t%lu\t%s\t%s\t%s\n", id3->path,
              (long)time(NULL) - (long)(id3->elapsed / 1000),
              id3->elapsed, id3->length,
-             (te->flags & TEF_AUTO_SKIP) ? "finished" : "skipped", source);
+             (te->flags & TEF_AUTO_SKIP) ? "finished" : "skipped", source,
+             station);
     close(fd);
 
     if (size >= LISTENS_ROTATE)

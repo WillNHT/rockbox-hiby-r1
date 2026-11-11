@@ -17,6 +17,11 @@
 #ifndef _LISTENS_H_
 #define _LISTENS_H_
 
+#include "rbpaths.h"
+
+#define LISTENS_FILE     ROCKBOX_DIR "/listens.tsv"
+#define LISTENS_OLD_FILE ROCKBOX_DIR "/listens.1.tsv"
+
 /* Starts appending every listen to /.rockbox/listens.tsv */
 void listens_init(void);
 
