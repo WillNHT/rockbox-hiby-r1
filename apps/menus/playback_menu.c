@@ -40,6 +40,7 @@
 #include "talk.h"
 #include "lyrics.h"
 #include "pradio.h"
+#include "exported_menus.h"
 #endif
 
 #if defined(HAVE_CROSSFADE)
@@ -221,10 +222,11 @@ MAKE_MENU(playback_settings,ID2P(LANG_PLAYBACK),0,
 #ifdef HAVE_LYRICS
         ,&lyrics_menu
 #endif
+        ,&advanced_playback_menu
          );
 
-MAKE_MENU(advanced_playback_menu,ID2P(LANG_PLAYBACK),0,
-          Icon_Playback_menu,
+MAKE_MENU(advanced_playback_menu,ID2P(LANG_ADVANCED),0,
+          Icon_Config,
           &play_selected,
           &ff_rewind_settings_menu,
 #ifdef HAVE_DISK_STORAGE

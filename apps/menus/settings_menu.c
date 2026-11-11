@@ -441,9 +441,8 @@ MENUITEM_SETTING(sound_duck_click, &global_settings.sound_duck_click, NULL);
 MENUITEM_SETTING(sound_duck_alert, &global_settings.sound_duck_alert, NULL);
 MENUITEM_SETTING(sound_duck_cue, &global_settings.sound_duck_cue, NULL);
 
-MAKE_MENU(device_sounds_menu, ID2P(LANG_DEVICE_SOUNDS), 0, Icon_Audio,
-          &keyclick, &keyclick_volume, &beep, &sound_duck);
-MAKE_MENU(advanced_sounds_menu, ID2P(LANG_DEVICE_SOUNDS), 0, Icon_Audio,
+/* Which presses click: the one page of this nobody needs twice. */
+MAKE_MENU(advanced_sounds_menu, ID2P(LANG_ADVANCED), 0, Icon_Config,
           &keyclick_repeats,
 #ifdef HAVE_HARDWARE_CLICK
           &keyclick_hardware,
@@ -456,8 +455,11 @@ MAKE_MENU(advanced_sounds_menu, ID2P(LANG_DEVICE_SOUNDS), 0, Icon_Audio,
           &keyclick_src_stick_dial,
           &keyclick_src_stick_scroll,
           &keyclick_src_touch,
-          &keyclick_src_lock,
-          &sound_duck_click, &sound_duck_alert, &sound_duck_cue);
+          &keyclick_src_lock);
+MAKE_MENU(device_sounds_menu, ID2P(LANG_DEVICE_SOUNDS), 0, Icon_Audio,
+          &keyclick, &keyclick_volume, &beep,
+          &sound_duck, &sound_duck_click, &sound_duck_alert, &sound_duck_cue,
+          &advanced_sounds_menu);
 
 #if CONFIG_CHARGING
 MENUITEM_SETTING(car_adapter_mode, &global_settings.car_adapter_mode, NULL);
@@ -851,6 +853,7 @@ MAKE_MENU(library_menu, ID2P(LANG_LIBRARY), 0, Icon_Audio,
           &tagcache_menu,
 #endif
           &file_menu,
+          &advanced_library_menu,
           );
 
 MAKE_MENU(controls_menu, ID2P(LANG_CONTROLS), 0, Icon_Menu_setting,
@@ -869,6 +872,7 @@ MAKE_MENU(controls_menu, ID2P(LANG_CONTROLS), 0, Icon_Menu_setting,
           &hotkey_wps_item,
           &hotkey_tree_item,
 #endif
+          &advanced_input_menu,
           );
 
 MAKE_MENU(system_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
@@ -889,9 +893,10 @@ MAKE_MENU(system_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
           &sleeptimer_duration,
           &manage_settings,
           &info_menu,
+          &advanced_system_menu,
           );
 
-MAKE_MENU(advanced_library_menu, ID2P(LANG_LIBRARY), 0, Icon_Audio,
+MAKE_MENU(advanced_library_menu, ID2P(LANG_ADVANCED), 0, Icon_Config,
           &playlist_settings,
           &sort_case, &interpret_numbers, &browse_current,
           &show_path_in_browser, &clear_start_directory_item,
@@ -903,7 +908,7 @@ MAKE_MENU(advanced_library_menu, ID2P(LANG_LIBRARY), 0, Icon_Audio,
 #endif
           );
 
-MAKE_MENU(advanced_system_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
+MAKE_MENU(advanced_system_menu, ID2P(LANG_ADVANCED), 0, Icon_Config,
 #ifdef HAVE_DISK_STORAGE
           &disk_spindown,
 #endif
@@ -949,15 +954,5 @@ MAKE_MENU(advanced_system_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
 #endif
           );
 
-MAKE_MENU(settings_advanced_menu, ID2P(LANG_ADVANCED), 0, Icon_Config,
-          &audio_effects_menu,
-          &advanced_playback_menu,
-          &advanced_sounds_menu,
-          &advanced_input_menu,
-          &advanced_lists_menu,
-          &advanced_display_menu,
-          &advanced_library_menu,
-          &advanced_system_menu,
-          );
 /*    SETTINGS MENU                */
 /***********************************/

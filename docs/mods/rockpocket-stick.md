@@ -14,7 +14,7 @@ before this feature existed.
 
 ## Turning it on
 
-*Settings → Controls → Rockpocket Stick*. Sectors, Rose Rotation, Arming Window and Degrees Per Detent are in *Settings → Advanced → Input*.
+*Settings → Controls → Rockpocket Stick*. Sectors, Rose Rotation, Arming Window and Degrees Per Detent are in *Settings → Controls → Advanced*.
 
 | Setting | Meaning |
 |---|---|

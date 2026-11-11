@@ -602,7 +602,7 @@ def animated(radio=False):
 # the caption stranded below it.
 %%Vl(noartlabel,%d,%d,%d,40,2)
 %%Vt(0)
-%%ac%%s%%?id<%%id|%%?ia<%%ia|no cover>>""" % (AX + 2, AY + 2, ART_W, ART_H,
+%%ac%%s%%?rs<%%rs|%%?id<%%id|%%?ia<%%ia|no cover>>>""" % (AX + 2, AY + 2, ART_W, ART_H,
                               AX + 2, MIRROR_Y, ART_W, MIRROR_H,
                               AX, AY,
                               AX, MIRROR_Y,

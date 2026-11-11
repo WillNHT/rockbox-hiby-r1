@@ -625,7 +625,7 @@ MENUITEM_SETTING(volume_adjust_norm_steps, &global_settings.volume_adjust_norm_s
 MENUITEM_SETTING(shortcuts_replaces_quickscreen, &global_settings.shortcuts_replaces_qs, NULL);
 #endif
 
-MAKE_MENU(advanced_input_menu, ID2P(LANG_INPUT), NULL, Icon_NOICON,
+MAKE_MENU(advanced_input_menu, ID2P(LANG_ADVANCED), NULL, Icon_Config,
 #ifdef HAVE_TOUCHSCREEN
             &stick_sectors, &stick_rotation,
             &stick_arm_ms, &stick_deg_per_detent,
@@ -695,10 +695,12 @@ MAKE_MENU(display_menu, ID2P(LANG_DISPLAY),
 #ifdef HAVE_VIDEO
             &saver_menu,
 #endif
+            &advanced_lists_menu,
+            &advanced_display_menu,
             );
 
-MAKE_MENU(advanced_display_menu, ID2P(LANG_DISPLAY),
-            NULL, Icon_Display_menu,
+MAKE_MENU(advanced_display_menu, ID2P(LANG_ADVANCED),
+            NULL, Icon_Config,
 #ifdef HAVE_BACKLIGHT
             &backlight_on_button_hold,
             &caption_backlight,

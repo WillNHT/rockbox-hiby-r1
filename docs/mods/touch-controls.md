@@ -2,7 +2,7 @@
 
 
 If you have trouble tapping the right element in lists, you can increase line height with the `Line Padding in Lists` setting (in `Settings > Display`).
-It's also useful to set the `Line Separator` to `Auto` (in `Settings > Advanced > Lists & Scrolling`) to see the element tap zones:
+It's also useful to set the `Line Separator` to `Auto` (in `Settings > Display > Lists & Scrolling`) to see the element tap zones:
 <p align="center">
 <img width="120" height="200" alt="list_100px_padding" src="docs/mods/screenshots/list_100px_padding.png" />
 </p>
@@ -43,9 +43,18 @@ Hold **Power** and let go:
 - at **2 s** - screen off. The keys still work in the dark and do not wake it, and the touchscreen is off; a **Power** press brings the screen back and does nothing else. While it is off the LED blinks while playing and stays lit while paused (not on the charger, where it shows charging).
 - hold **4 s** - shut down, as before.
 
-The countdown says what letting go now will do; the border round the screen starts again at each step.
+The countdown says what letting go now will do and, under it, what holding on gets instead and how long that is away. The three bars are the three steps - lock, screen off, power off - and the border round the screen starts again at each one.
 
 <p align="center">
-<img width="160" alt="Release to lock" src="screenshots/power-hold-lock.png" />
-<img width="160" alt="Release for screen off" src="screenshots/power-hold-screen-off.png" />
+<img width="160" alt="Let go to lock" src="screenshots/power-hold-lock.png" />
+<img width="160" alt="Let go for screen off" src="screenshots/power-hold-screen-off.png" />
+</p>
+
+## Quickscreen
+
+Four cards down the screen - up, left, right, down - each the full width, so a name fits on its line. The arrow and the side the text sits on say which way a card is. Between left and right is the name of the page you are on.
+
+<p align="center">
+<img width="160" alt="Quickscreen" src="screenshots/quickscreen.png" />
+<img width="160" alt="Quickscreen, the Playback page" src="screenshots/quickscreen-page.png" />
 </p>

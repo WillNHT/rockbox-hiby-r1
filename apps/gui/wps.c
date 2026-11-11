@@ -1435,7 +1435,10 @@ static bool transition_wait_cover(struct wps_state *state)
             waiting = true;
             waiting_since = current_tick;
         }
-        return TIME_BEFORE(current_tick, waiting_since + HZ);
+        /* Three seconds, not one: a skip to a big file on a slow card
+         * takes longer than one to get as far as its cover, and what was
+         * drawn in the meantime was the new title on the old picture. */
+        return TIME_BEFORE(current_tick, waiting_since + 3 * HZ);
     }
     waiting = false;
 #else

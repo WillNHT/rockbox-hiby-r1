@@ -683,13 +683,13 @@
   desc: in the main menu
   user: core
   <source>
-    *: "Sound Settings"
+    *: "Sound"
   </source>
   <dest>
-    *: "Sound Settings"
+    *: "Sound"
   </dest>
   <voice>
-    *: "Sound Settings"
+    *: "Sound"
   </voice>
 </phrase>
 <phrase>
@@ -1204,13 +1204,13 @@
   desc: in settings_menu()
   user: core
   <source>
-    *: "Playback Settings"
+    *: "Playback"
   </source>
   <dest>
-    *: "Playback Settings"
+    *: "Playback"
   </dest>
   <voice>
-    *: "Playback Settings"
+    *: "Playback"
   </voice>
 </phrase>
 <phrase>

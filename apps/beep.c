@@ -38,8 +38,13 @@
 
 /* A device sound is only useful if it can be heard over what is playing, so
  * the music steps aside for as long as the sound lasts and a little after.
- * The tail keeps a run of chirps from flapping the volume between notes. */
-#define DUCK_TAIL_MS    150
+ * The tail has to outlast the gap between two clicks of a scroll, not only
+ * the gap between two notes of a chirp: at 150 ms every row of a list was
+ * a duck of its own and the music pumped all the way down it. Then it comes
+ * back a step at a time, so the return is not an edge of its own. */
+#define DUCK_TAIL_MS    600
+#define DUCK_LIFT_TICKS (HZ / 50)
+#define DUCK_LIFT_STEP  5
 
 static struct timeout duck_tmo;
 static int duck_depth;          /* 0 when the music is at full volume */
@@ -73,9 +78,9 @@ void beep_duck_hold(int percent)
 static int duck_release(struct timeout *tmo)
 {
     (void)tmo;
-    duck_depth = 0;
+    duck_depth = MAX(duck_depth - DUCK_LIFT_STEP, 0);
     duck_apply();
-    return 0;                   /* <= 0 unregisters */
+    return duck_depth > 0 ? DUCK_LIFT_TICKS : 0;    /* <= 0 unregisters */
 }
 
 static int fade_tick(struct timeout *tmo)

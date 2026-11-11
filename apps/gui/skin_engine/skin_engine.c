@@ -325,6 +325,10 @@ static char* get_skin_filename(char *buf, size_t buf_size,
     if (strcmp(setting, FAILSAFENAME) && strcmp(setting, "-"))
     {
         snprintf(buf, buf_size, WPS_DIR "/%s.%s", setting, ext);
+        /* the radio WPS has a default, and a card need not have the file */
+        if (setting == global_settings.radio_wps && !file_exists(buf))
+            snprintf(buf, buf_size, WPS_DIR "/%s.%s",
+                     global_settings.wps_file, ext);
     }
     return buf;
 }

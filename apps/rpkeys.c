@@ -417,7 +417,7 @@ static void countdown_draw(long held_ticks)
 {
     struct viewport vp;
     char line[32];
-    const char *what;
+    const char *what, *next;
     long target, start, perim, want;
     long left_ms;
     int w, h, y;
@@ -428,16 +428,18 @@ static void countdown_draw(long held_ticks)
 
     if (held_ticks >= SCREEN_OFF_HOLD_TICKS)
     {
-        what = "Release: screen off";
+        what = "Let go: screen off";
+        next = "Power off in ";
         target = SHUTDOWN_HOLD_TICKS;
         start = SCREEN_OFF_HOLD_TICKS;
         stage = 2;
     }
     else if (held_ticks >= LOCK_HOLD_TICKS)
     {
-        /* Short: the line is one line of a big face. Holding on is
-         * shown by the border starting round again. */
-        what = locked ? "Release: unlock" : "Release: lock";
+        /* Short: the line is one line of a big face. What letting go
+         * does now, and under it what holding on gets instead. */
+        what = locked ? "Let go to unlock" : "Let go to lock";
+        next = "Screen off in ";
         target = SCREEN_OFF_HOLD_TICKS;
         start = LOCK_HOLD_TICKS;
         stage = 1;
@@ -445,6 +447,7 @@ static void countdown_draw(long held_ticks)
     else
     {
         what = locked ? "Hold to unlock" : "Hold to lock";
+        next = "";
         target = LOCK_HOLD_TICKS;
         start = LOCK_ARM_TICKS;
         stage = 0;
@@ -530,10 +533,31 @@ static void countdown_draw(long held_ticks)
     /* Hundredths. Thousandths were three digits of noise churning too fast
      * to read; two move at about the speed the eye can follow and still say
      * plainly that the device has not frozen. */
-    snprintf(line, sizeof(line), "%ld.%02ld s", left_ms / 1000,
+    snprintf(line, sizeof(line), "%s%ld.%02ld s", next, left_ms / 1000,
              (left_ms % 1000) / 10);
     lcd_getstringsize(line, &w, NULL);
     lcd_putsxy((vp.width - w) / 2, y + h + h / 2, line);
+
+    /* Lock, screen off, power off: the three things the one key does, as
+     * three steps. The ones passed are solid, the one being counted fills
+     * as it goes, so how far there is to hold is on the screen before the
+     * text has been read. */
+    {
+        const int gap = 8, sh = 10;
+        const int sw = (vp.width / 2 - 2 * gap) / 3;
+        int sx = vp.width / 4, i;
+
+        for (i = 0; i < 3; i++, sx += sw + gap)
+        {
+            lcd_drawrect(sx, y + 3 * h, sw, sh);
+            if (i < stage)
+                lcd_fillrect(sx, y + 3 * h, sw, sh);
+            else if (i == stage && target > start && held_ticks > start)
+                lcd_fillrect(sx, y + 3 * h,
+                             (int)(sw * MIN(held_ticks - start, target - start)
+                                   / (target - start)), sh);
+        }
+    }
 
     if (first)
         lcd_update_viewport();

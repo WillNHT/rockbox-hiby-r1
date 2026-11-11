@@ -388,7 +388,7 @@ SHF%xd(O,%ps)
 # the caption stranded below it.
 %Vl(noartlabel,40,340,400,40,2)
 %Vt(0)
-%ac%s%?id<%id|%?ia<%ia|no cover>>
+%ac%s%?rs<%rs|%?id<%id|%?ia<%ia|no cover>>>
 #
 # The sheen
 # =========
