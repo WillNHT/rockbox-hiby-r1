@@ -2785,7 +2785,9 @@ const struct settings_list settings[] = {
    OFFON_SETTING(0, ab_autoscan, LANG_AB_AUTOSCAN, true,
                  "audiobook scan at startup", NULL),
    TEXT_SETTING(0, radio_folder, "radio folder path", "/radio", NULL, NULL),
-   TEXT_SETTING(0, radio_wps, "radio wps", "", NULL, NULL),
+   /* The skin that ships for it. With no default a station came up in the
+    * music WPS, track title and all, until somebody found the setting. */
+   TEXT_SETTING(0, radio_wps, "radio wps", "SnappyRadio", NULL, NULL),
    TEXT_SETTING(0, radio_saver, "radio screensaver", "", NULL, NULL),
    TEXT_SETTING(0, radio_last, "radio last station", "", NULL, NULL),
    INT_SETTING(F_TIME_SETTING, radio_min_length, LANG_RADIO_MIN_LENGTH, 10,
