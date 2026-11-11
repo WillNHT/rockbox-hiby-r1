@@ -47,6 +47,7 @@
 #include "stick_glue.h"
 #include "touchscreen.h"
 #include "viewport.h"
+#include "fixedpoint.h"
 
 #define LOGF_ENABLE
 #include "logf.h"
@@ -552,9 +553,9 @@ static inline void bd_gesture_reset(void) { }
  * files do); where the room is not there - the WPS, a plugin, another
  * theme - there is no plate and a gesture gets the edge lights instead.
  *
- * A tenth of the panel is a first guess at the height, to be tuned on the
- * device. Change it here and in the SBS files together. */
-#define PLATE_H   (LCD_HEIGHT / 10)
+ * Three tenths of the panel: a tenth was too small a target for a thumb.
+ * Change it here and in the SBS files together. */
+#define PLATE_H   (LCD_HEIGHT * 3 / 10)
 #define PLATE_PAD  8
 #define PLATE_HINT_TICKS (3 * HZ)
 
@@ -583,26 +584,74 @@ static bool plate_has_room(void)
     return vp.y + vp.height <= LCD_HEIGHT - PLATE_H;
 }
 
+/* A disc, or a ring when r_in > 0, with its edge blended into the ground
+ * instead of stepped: each pixel gets the share of it that lies between the
+ * radii, from its distance to the centre in 1/16 px. */
+static void plate_disc(int cx, int cy, int r_in, int r_out,
+                       unsigned fg, unsigned ground)
+{
+    int lim = r_out + 1;
+    int x, y;
+
+    for (y = -lim; y <= lim; y++)
+    {
+        for (x = -lim; x <= lim; x++)
+        {
+            long d2 = (long)x * x + (long)y * y;
+            int d, a_out, a_in, a;
+
+            if (d2 > (long)lim * lim ||
+                (r_in > 1 && d2 < (long)(r_in - 1) * (r_in - 1)))
+                continue;
+            d = fp_sqrt(d2 << 8, 8) >> 4;
+            a_out = r_out * 16 + 8 - d;
+            a_in = r_in > 0 ? d - r_in * 16 + 8 : 16;
+            if (a_out <= 0 || a_in <= 0)
+                continue;
+            a = (a_out > 16 ? 16 : a_out) * (a_in > 16 ? 16 : a_in);
+#if defined(HAVE_COMPOSITOR) && defined(HAVE_LCD_LAYERS)
+            lcd_set_foreground(canvas_blend_px((canvas_px)ground,
+                                               (canvas_px)fg,
+                                               a > 255 ? 255 : a));
+#else
+            (void)ground;
+            if (a < 128)
+                continue;
+#endif
+            lcd_drawpixel(cx + x, cy + y);
+        }
+    }
+    lcd_set_foreground(fg);
+}
+
 static void paint_plate(const struct overlay_shape *s)
 {
-    struct overlay_shape p = *s;
     int top = LCD_HEIGHT - PLATE_H;
     int cx = LCD_WIDTH / 2;
     int cy = top + PLATE_H / 2;
     int rad = (PLATE_H / 2) - PLATE_PAD;
-    int capr = rad / 2;
+    int capr = rad * 3 / 4;
+    int travel = rad - capr;
     int reach = s->R > 0 ? s->R : 1;
-    int capx, capy, dx, dy;
+    unsigned fg = global_settings.fg_color;
+    unsigned ground = fg;
+    int capx, capy;
+    long d2;
 
     /* The cap goes where the thumb has pushed to, scaled so that full
-     * travel puts it exactly on the ring. */
-    capx = cx + ((s->x - s->ox) * rad) / reach;
-    capy = cy + ((s->y - s->oy) * rad) / reach;
+     * travel puts its edge exactly on the ring, and no further. */
+    capx = ((s->x - s->ox) * travel) / reach;
+    capy = ((s->y - s->oy) * travel) / reach;
+    d2 = (long)capx * capx + (long)capy * capy;
+    if (d2 > (long)travel * travel)
+    {
+        int d = fp_sqrt(d2, 0);
 
-    if (capx < cx - rad) capx = cx - rad;
-    if (capx > cx + rad) capx = cx + rad;
-    if (capy < cy - rad) capy = cy - rad;
-    if (capy > cy + rad) capy = cy + rad;
+        capx = capx * travel / d;
+        capy = capy * travel / d;
+    }
+    capx += cx;
+    capy += cy;
 
     /* Saved before a single pixel of it is drawn - see bd_capture(). */
     bd_capture(BD_MAIN, 0, top, LCD_WIDTH, PLATE_H);
@@ -611,24 +660,16 @@ static void paint_plate(const struct overlay_shape *s)
 #if defined(HAVE_COMPOSITOR) && defined(HAVE_LCD_LAYERS)
     /* Ground of its own, a shade off the theme's, so the strip reads as a
      * control and not as an empty row. */
-    lcd_set_foreground(canvas_blend_px((canvas_px)global_settings.bg_color,
-                                       (canvas_px)global_settings.fg_color,
-                                       24));
+    ground = canvas_blend_px((canvas_px)global_settings.bg_color,
+                             (canvas_px)fg, 24);
+    lcd_set_foreground(ground);
     lcd_fillrect(0, top, LCD_WIDTH, PLATE_H);
-    lcd_set_foreground(global_settings.fg_color);
+    lcd_set_foreground(fg);
 #endif
     lcd_hline(0, LCD_WIDTH - 1, top);
 
-    p.ox = cx;
-    p.oy = cy;
-    rose_ring(&p, rad);
-
-    for (dy = -capr; dy <= capr; dy++)
-    {
-        for (dx = 0; (dx + 1) * (dx + 1) + dy * dy <= capr * capr; dx++)
-            ;
-        lcd_hline(capx - dx, capx + dx, capy + dy);
-    }
+    plate_disc(cx, cy, rad - 2, rad, fg, ground);
+    plate_disc(capx, capy, 0, capr, fg, ground);
 
     /* The hint: what sideways means, either side of the stick. Someone who
      * tapped a row was looking for "open", and this is where it is. */
