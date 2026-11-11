@@ -7,9 +7,10 @@
 # simulator's tick follows the script (RBSIM_CLOCK), so what is left here
 # follows audio or the wall clock instead.
 
-# Battery level: the simulated battery drains on the wall clock.
-Snappy-Animated * 376,20 420,80
-Snappy-V2 * 376,20 420,80
+# Battery level: the simulated battery drains on the wall clock. Both
+# digits, in the status bar and in the WPS, where the number sits further left.
+Snappy-Animated * 362,20 434,80
+Snappy-V2 * 362,20 434,80
 # and by the last shot its percentage is a digit either way.
 Snappy-Animated shot09 420,20 450,80
 Snappy-V2 shot09 420,20 450,80
