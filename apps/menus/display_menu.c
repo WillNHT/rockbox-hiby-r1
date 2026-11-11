@@ -612,8 +612,7 @@ MENUITEM_SETTING(stick_deg_per_detent, &global_settings.stick_deg_per_detent,
 
 MAKE_MENU(stick_menu, ID2P(LANG_STICK_SETTINGS), NULL, Icon_NOICON,
             &stick_preset, &stick_zone,
-            &stick_dial_wps, &stick_dial_lists,
-            &stick_overlay, &stick_overlay_style, &stick_edge_swipe);
+            &stick_dial_wps, &stick_dial_lists, &stick_edge_swipe);
 #endif
 
 MENUITEM_SETTING(browser_default, &global_settings.browser_default, NULL);
@@ -688,6 +687,8 @@ MAKE_MENU(display_menu, ID2P(LANG_DISPLAY),
 #endif /* HAVE_BACKLIGHT */
 #ifdef HAVE_TOUCHSCREEN
             &list_line_padding,
+            /* How the stick looks is display; what it does is controls. */
+            &stick_overlay, &stick_overlay_style,
 #endif
 #ifdef HAVE_LCD_TRANSITIONS
             &transitions_menu,
