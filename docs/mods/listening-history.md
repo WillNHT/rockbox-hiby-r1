@@ -1,6 +1,6 @@
 # Listening history
 
-Every listen is appended to `/.rockbox/listens.tsv` on the card, one line each, when the track ends for any reason. It is the record the recaps, charts and recommendations of #28 will be built on; the first reader is the radio's *Station History*.
+Every listen is appended to `/.rockbox/listens.tsv` on the card, one line each, when the track ends for any reason. It is the record the recaps, charts and recommendations of #28 will be built on; [For You](for-you.md) and the radio's *Station History* read it.
 
 | Column | Meaning |
 | --- | --- |

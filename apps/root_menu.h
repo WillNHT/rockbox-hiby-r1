@@ -81,7 +81,9 @@ enum {
     /* Pseudo-radio. Not the FM tuner - this device has none. A folder of
      * long recordings, entered at a random point, which is the one thing
      * the file browser cannot be talked into doing. */
-    GO_TO_PSEUDO_RADIO
+    GO_TO_PSEUDO_RADIO,
+    /* Mixes, charts and recaps out of the listening log. */
+    GO_TO_FORYOU
 };
 #ifndef PLUGIN
 extern struct menu_item_ex root_menu_;

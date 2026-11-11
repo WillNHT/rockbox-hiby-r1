@@ -41,6 +41,7 @@
 #include "sound.h"
 #include "audiobooks/audiobooks.h"
 #include "pradio.h"
+#include "foryou.h"
 #include "shortcuts.h"
 
 #ifdef HAVE_HOTSWAP
@@ -437,6 +438,13 @@ static int pseudo_radio(void* param)
     return pradio_screen();
 }
 
+/* Mixes, charts and recaps: see apps/foryou.c. */
+static int foryou(void* param)
+{
+    (void)param;
+    return foryou_screen();
+}
+
 static int load_bmarks(void* param)
 {
     (void)param;
@@ -483,6 +491,7 @@ static const struct root_items items[] = {
     [GO_TO_CUSTOMFOLDER] = { browser, (void*)GO_TO_CUSTOMFOLDER, &file_menu },
     [GO_TO_AUDIOBOOKS]   = { audiobooks, NULL, NULL },
     [GO_TO_PSEUDO_RADIO] = { pseudo_radio, NULL, NULL },
+    [GO_TO_FORYOU]       = { foryou, NULL, NULL },
 
 };
 //static const int nb_items = sizeof(items)/sizeof(*items);
@@ -507,6 +516,9 @@ MENUITEM_RETURNVALUE(audiobooks_item, ID2P(LANG_AUDIOBOOKS),
 
 MENUITEM_RETURNVALUE(pseudo_radio_item, ID2P(LANG_PSEUDO_RADIO),
                         GO_TO_PSEUDO_RADIO, NULL, Icon_Radio_screen);
+
+MENUITEM_RETURNVALUE(foryou_item, ID2P(LANG_FORYOU),
+                        GO_TO_FORYOU, NULL, Icon_Playlist);
 
 MENUITEM_RETURNVALUE(file_browser, ID2P(LANG_DIR_BROWSER), GO_TO_FILEBROWSER,
                         NULL, Icon_file_view_menu);
@@ -588,6 +600,7 @@ static struct menu_table menu_table[] = {
     { "custom folder", &custom_folder_item, true },
     { "audiobooks", &audiobooks_item },
     { "pseudo radio", &pseudo_radio_item },
+    { "for you", &foryou_item },
 };
 #define MAX_MENU_ITEMS (sizeof(menu_table) / sizeof(struct menu_table))
 static struct menu_item_ex *root_menu__[MAX_MENU_ITEMS];
@@ -1314,6 +1327,7 @@ void root_menu(void)
             case GO_TO_CUSTOMFOLDER:
             case GO_TO_AUDIOBOOKS:
             case GO_TO_PSEUDO_RADIO:
+            case GO_TO_FORYOU:
             case GO_TO_FILEBROWSER:
             case GO_TO_PLAYLISTS_SCREEN:
                 previous_browser = next_screen;
