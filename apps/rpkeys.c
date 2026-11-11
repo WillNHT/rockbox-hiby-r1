@@ -75,7 +75,6 @@
 #include "settings.h"
 #include "skin_engine/skin_engine.h"
 #include "sound.h"
-#include "splash.h"
 #include "system.h"
 #include "viewport.h"
 #ifdef HAVE_GENERAL_PURPOSE_LED
@@ -429,7 +428,8 @@ static void countdown_draw(long held_ticks)
 
     if (held_ticks >= SCREEN_OFF_HOLD_TICKS)
     {
-        what = "Turning off screen";
+        what = locked ? "Locked, turning off screen"
+                      : "Unlocked, turning off screen";
         next = "Power off in ";
         target = SHUTDOWN_HOLD_TICKS;
         start = SCREEN_OFF_HOLD_TICKS;
@@ -437,9 +437,9 @@ static void countdown_draw(long held_ticks)
     }
     else if (held_ticks >= LOCK_HOLD_TICKS)
     {
-        /* Short: the line is one line of a big face. What letting go
-         * does now, and under it what holding on gets instead. */
-        what = locked ? "Unlocking" : "Locking";
+        /* Short: the line is one line of a big face. What the hold has
+         * done, and under it what holding on gets next. */
+        what = locked ? "Locked" : "Unlocked";
         next = "Screen off in ";
         target = SCREEN_OFF_HOLD_TICKS;
         start = LOCK_HOLD_TICKS;
@@ -672,28 +672,15 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
         power_consumed = false;
         shot_taken = false;
 
-        /* Each hold does the one thing it was let go in: the lock, or past
-         * it the screen. Shutdown never gets here - it fires while held. */
+        /* The lock already flipped while held; past it, letting go turns
+         * the screen off. Shutdown never gets here - it fires while held. */
         if (!spent && held_ticks >= SCREEN_OFF_HOLD_TICKS)
         {
             screen_off(true);
             return true;
         }
         if (!spent && held_ticks >= LOCK_HOLD_TICKS)
-        {
-            locked = !locked;
-#ifdef HAVE_BACKLIGHT_DIM_IDLE
-            backlight_set_locked(locked);
-#endif
-#if defined(BUTTON_TOUCH_WAKES) && !defined(SIMULATOR)
-            button_set_touch_wake(!locked);
-#endif
-            splash(HZ/2, locked ? "Locked" : "Unlocked");
-            /* The splash leaves ink the same way the countdown does. */
-            countdown_drawn = true;
-            countdown_clear();
             return true;
-        }
 
         /* Away from the WPS a tap is the way back to it and nothing
          * more: the screen the user asked for should not arrive with
@@ -795,10 +782,19 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
             }
         }
 
-        /* The run ends on the lock's threshold; letting go from here on
-         * toggles it. A falling chirp says the next let-go is the screen. */
-        if (held_ticks >= LOCK_HOLD_TICKS)
+        /* The run ends on the lock's threshold, and the lock flips there,
+         * still held. A falling chirp says the next let-go is the screen. */
+        if (held_ticks >= LOCK_HOLD_TICKS && !lock_cue_done)
+        {
             lock_cue_done = true;
+            locked = !locked;
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+            backlight_set_locked(locked);
+#endif
+#if defined(BUTTON_TOUCH_WAKES) && !defined(SIMULATOR)
+            button_set_touch_wake(!locked);
+#endif
+        }
         if (held_ticks >= SCREEN_OFF_HOLD_TICKS && !off_cue_done)
         {
             off_cue_done = true;
