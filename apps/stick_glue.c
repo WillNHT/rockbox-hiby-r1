@@ -129,8 +129,10 @@ static struct stick_config live_cfg;
 static struct stick_state  live_state;
 
 static bool  initialised;
-static bool  session_disabled;      /* kill switch, or a crash-loop */
-static bool  kill_switched;         /* it was the kill switch       */
+/* Off for this session: paused after a run that never settled, which the
+ * settings screen lifts, or killed by the hardware switch, which nothing
+ * does. */
+static enum { STICK_LIVE, STICK_PAUSED, STICK_KILLED } stick_session;
 static bool  marker_present;
 static int   cached_context = -1;
 static long  first_use_tick;
@@ -182,7 +184,7 @@ static void stick_lazy_init(void)
         logf("stick: previous run did not settle, starting disabled");
         splashf(HZ * 3, "Joystick paused: re-pick Touchscreen Mode to resume");
         remove(STICK_MARKER_FILE);
-        session_disabled = true;
+        stick_session = STICK_PAUSED;
     }
 
     stick_reset(&live_state, &live_cfg);
@@ -196,7 +198,7 @@ bool stick_enabled(void)
 #else
     stick_lazy_init();
 
-    if (session_disabled)
+    if (stick_session != STICK_LIVE)
         return false;
 
     /* One scheme owns the panel at a time. Absolute touch and a relative
@@ -245,8 +247,8 @@ void stick_settings_apply(void)
      * hardware kill switch stays latched for the session: that one was
      * deliberate, and it has to survive for someone escaping a stick they
      * cannot drive. */
-    if (session_disabled && !kill_switched)
-        session_disabled = false;
+    if (stick_session == STICK_PAUSED)
+        stick_session = STICK_LIVE;
 
     stick_config_invalidate();
     cached_context = -1;        /* force a rebuild on the next event */
@@ -1321,7 +1323,7 @@ static bool plate_at_rest(struct overlay_shape *s)
 {
     static bool listening;
 
-    if (!global_settings.stick_overlay || session_disabled ||
+    if (!global_settings.stick_overlay || stick_session != STICK_LIVE ||
         global_settings.stick_overlay_style != STICK_OVERLAY_PLATE ||
         global_settings.touch_mode != TOUCHSCREEN_STICK)
         return false;
@@ -1547,7 +1549,7 @@ void stick_check_killswitch(int button)
                                      first_use_tick + BOOT_SETTLE_TICKS))
         marker_clear();
 
-    if (session_disabled)
+    if (stick_session != STICK_LIVE)
         return;
 
     if ((held & STICK_KILL_COMBO) == STICK_KILL_COMBO)
@@ -1556,8 +1558,7 @@ void stick_check_killswitch(int button)
             kill_held_since = current_tick;
         else if (TIME_AFTER(current_tick, kill_held_since + KILL_HOLD_TICKS))
         {
-            session_disabled = true;
-            kill_switched = true;
+            stick_session = STICK_KILLED;
             kill_held_since = 0;
             marker_clear();
             stick_reset(&live_state, &live_cfg);
