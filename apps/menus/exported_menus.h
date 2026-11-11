@@ -40,8 +40,9 @@ extern const struct menu_item_ex
         library_menu,               /* settings_menu.c  */
         controls_menu,
         system_menu,
-        settings_advanced_menu,
         device_sounds_menu,
+        advanced_library_menu,
+        advanced_system_menu,
         bookmark_settings_menu,
         altmenu_menu,
         wps_set_context_plugin,

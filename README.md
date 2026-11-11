@@ -76,7 +76,7 @@ Available in the [Development Build](#development-builds):
 * **Optimized Background Checks:** Extends battery life.
 * **Battery Protection Options:** Added configurable limits for charging voltage, current, and low-battery power-off (*Settings -> System -> Battery*).
   *Shortcut:* with System shown in the Main Menu (Settings -> Controls -> Main Menu Layout), long-press it to open System Settings directly.
-* **Touchscreen Exemptions:** Added the ability to disable touch controls in WPS and/or Lists/Menus (*Settings -> Advanced -> Input -> Touchscreen Exemptions*).
+* **Touchscreen Exemptions:** Added the ability to disable touch controls in WPS and/or Lists/Menus (*Settings -> Controls -> Advanced -> Touchscreen Exemptions*).
 * **Screen-Off Shutdown Beep:** Added an audible beep when powering off via hardware button with the screen off, preventing over-pressing in your pocket. *(Note: Voice Menu must be disabled to hear this).*
 * **Snappier Scrolling & Navigation:** Removed scrolling inertia when stopping. Disabled the right-half screen tap for the **Quickscreen** to prevent accidental activations when attempting to navigate **Back**.
 * **Touch-Friendly Lists:** Increased the default size of list elements. Fine tune it for your fingers via *Settings -> Display -> Line Padding in Lists*.
