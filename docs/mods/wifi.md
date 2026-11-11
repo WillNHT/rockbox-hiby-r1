@@ -1,6 +1,6 @@
 # Wi-Fi
 
-Main Menu > **Wi-Fi** brings the R1's radio up the way HiBy OS does: the driver is
+Settings > **Wi-Fi** brings the R1's radio up the way HiBy OS does: the driver is
 already loaded at boot, `wpa_supplicant` joins a network and `udhcpc` asks it for an
 address. Nothing listens on the network - Rockbox only ever talks out.
 
@@ -15,8 +15,10 @@ address. Nothing listens on the network - Rockbox only ever talks out.
 Networks and passwords are kept by `wpa_supplicant` in `/.rockbox/wifi.conf`, in plain
 text, like HiBy OS keeps its own.
 
-Wi-Fi is under Settings > System. To put it back on the main menu, show it in
+Wi-Fi is at the top of Settings. To put it on the main menu as well, show it in
 Settings > Controls > Main Menu Layout.
+
+![Settings, Bluetooth at the top (the simulator has no Wi-Fi)](screenshots/settings-top.png)
 
 Nothing uses the connection yet: this is the base for internet radio, clock sync and
 the rest of [#29](https://github.com/WillNHT/rockbox-hiby-r1/issues/29).

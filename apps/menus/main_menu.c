@@ -502,6 +502,12 @@ MAKE_MENU(info_menu, ID2P(LANG_ABOUT), 0, Icon_System_menu,
 
 MAKE_MENU(main_menu_, ID2P(LANG_SETTINGS), NULL,
         Icon_Submenu_Entered,
+#ifdef HAVE_HIBY_BLUETOOTH
+        &hiby_bluetooth_root_item,
+#endif
+#if defined(HIBY_LINUX) && !defined(SIMULATOR)
+        &hiby_wifi_root_item,
+#endif
         &sound_settings,
         &playback_settings,
         &library_menu,

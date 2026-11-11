@@ -872,12 +872,6 @@ MAKE_MENU(controls_menu, ID2P(LANG_CONTROLS), 0, Icon_Menu_setting,
           );
 
 MAKE_MENU(system_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
-#ifdef HAVE_HIBY_BLUETOOTH
-          &hiby_bluetooth_root_item,
-#endif
-#if defined(HIBY_LINUX) && !defined(SIMULATOR)
-          &hiby_wifi_root_item,
-#endif
 #if defined(USB_ENABLE_HID) || \
     defined(USB_ENABLE_AUDIO) || defined(HAVE_HOST_USB_AUDIO) || \
     (defined(USB_ENABLE_STORAGE) && defined(HAVE_MULTIDRIVE)) || \
