@@ -2437,6 +2437,35 @@ bool tagtree_get_cover_file(struct tree_context *c, int item,
     return found;
 }
 
+/* Who a track or an album is by, for the line under its name. An album's
+ * is its first track's, as its cover is. */
+bool tagtree_get_artist(struct tree_context *c, int item,
+                        char *buf, int buflen)
+{
+    struct tagcache_search tcs;
+    struct tagentry *entry;
+    bool found = false;
+
+    if (item < c->special_entry_count || item >= c->filesindir)
+        return false;
+    entry = tagtree_get_entry(c, item);
+    if (!entry)
+        return false;
+
+    if (!tagcache_search(&tcs, tag_artist))
+        return false;
+    if (entry->newtable == TABLE_PLAYTRACK)
+        found = tagcache_retrieve(&tcs, entry->extraseek, tcs.type,
+                                  buf, buflen);
+    else if (list_tag == tag_album)
+    {
+        if (tagcache_search_add_filter(&tcs, tag_album, entry->extraseek))
+            found = tagcache_get_next(&tcs, buf, buflen);
+    }
+    tagcache_search_finish(&tcs);
+    return found && buf[0] && strcmp(buf, UNTAGGED);
+}
+
 int tagtree_get_custom_action(struct tree_context* c)
 {
     if (c->dirlength == 0)

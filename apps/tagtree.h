@@ -48,6 +48,8 @@ int tagtree_get_filename(struct tree_context* c, char *buf, int buflen);
 /* Whether the loaded listing is albums or tracks, and an item's file to
  * take a cover from (an album's first track). */
 bool tagtree_lists_covers(struct tree_context *c);
+bool tagtree_get_artist(struct tree_context *c, int item,
+                        char *buf, int buflen);
 bool tagtree_get_cover_file(struct tree_context *c, int item,
                             char *buf, int buflen);
 int tagtree_get_custom_action(struct tree_context* c);

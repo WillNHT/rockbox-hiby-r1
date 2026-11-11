@@ -38,6 +38,7 @@
 #ifdef HAVE_COVER_VIEWS
 
 #include <string.h>
+#include "string-extra.h"
 #include "system.h"
 #include "lcd.h"
 #include "font.h"
@@ -148,7 +149,7 @@ static void draw_text(struct screen *d, struct cv_state *st, int tile,
     char sub[MAX_PATH];
     const char *subtitle = NULL;
     int fh = d->getcharheight();
-    int lines, ty;
+    int lines, ty, sw;
 
     if (tile >= MAX_TILES || w <= 0 || h <= 0 || y < 0)
         return;
@@ -166,6 +167,33 @@ static void draw_text(struct screen *d, struct cv_state *st, int tile,
         return;
     d->set_viewport(tv);
 
+    /* Nothing to say under the name, and the name too long for its line:
+     * it takes the second line too, broken at the last space that fits,
+     * rather than running off the edge with a line standing empty. */
+    if (lines == 1 && with_subtitle && tv->height >= 2 * fh &&
+        d->getstringsize((const unsigned char *)name, &sw, NULL) > tv->width)
+    {
+        size_t brk = 0;
+        for (size_t i = 1; name[i] && i < sizeof(sub) - 1; i++)
+        {
+            if (name[i] != ' ')
+                continue;
+            strmemccpy(sub, name, i + 1);
+            if (d->getstringsize((const unsigned char *)sub, &sw, NULL)
+                    > tv->width)
+                break;
+            brk = i;
+        }
+        if (brk)
+        {
+            strmemccpy(sub, name, brk + 1);
+            subtitle = name + brk + 1;
+            name = sub;
+            lines = 2;
+            with_subtitle = false;      /* the same colour as the first */
+        }
+    }
+
     ty = (tv->height - lines * fh) / 2;
     if (ty < 0)
         ty = 0;
@@ -182,7 +210,7 @@ static void draw_text(struct screen *d, struct cv_state *st, int tile,
              "$t", name);
     if (lines == 2)
     {
-        if (!selected)
+        if (!selected && with_subtitle)
         {
             /* the second line is quieter */
             ld.style = STYLE_DEFAULT | STYLE_COLORED;
@@ -380,10 +408,11 @@ static bool draw_list(struct screen *d, struct gui_synclist *list,
     case COVERVIEW_SHELVES:
     default:
     {
-        /* 35% of the panel rather than 30%: at a 44 px face the name
-         * was taller than the picture beside it, which is the wrong way
-         * round for a view whose whole point is the picture. */
-        int row_h = MAX(2 * fh + 3 * PAD, vp->width * 7 / 20);
+        /* Two lines of text set the row and the picture fills it. It
+         * was 35% of the panel wide, which at a 44 px face left the name
+         * thirteen characters beside a picture nobody needed that big to
+         * tell albums apart. */
+        int row_h = 2 * fh + 3 * PAD;
         draw_rows(d, st, vp, row_h, row_h - 2 * PAD, true);
         break;
     }

@@ -512,7 +512,7 @@ static const char *tree_cover_subtitle(int item, void *data,
     (void)data;
 #ifdef HAVE_TAGCACHE
     if (tree_cover_id3db)
-        return NULL;
+        return tagtree_get_artist(&tc, item, buf, size) ? buf : NULL;
 #endif
     struct entry *e = tree_get_entry_at(&tc, item);
     if (!e)
