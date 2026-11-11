@@ -121,14 +121,18 @@
 /* Seeking. */
 #define SEEK_STEP_MS         5000
 
+/* One POWER press, from going down to the let-go. */
+static enum {
+    POWER_UP,                   /* not held                               */
+    POWER_HELD,                 /* a tap, a lock, screen off or shutdown  */
+    POWER_SPENT,                /* it did its one thing: the rest is ours */
+} power_press;
+
 static bool locked;
-static bool lock_cue_done;      /* the arming run is over for this press  */
 static bool off_cue_done;       /* the screen-off chirp has played        */
 static int  lock_chirp_step;    /* how far the arming run has got         */
-static long power_down_tick;    /* 0 when POWER is not held               */
-static bool power_consumed;     /* this press already did something       */
+static long power_down_tick;    /* when this press went down              */
 static long vol_next_tick;
-static bool shot_taken;         /* this POWER press took a screenshot  */
 static bool countdown_drawn;
 
 static bool screen_is_off(void)
@@ -348,7 +352,9 @@ void rpkeys_chirp_step(int step, int total, bool rising)
 
 static long countdown_next_tick;
 static long border_done;        /* perimeter pixels already inked */
-static int  countdown_stage;    /* 0 = the lock, 1 = screen off, 2 = shutdown */
+/* What letting go does at this point in the hold. */
+enum countdown_stage { CD_LOCK, CD_SCREEN_OFF, CD_SHUTDOWN };
+static enum countdown_stage countdown_stage;
 
 /* Union a rectangle into an accumulating bounding box. */
 static void bbox_add(int *bx, int *by, int *bw, int *bh,
@@ -423,7 +429,7 @@ static void countdown_draw(long held_ticks)
     int w, h, y;
     int band_y, band_h;
     int bx = 0, by = 0, bw = 0, bh = 0;
-    int stage;
+    enum countdown_stage stage;
     bool first;
 
     if (held_ticks >= SCREEN_OFF_HOLD_TICKS)
@@ -432,7 +438,7 @@ static void countdown_draw(long held_ticks)
         next = "Power off in ";
         target = SHUTDOWN_HOLD_TICKS;
         start = SCREEN_OFF_HOLD_TICKS;
-        stage = 2;
+        stage = CD_SHUTDOWN;
     }
     else if (held_ticks >= LOCK_HOLD_TICKS)
     {
@@ -442,7 +448,7 @@ static void countdown_draw(long held_ticks)
         next = "Screen off in ";
         target = SCREEN_OFF_HOLD_TICKS;
         start = LOCK_HOLD_TICKS;
-        stage = 1;
+        stage = CD_SCREEN_OFF;
     }
     else
     {
@@ -450,7 +456,7 @@ static void countdown_draw(long held_ticks)
         next = "";
         target = LOCK_HOLD_TICKS;
         start = LOCK_ARM_TICKS;
-        stage = 0;
+        stage = CD_LOCK;
     }
 
     /* Crossing into the next stage restarts the border from nothing, so
@@ -655,21 +661,16 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
 
     if (release)
     {
-        long held_ticks = power_down_tick ? now - power_down_tick : 0;
+        long held_ticks = power_press != POWER_UP ? now - power_down_tick : 0;
         /* Strictly a tap, not merely "not a completed lock". A hold the
          * user abandoned halfway is a cancelled lock and means nothing;
          * letting it fall through to the screen toggle is what made
          * thinking better of a lock turn the display off. */
-        bool was_tap = !power_consumed && held_ticks < POWER_TAP_MAX_TICKS;
-        bool spent = power_consumed || shot_taken;
+        bool spent = power_press == POWER_SPENT;
+        bool was_tap = !spent && held_ticks < POWER_TAP_MAX_TICKS;
 
         countdown_clear();
-        power_down_tick = 0;
-        lock_cue_done = false;
-        off_cue_done = false;
-        lock_chirp_step = 0;
-        power_consumed = false;
-        shot_taken = false;
+        power_press = POWER_UP;
 
         /* Each hold does the one thing it was let go in: the lock, or past
          * it the screen. Shutdown never gets here - it fires while held. */
@@ -720,26 +721,23 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
     /* POWER with Vol Up: a screenshot. The press is spent on it -
      * not a tap, not a lock, no countdown - and it fires once however
      * long the two are held. */
-    if ((held & BUTTON_UP) && !shot_taken)
+    if ((held & BUTTON_UP) && power_press != POWER_SPENT)
     {
-        if (!power_down_tick)
+        if (power_press == POWER_UP)
             power_down_tick = now;
-        shot_taken = true;
-        power_consumed = true;
-        lock_cue_done = true;
+        power_press = POWER_SPENT;
         countdown_clear();
         screenshot_take();
         cue();
         return true;
     }
-    if (shot_taken)
+    if (power_press == POWER_SPENT)
         return true;
 
-    if (!power_down_tick)
+    if (power_press == POWER_UP)
     {
+        power_press = POWER_HELD;
         power_down_tick = now;
-        power_consumed = false;
-        lock_cue_done = false;
         off_cue_done = false;
         lock_chirp_step = 0;
         /* The screen is off: this press only brings it back, however long
@@ -748,8 +746,7 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
         {
             screen_off(false);
             cue();
-            shot_taken = true;
-            power_consumed = true;
+            power_press = POWER_SPENT;
         }
         return true;
     }
@@ -766,7 +763,7 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
             countdown_clear();
             cue();
             sys_poweroff();
-            power_consumed = true;
+            power_press = POWER_SPENT;
             return true;
         }
 
@@ -774,7 +771,7 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
          * unlock), falling if it will shut one (a lock), paced so the last
          * note lands on the instant the lock flips rather than after it -
          * the sound is the progress, not the receipt. */
-        if (!lock_cue_done && held_ticks >= LOCK_ARM_TICKS)
+        if (held_ticks >= LOCK_ARM_TICKS)
         {
             long span = LOCK_HOLD_TICKS - LOCK_ARM_TICKS;
             int want = (int)(((held_ticks - LOCK_ARM_TICKS) * CHIRP_RUN_NOTES)
@@ -790,10 +787,9 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
             }
         }
 
-        /* The run ends on the lock's threshold; letting go from here on
-         * toggles it. A falling chirp says the next let-go is the screen. */
-        if (held_ticks >= LOCK_HOLD_TICKS)
-            lock_cue_done = true;
+        /* The run ends on the lock's threshold (want stops growing there);
+         * letting go from here on toggles it. A falling chirp says the next
+         * let-go is the screen. */
         if (held_ticks >= SCREEN_OFF_HOLD_TICKS && !off_cue_done)
         {
             off_cue_done = true;
