@@ -100,7 +100,9 @@ phone user tries. The plate answers it for three seconds with `< back` and
 row with it, up to the distance the release needs.
 
 The strip's height is `PLATE_H` in `apps/stick_glue.c`; the Snappy `.sbs`
-files reserve the same 80 px and have to change with it.
+files reserve the same 80 px and have to change with it. They reserve it
+only while the settings would draw a plate (stick touch mode, overlay on,
+style `plate`); otherwise the list and footer use the whole panel.
 
 ---
 

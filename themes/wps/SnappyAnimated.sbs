@@ -33,12 +33,16 @@
 %xl(wired,wired.bmp,46,6)
 %xl(rx,rx.bmp,22,6,2)
 %xl(db,db.bmp,0,6,2)
+%xl(p,paused.bmp,12,8)
 %xl(vb,vb.bmp)
 %xl(vb_backdrop,vb_backdrop.bmp)
 %xl(vb_too_loud,vb_too_loud.bmp)
 %?mv(1.5)<%Vd(vol)|%Vd(status)%?Lt<%Vd(title)|%Vd(no_title)>>
-%?if(%cs, =, 21)<%Vd(USB)%VI(USB)|%?mp<%VI(main_l)%Vd(main_l)|%VI(main)%Vd(main)>>
-%?if(%cs, =, 21)<|%?mp<|%?C<%Vd(npart)|%Vd(npnote)>>>
+# The bottom 80 px are the joystick plate's (PLATE_H in apps/stick_glue.c),
+# but only while the settings would draw one: the _p viewports end above
+# it, the plain ones use the whole panel.
+%?if(%cs, =, 21)<%Vd(USB)%VI(USB)|%?and(%if(%St(touchscreen mode),=,stick),%if(%St(stick overlay),=,on),%if(%St(stick overlay style),=,plate))<%?mp<%VI(main_lp)%Vd(main_lp)|%VI(main_p)%Vd(main_p)>|%?mp<%VI(main_l)%Vd(main_l)|%VI(main)%Vd(main)>>>
+%?if(%cs, =, 21)<|%?mp<|%?and(%if(%St(touchscreen mode),=,stick),%if(%St(stick overlay),=,on),%if(%St(stick overlay style),=,plate))<%?C<%Vd(npart_p)|%Vd(npnote_p)>|%?C<%Vd(npart)|%Vd(npnote)>>>>
 #
 # ---------
 # Margins
@@ -51,7 +55,8 @@
 # r
 %V(-30,0,-,-,-)
 # b (when footer is hidden)
-%Vl(main_l,30,-136,-30,56,-)
+%Vl(main_l,30,-56,-30,-,-)
+%Vl(main_lp,30,-136,-30,56,-)
 #
 # ---------
 # Title Area
@@ -89,8 +94,10 @@
 # ---------
 # UI viewport
 # ---------
-%Vi(main,30,152,-30,-184,-)
-%Vi(main_l,30,152,-30,-136,-)
+%Vi(main,30,152,-30,-104,-)
+%Vi(main_l,30,152,-30,-56,-)
+%Vi(main_p,30,152,-30,-184,-)
+%Vi(main_lp,30,152,-30,-136,-)
 %Vi(USB,30,152,2,2,-)
 #
 %Vl(USB,30,154,-30,-136,5)
@@ -101,26 +108,39 @@
 # ---------
 # Footer
 # ---------
-%Vl(main,30,-184,-30,44,-)
+%Vl(main,30,-104,-30,-60,-)
+%dr(0,24,-,2)
+%Vl(main_p,30,-184,-30,44,-)
 %dr(0,24,-,2)
 #
 # The cover of what is playing, the height of the title line, left of it.
 # 34 px is its own album-art size, so buffering scales a copy for it; the
 # WPS keeps its big one.
-%Vl(npart,30,-140,34,34,-)
+%Vl(npart,30,-60,34,34,-)
 %Cl(0,0,34,34,c,c)
+%Cd
+%Vl(npart_p,30,-140,34,34,-)
 %Cd
 #
 # No cover: a note, drawn, because the fonts here have no note glyph.
-%Vl(npnote,30,-140,34,34,-)
+%Vl(npnote,30,-60,34,34,-)
+%dr(0,0,-,-,3A3B3D,3A3B3D)
+%dr(8,20,12,9)
+%dr(18,6,3,20)
+%dr(18,6,10,4)
+%Vl(npnote_p,30,-140,34,34,-)
 %dr(0,0,-,-,3A3B3D,3A3B3D)
 %dr(8,20,12,9)
 %dr(18,6,3,20)
 %dr(18,6,10,4)
 #
-%Vl(main,72,-140,-60,-80,3)
+%Vl(main,72,-60,-60,-,3)
+%al%s%?rs<%rs|%?it<%it|%fn>>
+%Vl(main_p,72,-140,-60,-80,3)
 %al%s%?rs<%rs|%?it<%it|%fn>>
 #
-%Vl(main,-60,-140,-30,-80,-)
-%?if(%mp,=,3)<%x(p,paused.bmp,12,8)>
+%Vl(main,-60,-60,-30,-,-)
+%?if(%mp,=,3)<%xd(p)>
+%Vl(main_p,-60,-140,-30,-80,-)
+%?if(%mp,=,3)<%xd(p)>
 #
