@@ -21016,3 +21016,395 @@
     *: "Update failed"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_RADIO_HISTORY
+  desc: radio: plays, time listened and last heard, per station
+  user: core
+  <source>
+    *: "Station History"
+  </source>
+  <dest>
+    *: "Station History"
+  </dest>
+  <voice>
+    *: "Station History"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU
+  desc: main menu and its title: mixes, charts and recaps from the listening log
+  user: core
+  <source>
+    *: "For You"
+  </source>
+  <dest>
+    *: "For You"
+  </dest>
+  <voice>
+    *: "For You"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_DAILY
+  desc: For You: a mix of familiar, less played and unheard tracks
+  user: core
+  <source>
+    *: "Daily Mix"
+  </source>
+  <dest>
+    *: "Daily Mix"
+  </dest>
+  <voice>
+    *: "Daily Mix"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_SIMILAR
+  desc: For You: a mix around the track that is playing
+  user: core
+  <source>
+    *: "Because You Played..."
+  </source>
+  <dest>
+    *: "Because You Played..."
+  </dest>
+  <voice>
+    *: "Because You Played..."
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_REDISCOVER
+  desc: For You: tracks not heard for a long time
+  user: core
+  <source>
+    *: "Rediscover"
+  </source>
+  <dest>
+    *: "Rediscover"
+  </dest>
+  <voice>
+    *: "Rediscover"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_FORGOTTEN
+  desc: For You: much played tracks not heard for a long time
+  user: core
+  <source>
+    *: "Forgotten Favorites"
+  </source>
+  <dest>
+    *: "Forgotten Favorites"
+  </dest>
+  <voice>
+    *: "Forgotten Favorites"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_SHUFFLE
+  desc: For You: reorder the current playlist, no artist twice in a row
+  user: core
+  <source>
+    *: "Smart Shuffle"
+  </source>
+  <dest>
+    *: "Smart Shuffle"
+  </dest>
+  <voice>
+    *: "Smart Shuffle"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_MOOD
+  desc: For You: mixes by mood
+  user: core
+  <source>
+    *: "Mood Radio"
+  </source>
+  <dest>
+    *: "Mood Radio"
+  </dest>
+  <voice>
+    *: "Mood Radio"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_CHILL
+  desc: For You: a mood
+  user: core
+  <source>
+    *: "Chill"
+  </source>
+  <dest>
+    *: "Chill"
+  </dest>
+  <voice>
+    *: "Chill"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_ENERGETIC
+  desc: For You: a mood
+  user: core
+  <source>
+    *: "Energetic"
+  </source>
+  <dest>
+    *: "Energetic"
+  </dest>
+  <voice>
+    *: "Energetic"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_DRIVING
+  desc: For You: a mood
+  user: core
+  <source>
+    *: "Driving"
+  </source>
+  <dest>
+    *: "Driving"
+  </dest>
+  <voice>
+    *: "Driving"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_RELAXING
+  desc: For You: a mood
+  user: core
+  <source>
+    *: "Relaxing"
+  </source>
+  <dest>
+    *: "Relaxing"
+  </dest>
+  <voice>
+    *: "Relaxing"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_ALBUMS
+  desc: For You: albums not heard for a long time
+  user: core
+  <source>
+    *: "Album Rediscovery"
+  </source>
+  <dest>
+    *: "Album Rediscovery"
+  </dest>
+  <voice>
+    *: "Album Rediscovery"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_YEARS_AGO
+  desc: For You: what was played on this day in earlier years
+  user: core
+  <source>
+    *: "Today, Years Ago"
+  </source>
+  <dest>
+    *: "Today, Years Ago"
+  </dest>
+  <voice>
+    *: "Today, Years Ago"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_CHARTS
+  desc: For You: most played tracks, artists and albums
+  user: core
+  <source>
+    *: "Charts"
+  </source>
+  <dest>
+    *: "Charts"
+  </dest>
+  <voice>
+    *: "Charts"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_WEEK
+  desc: For You: chart period
+  user: core
+  <source>
+    *: "This Week"
+  </source>
+  <dest>
+    *: "This Week"
+  </dest>
+  <voice>
+    *: "This Week"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_MONTH
+  desc: For You: chart period
+  user: core
+  <source>
+    *: "This Month"
+  </source>
+  <dest>
+    *: "This Month"
+  </dest>
+  <voice>
+    *: "This Month"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_YEAR
+  desc: For You: chart period
+  user: core
+  <source>
+    *: "This Year"
+  </source>
+  <dest>
+    *: "This Year"
+  </dest>
+  <voice>
+    *: "This Year"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_ALL
+  desc: For You: chart period
+  user: core
+  <source>
+    *: "All Time"
+  </source>
+  <dest>
+    *: "All Time"
+  </dest>
+  <voice>
+    *: "All Time"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_RECAP
+  desc: For You: summary of this month and the last
+  user: core
+  <source>
+    *: "Monthly Recap"
+  </source>
+  <dest>
+    *: "Monthly Recap"
+  </dest>
+  <voice>
+    *: "Monthly Recap"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_WRAPPED
+  desc: For You: summary of this year and the last
+  user: core
+  <source>
+    *: "Year Wrapped"
+  </source>
+  <dest>
+    *: "Year Wrapped"
+  </dest>
+  <voice>
+    *: "Year Wrapped"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_CALENDAR
+  desc: For You: streaks and a mark per day listened
+  user: core
+  <source>
+    *: "Listening Calendar"
+  </source>
+  <dest>
+    *: "Listening Calendar"
+  </dest>
+  <voice>
+    *: "Listening Calendar"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_HOURS
+  desc: For You: listening by hour of the day
+  user: core
+  <source>
+    *: "Time of Day"
+  </source>
+  <dest>
+    *: "Time of Day"
+  </dest>
+  <voice>
+    *: "Time of Day"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_FIRST
+  desc: For You: tracks heard for the first time this month
+  user: core
+  <source>
+    *: "First Listens"
+  </source>
+  <dest>
+    *: "First Listens"
+  </dest>
+  <voice>
+    *: "First Listens"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_SKIPS
+  desc: For You: completion rate and most skipped tracks
+  user: core
+  <source>
+    *: "Skips"
+  </source>
+  <dest>
+    *: "Skips"
+  </dest>
+  <voice>
+    *: "Skips"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_MIX_SIZE
+  desc: For You: number of tracks in a mix
+  user: core
+  <source>
+    *: "Mix Length"
+  </source>
+  <dest>
+    *: "Mix Length"
+  </dest>
+  <voice>
+    *: "Mix Length"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_AGE
+  desc: For You: days unheard before a track counts as forgotten
+  user: core
+  <source>
+    *: "Rediscover After (Days)"
+  </source>
+  <dest>
+    *: "Rediscover After (Days)"
+  </dest>
+  <voice>
+    *: "Rediscover After (Days)"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FORYOU_EMPTY
+  desc: For You: the log has nothing for this yet
+  user: core
+  <source>
+    *: "Not enough listening history yet"
+  </source>
+  <dest>
+    *: "Not enough listening history yet"
+  </dest>
+  <voice>
+    *: "Not enough listening history yet"
+  </voice>
+</phrase>

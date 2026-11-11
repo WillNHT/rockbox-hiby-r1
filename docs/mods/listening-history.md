@@ -1,6 +1,6 @@
 # Listening history
 
-Every listen is appended to `/.rockbox/listens.tsv` on the card, one line each, when the track ends for any reason. It is the record the recaps, charts and recommendations of #28 will be built on; nothing on the device reads it yet.
+Every listen is appended to `/.rockbox/listens.tsv` on the card, one line each, when the track ends for any reason. It is the record the recaps, charts and recommendations of #28 will be built on; [For You](for-you.md) and the radio's *Station History* read it.
 
 | Column | Meaning |
 | --- | --- |
@@ -10,6 +10,7 @@ Every listen is appended to `/.rockbox/listens.tsv` on the card, one line each, 
 | `length_ms` | Its length at the time, so `played_ms / length_ms` is how much was heard |
 | `ended` | `finished` when playback moved on by itself, `skipped` when it was skipped or stopped |
 | `source` | `music`, `audiobook`, or `radio` for a pseudo radio station |
+| `station` | The station's name when the source is `radio`, else empty. Rows written before this column existed end at `source` |
 
 A track that never started is not logged. A short listen is, and marked by its `played_ms`, so skips are data too.
 

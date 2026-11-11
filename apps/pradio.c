@@ -65,6 +65,7 @@
 #include "timefuncs.h"
 #include "rbpaths.h"
 #include "tagcache.h"
+#include "listens.h"
 #include "pradio.h"
 
 #define PRADIO_MAX_STATIONS 48
@@ -1161,6 +1162,9 @@ MENUITEM_FUNCTION(pradio_saver_item, 0, ID2P(LANG_RADIO_SAVER),
 static int pradio_stations(void);
 MENUITEM_FUNCTION(pradio_stations_item, 0, ID2P(LANG_RADIO_STATIONS),
                   pradio_stations, NULL, Icon_Radio_screen);
+static int pradio_history(void);
+MENUITEM_FUNCTION(pradio_history_item, 0, ID2P(LANG_RADIO_HISTORY),
+                  pradio_history, NULL, Icon_Radio_screen);
 MENUITEM_SETTING(pradio_min_length, &global_settings.radio_min_length, NULL);
 MENUITEM_SETTING(pradio_static, &global_settings.radio_static, NULL);
 MENUITEM_SETTING(pradio_static_strength,
@@ -1171,6 +1175,7 @@ MENUITEM_FUNCTION(pradio_rebuild_item, 0, ID2P(LANG_RADIO_REBUILD),
 
 MAKE_MENU(pradio_settings_menu, ID2P(LANG_RADIO_SETTINGS), NULL, Icon_Radio_screen,
           &pradio_stations_item,
+          &pradio_history_item,
           &pradio_rebuild_item,
           &pradio_folder_item,
           &pradio_min_length,
@@ -1288,4 +1293,110 @@ int pradio_screen(void)
         return GO_TO_WPS;
 
     return GO_TO_PREVIOUS;
+}
+
+/* --- what was listened to --------------------------------------------- */
+
+/* Per station, off the listening log (apps/listens.c): how often, how
+ * long, and when last. A sequential read of the whole log, which is fine
+ * for a screen opened on purpose and is why nothing keeps these totals. */
+static struct
+{
+    long plays;
+    unsigned long secs;
+    long last;
+} heard[PRADIO_MAX_STATIONS];
+static int heard_order[PRADIO_MAX_STATIONS];
+
+/* Longest listened first, the rest as the dial has them */
+static int cmp_heard(const void *a, const void *b)
+{
+    int x = *(const int *)a, y = *(const int *)b;
+
+    if (heard[x].secs != heard[y].secs)
+        return heard[x].secs < heard[y].secs ? 1 : -1;
+    return x - y;
+}
+
+static const char *heard_name(int item, void *data, char *buf, size_t size)
+{
+    (void)data;
+    int s = heard_order[item];
+    time_t last = heard[s].last;
+    struct tm tm;
+
+    if (!heard[s].plays)
+        snprintf(buf, size, "%s: -", stations[s]);
+    else
+    {
+        gmtime_r(&last, &tm);
+        snprintf(buf, size, "%s: %ldx, %luh%02lum, %04d-%02d-%02d",
+                 stations[s], heard[s].plays, heard[s].secs / 3600,
+                 heard[s].secs / 60 % 60, tm.tm_year + 1900, tm.tm_mon + 1,
+                 tm.tm_mday);
+    }
+    return buf;
+}
+
+/* The next tab separated field of a log line, NULL past the last */
+static char *log_field(char **line)
+{
+    char *field = *line;
+
+    if (field && (*line = strchr(field, '\t')))
+        *(*line)++ = '\0';
+    return field;
+}
+
+static int pradio_history(void)
+{
+    static const char * const logs[] = { LISTENS_OLD_FILE, LISTENS_FILE };
+    static char line[MAX_PATH + 160];
+
+    scan_stations();
+    memset(heard, 0, sizeof(heard));
+
+    for (int f = 0; f < 2; f++)
+    {
+        int fd = open(logs[f], O_RDONLY);
+        if (fd < 0)
+            continue;
+        while (read_line(fd, line, sizeof(line)) > 0)
+        {
+            char *p = line;
+            log_field(&p);                              /* path */
+            char *started = log_field(&p);
+            char *played = log_field(&p);
+            log_field(&p);                              /* length_ms */
+            log_field(&p);                              /* ended */
+            log_field(&p);                              /* source */
+            char *station = log_field(&p);
+
+            /* no station: not the radio, or a row from before the column.
+               no start: the header */
+            if (!station || atol(started) == 0)
+                continue;
+            for (int i = 0; i < nstations; i++)
+            {
+                if (strcasecmp(station, stations[i]))
+                    continue;
+                heard[i].plays++;
+                heard[i].secs += strtoul(played, NULL, 10) / 1000;
+                heard[i].last = atol(started);  /* the log is in order */
+                break;
+            }
+        }
+        close(fd);
+    }
+
+    for (int i = 0; i < nstations; i++)
+        heard_order[i] = i;
+    qsort(heard_order, nstations, sizeof(heard_order[0]), cmp_heard);
+
+    struct simplelist_info info;
+    simplelist_info_init(&info, str(LANG_RADIO_HISTORY), nstations, NULL);
+    info.get_name = heard_name;
+    info.title_icon = Icon_Radio_screen;
+    simplelist_show_list(&info);
+    return 0;
 }

@@ -23,6 +23,8 @@ Grab a build from the [releases page](https://github.com/WillNHT/rockbox-hiby-r1
   grid and carousel; `%Cp` in a WPS.
 * [Audiobooks library](mods/audiobooks-library.md) - covers, series, narrators,
   progress, Continue Listening, per-book speed, sleep timer.
+* [For You](mods/for-you.md) - mixes, charts, recaps and a year
+  wrapped, from the listening log.
 * [Listening history](mods/listening-history.md) - every listen in
   `listens.tsv`, the record recaps and recommendations will read.
 * [Audio prioritisation](mods/audio-prioritisation.md) - device sounds duck the

@@ -22,6 +22,11 @@ throwing away the thing you came back to look at.
 Picking a station by name is **Settings > Library > Radio > Stations**,
 which is where the rest of the deliberate choices already are.
 
+**Station History**, next to it, is what the [listening
+log](listening-history.md) says about each station: how many times it was
+tuned in, how long it was listened to, and the day it was last heard, the
+most listened first.
+
 ## Stations
 
 Stations are the immediate subfolders of the radio folder, and the tracks
