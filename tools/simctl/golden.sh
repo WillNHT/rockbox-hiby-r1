@@ -30,7 +30,7 @@ cp -r "$ROOT"/themes/fonts/. "$DISK/.rockbox/fonts/"
 cp -r "$ROOT"/themes/icons/. "$DISK/.rockbox/icons/"
 cp "$ROOT"/themes/*.cfg "$DISK/.rockbox/themes/"
 
-cat "$HERE/tests/library.txt" "$HERE/golden/script.txt" > /tmp/golden.txt
+cat "$HERE/tests/plate.txt" "$HERE/tests/library.txt" "$HERE/golden/script.txt" > /tmp/golden.txt
 
 rm -rf "$OUT"
 mkdir -p "$OUT"

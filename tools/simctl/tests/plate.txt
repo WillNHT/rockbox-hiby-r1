@@ -1,0 +1,23 @@
+# The joystick plate teaching the list's gestures (#156). Main menu.
+# Shots: a tap on a row, which does nothing and gets the plate's hint;
+# a sideways drag held short of opening, the row and the cap gone with it.
+sleep 3000
+down 240 400
+sleep 100
+up
+sleep 600
+dump
+sleep 4000
+down 240 400
+sleep 100
+move 260 400
+sleep 100
+move 280 400
+sleep 100
+move 300 400
+sleep 400
+dump
+move 240 400
+sleep 200
+up
+sleep 500

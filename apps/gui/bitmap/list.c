@@ -44,6 +44,7 @@
 #include "statusbar-skinned.h"
 #include "debug.h"
 #include "line.h"
+#include "stick_glue.h"
 #include "fixedpoint.h"
 //#define LOGF_ENABLE
 #include "logf.h"
@@ -215,6 +216,12 @@ static bool draw_title(struct screen *display,
 
     return true;
 }
+
+#ifdef HAVE_TOUCHSCREEN
+/* How far a sideways drag has gone, for the row that goes with it. Only
+ * read while the list is in SCROLL_ANSWER, so nothing has to clear it. */
+static int answer_dx;
+#endif
 
 void list_draw(struct screen *display, struct gui_synclist *list)
 {
@@ -511,6 +518,12 @@ void list_draw(struct screen *display, struct gui_synclist *list)
                     list->callback_get_item_icon(i, list->data) : Icon_NOICON;
 
 
+#ifdef HAVE_TOUCHSCREEN
+        /* The row goes with a sideways drag, so the answer can be seen
+         * coming before the thumb lifts. */
+        list_info.x = is_selected && list->scroll_mode == SCROLL_ANSWER ?
+                      answer_dx : 0;
+#endif
         list_info.y = line * linedes.height + draw_offset;
         list_info.is_selected = is_selected;
         list_info.item_indent = line_indent;
@@ -1013,6 +1026,9 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
     int action = ACTION_NONE;
     int click_loc;
 
+    stick_plate_thumb(action_gesture_is_pressed(),
+                      gevent.x - gevent.ox, gevent.y - gevent.oy);
+
     if (action_gesture_is_pressed())
         kinetic.cb_data.press_duration = gevent.last_tick - gevent.start_tick;
     else
@@ -1080,6 +1096,9 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
                 action = ACTION_STD_CONTEXT;
             else
                 action = ACTION_REDRAW;
+            /* Which is what anyone used to a phone tries first. */
+            if (gevent.id == GESTURE_TAP)
+                stick_plate_hint();
         }
         else if (click_loc & TITLE)
         {
@@ -1157,6 +1176,18 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
             action = scrollbar_scroll(list, gevent.y);
         else if (list->scroll_mode == SCROLL_SWIPE)
             action = swipe_scroll(list, gevent.y - gevent.oy);
+        else if (list->scroll_mode == SCROLL_ANSWER)
+        {
+            /* As far as the release needs and no further, so the row
+             * stopping is the drag being long enough. */
+            const int max_dx = list_vp->width / 5;
+            answer_dx = gevent.x - gevent.ox;
+            if (answer_dx > max_dx)
+                answer_dx = max_dx;
+            else if (answer_dx < -max_dx)
+                answer_dx = -max_dx;
+            action = ACTION_REDRAW;
+        }
         break;
 
     case GESTURE_RELEASE:

@@ -49,7 +49,7 @@
 # r
 %V(-30,0,-,-,-)
 # b (when footer is hidden)
-%Vl(main_l,30,-56,-30,-,-)
+%Vl(main_l,30,-136,-30,56,-)
 #
 # ---------
 # Title Area
@@ -87,11 +87,11 @@
 # ---------
 # UI viewport
 # ---------
-%Vi(main,30,152,-30,-104,-)
-%Vi(main_l,30,152,-30,-56,-)
+%Vi(main,30,152,-30,-184,-)
+%Vi(main_l,30,152,-30,-136,-)
 %Vi(USB,30,152,2,2,-)
 #
-%Vl(USB,30,154,-30,-56,5)
+%Vl(USB,30,154,-30,-136,5)
 %Vs(invert)%acEJECT
 %acBEFORE
 %acDISCONNECTING
@@ -99,26 +99,26 @@
 # ---------
 # Footer
 # ---------
-%Vl(main,30,-104,-30,-60,-)
+%Vl(main,30,-184,-30,44,-)
 %dr(0,24,-,2)
 #
 # The cover of what is playing, the height of the title line, left of it.
 # 34 px is its own album-art size, so buffering scales a copy for it; the
 # WPS keeps its big one.
-%Vl(npart,30,-60,34,34,-)
+%Vl(npart,30,-140,34,34,-)
 %Cl(0,0,34,34,c,c)
 %Cd
 #
 # No cover: a note, drawn, because the fonts here have no note glyph.
-%Vl(npnote,30,-60,34,34,-)
+%Vl(npnote,30,-140,34,34,-)
 %dr(0,0,-,-,3A3B3D,3A3B3D)
 %dr(8,20,12,9)
 %dr(18,6,3,20)
 %dr(18,6,10,4)
 #
-%Vl(main,72,-60,-60,-,3)
+%Vl(main,72,-140,-60,-80,3)
 %al%s%?rs<%rs|%?it<%it|%fn>>
 #
-%Vl(main,-60,-60,-30,-,-)
+%Vl(main,-60,-140,-30,-80,-)
 %?if(%mp,=,3)<%x(p,paused.bmp,12,8)>
 #

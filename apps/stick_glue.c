@@ -46,6 +46,7 @@
 #include "rpkeys.h"
 #include "stick_glue.h"
 #include "touchscreen.h"
+#include "viewport.h"
 
 #define LOGF_ENABLE
 #include "logf.h"
@@ -297,6 +298,7 @@ struct overlay_shape
      * the overlay draws no ring there. A list has no such language, so it
      * still gets one. */
     bool on_skin;
+    bool hint;        /* the plate is saying what sideways does         */
 };
 
 /* How often a moving overlay may ask the screen underneath to repaint. */
@@ -539,25 +541,58 @@ static inline void bd_forget_within(int rx, int ry, int rw, int rh)
 static inline void bd_gesture_reset(void) { }
 #endif /* HAVE_LCD_LAYERS */
 
-/* The plate: the study's 1c/2a "permanent control at the bottom" - a groove
+/* The plate: the study's 1c/2a "permanent control at the bottom" - a strip
  * with a ring in it and a cap that actually moves. Anchored to the panel
  * rather than to the thumb, so it is a place on the device instead of a
  * thing that appears wherever you happened to touch.
  *
- * It is still only drawn while a gesture is live. A plate that is there at
- * rest needs a hook into the list's own drawing, and there is no such hook
- * to call - see the note above STICK_OVERLAY_* in settings.h. */
-#define PLATE_H   150
-#define PLATE_PAD  14
+ * It is there at rest too, wherever the theme has left it the room: the
+ * layer holds it, so no list has to know. A theme makes the room by ending
+ * its UI viewport and footer PLATE_H short of the bottom (the Snappy SBS
+ * files do); where the room is not there - the WPS, a plugin, another
+ * theme - there is no plate and a gesture gets the edge lights instead.
+ *
+ * A tenth of the panel is a first guess at the height, to be tuned on the
+ * device. Change it here and in the SBS files together. */
+#define PLATE_H   (LCD_HEIGHT / 10)
+#define PLATE_PAD  8
+#define PLATE_HINT_TICKS (3 * HZ)
+
+/* What the lists tell the plate. They run their own drag (see
+ * gui_synclist_do_touchscreen) and the engine never sees it, so the cap
+ * would sit still through the one gesture a newcomer has to learn. */
+static struct
+{
+    bool down;
+    int  dx, dy;
+    long hint_until;    /* 0, or the tick the hint comes off at */
+} plate;
+
+static bool plate_hinting(void)
+{
+    return plate.hint_until && TIME_BEFORE(current_tick, plate.hint_until);
+}
+
+static bool plate_has_room(void)
+{
+    struct viewport vp;
+
+    if (!bd_active())
+        return false;
+    viewport_set_defaults(&vp, SCREEN_MAIN);
+    return vp.y + vp.height <= LCD_HEIGHT - PLATE_H;
+}
 
 static void paint_plate(const struct overlay_shape *s)
 {
     struct overlay_shape p = *s;
+    int top = LCD_HEIGHT - PLATE_H;
     int cx = LCD_WIDTH / 2;
-    int cy = LCD_HEIGHT - PLATE_H / 2;
+    int cy = top + PLATE_H / 2;
     int rad = (PLATE_H / 2) - PLATE_PAD;
+    int capr = rad / 2;
     int reach = s->R > 0 ? s->R : 1;
-    int capx, capy;
+    int capx, capy, dx, dy;
 
     /* The cap goes where the thumb has pushed to, scaled so that full
      * travel puts it exactly on the ring. */
@@ -570,20 +605,45 @@ static void paint_plate(const struct overlay_shape *s)
     if (capy > cy + rad) capy = cy + rad;
 
     /* Saved before a single pixel of it is drawn - see bd_capture(). */
-    bd_capture(BD_MAIN, 0, LCD_HEIGHT - PLATE_H, LCD_WIDTH, PLATE_H);
-    dirty_add(0, LCD_HEIGHT - PLATE_H, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+    bd_capture(BD_MAIN, 0, top, LCD_WIDTH, PLATE_H);
+    dirty_add(0, top, LCD_WIDTH - 1, LCD_HEIGHT - 1);
 
-    /* The groove the plate sits in. */
-    lcd_drawrect(PLATE_PAD / 2, LCD_HEIGHT - PLATE_H + PLATE_PAD / 2,
-                 LCD_WIDTH - PLATE_PAD, PLATE_H - PLATE_PAD);
+#if defined(HAVE_COMPOSITOR) && defined(HAVE_LCD_LAYERS)
+    /* Ground of its own, a shade off the theme's, so the strip reads as a
+     * control and not as an empty row. */
+    lcd_set_foreground(canvas_blend_px((canvas_px)global_settings.bg_color,
+                                       (canvas_px)global_settings.fg_color,
+                                       24));
+    lcd_fillrect(0, top, LCD_WIDTH, PLATE_H);
+    lcd_set_foreground(global_settings.fg_color);
+#endif
+    lcd_hline(0, LCD_WIDTH - 1, top);
 
     p.ox = cx;
     p.oy = cy;
     rose_ring(&p, rad);
-    rose_ring(&p, rad / 4);
 
-    lcd_drawline(cx, cy, capx, capy);
-    lcd_fillrect(capx - 7, capy - 7, 15, 15);
+    for (dy = -capr; dy <= capr; dy++)
+    {
+        for (dx = 0; (dx + 1) * (dx + 1) + dy * dy <= capr * capr; dx++)
+            ;
+        lcd_hline(capx - dx, capx + dx, capy + dy);
+    }
+
+    /* The hint: what sideways means, either side of the stick. Someone who
+     * tapped a row was looking for "open", and this is where it is. */
+    if (s->hint)
+    {
+        int w, h;
+
+        /* Foreground only: solid text would paint its box in the layer's
+         * key and cut a hole in the ground. */
+        lcd_set_drawmode(DRMODE_FG);
+        lcd_getstringsize("open >", &w, &h);
+        lcd_putsxy(PLATE_PAD * 3, cy - h / 2, "< back");
+        lcd_putsxy(LCD_WIDTH - PLATE_PAD * 3 - w, cy - h / 2, "open >");
+        lcd_set_drawmode(DRMODE_SOLID);
+    }
 }
 
 /* 2c: no widget at all. The screen edge nearest the direction of travel
@@ -980,8 +1040,12 @@ static void overlay_paint(const struct overlay_shape *s)
     switch (s->style)
     {
     case STICK_OVERLAY_PLATE:
-        paint_plate(s);
-        break;
+        if (plate_has_room())
+        {
+            paint_plate(s);
+            break;
+        }
+        /* fallthrough */
 
     case STICK_OVERLAY_EDGES:
         paint_edges(s);
@@ -1182,6 +1246,7 @@ static void overlay_update(const struct stick_state *st)
          * deflection mean nothing once the gesture is rotation. */
         overlay.want_s.dial = (phase == STICK_PHASE_DIAL);
         overlay.want_s.on_skin = on_a_skin();
+        overlay.want_s.hint = plate_hinting();
 
         /* The moment the dial arms or disarms, ask the skin to repaint.
          * A skin with no peak meter and no %an redraws only when something
@@ -1219,6 +1284,9 @@ void stick_redraw_overlay(int rx, int ry, int rw, int rh)
         overlay.have_s.style != STICK_OVERLAY_CANVAS_MIN &&
         !memcmp(&overlay.have_s, &overlay.want_s, sizeof(overlay.have_s)))
         return;
+    /* The plate at rest: it is in the layer and the rows went under it. */
+    if (!overlay.want && overlay.drawn)
+        return;
 #endif
     /* Called from the list once it has finished putting its rows down.
      * Whatever we had drawn is underneath those rows now, so the shape is
@@ -1240,11 +1308,67 @@ void stick_redraw_overlay(int rx, int ry, int rw, int rh)
     overlay_paint(&overlay.have_s);
 }
 
+static void plate_theme_changed(unsigned short id, void *data)
+{
+    (void)id;
+    (void)data;
+    stick_draw_overlay();
+}
+
+/* The plate with no gesture of the engine's on it: the cap centred, or
+ * following a list's own drag. False where there is no plate to show. */
+static bool plate_at_rest(struct overlay_shape *s)
+{
+    static bool listening;
+
+    if (!global_settings.stick_overlay || session_disabled ||
+        global_settings.stick_overlay_style != STICK_OVERLAY_PLATE ||
+        global_settings.touch_mode != TOUCHSCREEN_STICK)
+        return false;
+
+    /* A screen that takes the theme down may never poll for an action - a
+     * plugin reading buttons for itself - and the plate would sit over it
+     * for as long as it ran. */
+    if (!listening)
+    {
+        listening = true;
+        add_event(GUI_EVENT_THEME_CHANGED, plate_theme_changed);
+    }
+
+    if (!plate_has_room())
+        return false;
+
+    memset(s, 0, sizeof(*s));
+    s->style = STICK_OVERLAY_PLATE;
+    s->R = STICK_DEF_TRAVEL_PX;
+    if (plate.down)
+    {
+        s->x = plate.dx;
+        s->y = plate.dy;
+    }
+    s->hint = plate_hinting();
+    return true;
+}
+
+void stick_plate_thumb(bool down, int dx, int dy)
+{
+    plate.down = down;
+    plate.dx = dx;
+    plate.dy = dy;
+}
+
+void stick_plate_hint(void)
+{
+    plate.hint_until = current_tick + PLATE_HINT_TICKS;
+    if (!plate.hint_until)
+        plate.hint_until = 1;
+}
+
 void stick_draw_overlay(void)
 {
     bool moved;
 
-    if (!overlay.want)
+    if (!overlay.want && !plate_at_rest(&overlay.want_s))
     {
         overlay_clear();
         return;
@@ -1564,7 +1688,7 @@ void stick_tick(int context)
     overlay_update(&live_state);
 #ifdef HAVE_LCD_LAYERS
     if (!overlay.want)
-        overlay_clear();        /* the coast ended; see the touch path */
+        stick_draw_overlay();        /* the coast ended; see the touch path */
 #endif
 
     if (out.action != STICK_ACT_FIRE)
@@ -1669,7 +1793,7 @@ int stick_handle_touch(const struct touchevent *ev, int context,
      * after a release. In its own layer the clear cannot scribble on
      * anything, so there is no reason to wait. */
     if (!overlay.want)
-        overlay_clear();
+        stick_draw_overlay();
 #endif
 
     if (out.hold_end != STICK_BIND_NONE)
