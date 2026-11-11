@@ -31,6 +31,9 @@
 #include <unistd.h>
 
 #include "kernel.h"
+#include "system.h"
+#include "version.h"
+#include "audio.h"
 #include "action.h"
 #include "keyboard.h"
 #include "misc.h"
@@ -38,8 +41,9 @@
 #include "yesno.h"
 #include "gui/list.h"
 
-/* Wi-Fi brought up the way HiBy OS does it (wifi_on.sh): the driver is
- * loaded at boot, wpa_supplicant joins a network, udhcpc gets an address.
+/* Wi-Fi brought up the way HiBy OS does it (wifi_on.sh): wpa_supplicant
+ * joins a network, udhcpc gets an address. The bootloader unbinds the chip
+ * from its driver before it starts Rockbox, so on binds it and off lets go.
  * Off until switched on - the radio is the biggest battery cost the player
  * has - and nothing listens: Rockbox only ever talks out. Networks and
  * passwords are kept by wpa_supplicant itself, in wifi.conf. */
@@ -50,6 +54,16 @@
 #define WIFI_MAX_NETS  32
 #define WIFI_SSID_LEN  132  /* 32 bytes, escaped the way wpa_cli prints them */
 #define WIFI_OUT_OF_RANGE (-1000)
+#define WIFI_SDIO      "/sys/bus/sdio/drivers/bcmsdh_sdmmc/"
+#define WIFI_SDIO_ID   "mmc0:0001:2"    /* what the bootloader unbinds */
+#define WIFI_LOG       PIVOT_ROOT "/rockbox-wifi-debug.log"
+
+/* Updates: the release the fork's GitHub page calls latest, or the zip
+ * update.url names - a laptop serving a build on the same network. */
+#define UPDATE_RELEASES "https://github.com/WillNHT/rockbox-hiby-r1/releases"
+#define UPDATE_URL     PIVOT_ROOT ROCKBOX_DIR "/update.url"
+#define UPDATE_ZIP     PIVOT_ROOT ROCKBOX_DIR "/update.zip"
+#define UPDATE_DIR     PIVOT_ROOT "/.rockbox-update"
 
 struct wifi_net
 {
@@ -142,12 +156,21 @@ static bool wifi_on(void)
     splash(0, ID2P(LANG_WAIT));
     system("[ -f " WIFI_CONF " ] || printf 'ctrl_interface=/var/run/wpa_supplicant\\n"
            "update_config=1\\n' > " WIFI_CONF);
-    system("rfkill unblock wifi; ifconfig " WIFI_IF " up && wpa_supplicant -B -D nl80211 -i " WIFI_IF
-           " -c " WIFI_CONF " >/dev/null 2>&1");
+    system("rfkill unblock wifi; echo " WIFI_SDIO_ID " > " WIFI_SDIO "bind 2>/dev/null");
+    for (i = 0; i < 50 && access("/sys/class/net/" WIFI_IF, F_OK); i++)
+        sleep(HZ/10);
+    /* the address HiBy OS gave the radio at boot went with the unbind */
+    system("[ -f /usr/data/macaddr.txt ] && ifconfig " WIFI_IF
+           " hw ether $(cat /usr/data/macaddr.txt) 2>/dev/null; "
+           "ifconfig " WIFI_IF " up && wpa_supplicant -B -D nl80211 -i " WIFI_IF
+           " -c " WIFI_CONF " >/tmp/wifi.log 2>&1");
     for (i = 0; i < 30 && !wifi_is_on(); i++)
         sleep(HZ/10);
     if (!wifi_is_on())
     {
+        /* why, for whoever reads the card */
+        system("{ cat /tmp/wifi.log; ls /sys/bus/sdio/devices " WIFI_SDIO "; ifconfig -a; "
+               "rfkill list; dmesg | tail -n 40; } > " WIFI_LOG " 2>&1");
         splash(HZ*2, ID2P(LANG_WIFI_UNAVAILABLE));
         return false;
     }
@@ -163,6 +186,7 @@ static void wifi_off(void)
     system("killall udhcpc wpa_supplicant >/dev/null 2>&1; ifconfig " WIFI_IF " down");
     for (i = 0; i < 10 && wifi_is_on(); i++)
         sleep(HZ/10);
+    system("echo " WIFI_SDIO_ID " > " WIFI_SDIO "unbind 2>/dev/null");
 }
 
 static void wifi_add(const char *ssid, int signal, int id, bool secured)
@@ -386,6 +410,79 @@ static void wifi_show_networks(void)
     }
 }
 
+/* First line a command prints, cut at anything that is not safe to put back
+ * into a command: nothing checks who the answer came from */
+static void wifi_line(const char *cmd, char *out, size_t len)
+{
+    FILE *fp = popen(cmd, "r");
+
+    out[0] = '\0';
+    if (!fp)
+        return;
+    if (!fgets(out, len, fp))
+        out[0] = '\0';
+    pclose(fp);
+    out[strspn(out, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                    "0123456789.-_:/%~+=?&")] = '\0';
+}
+
+/* Fetch a release zip and unpack it over the card, then restart into it */
+static void wifi_update(void)
+{
+    char url[300], tag[40], sum[70], cmd[700];
+
+    tag[0] = sum[0] = '\0';
+    splash(0, ID2P(LANG_WAIT));
+    wifi_line("head -n 1 " UPDATE_URL " 2>/dev/null", url, sizeof(url));
+    if (url[0])
+        /* its second line, if there is one: the sha256 the zip must have */
+        wifi_line("sed -n 2p " UPDATE_URL, sum, sizeof(sum));
+    else
+    {
+        /* releases/latest redirects to releases/tag/<version> */
+        wifi_line("wget -q -S --spider -T 15 " UPDATE_RELEASES "/latest 2>&1 | "
+                  "sed -n 's|.*/releases/tag/||p' | head -n 1", tag, sizeof(tag));
+        if (!tag[0])
+        {
+            splash(HZ*2, ID2P(LANG_WIFI_UPDATE_FAILED));
+            return;
+        }
+        if (!strcmp(tag, rbversion))
+        {
+            splash(HZ*2, ID2P(LANG_WIFI_UP_TO_DATE));
+            return;
+        }
+        snprintf(url, sizeof(url), UPDATE_RELEASES "/download/%s/rockbox-hibyr1-%s-sdcard.zip",
+                 tag, tag);
+    }
+    snprintf(cmd, sizeof(cmd), "%s: %s", (const char *)str(LANG_WIFI_UPDATE),
+             tag[0] ? tag : url);
+    if (!yesno_pop(cmd))
+        return;
+
+    /* the codecs are about to be replaced */
+    audio_stop();
+    splash(0, ID2P(LANG_WIFI_DOWNLOADING));
+    snprintf(cmd, sizeof(cmd), "wget -q -T 30 -O " UPDATE_ZIP " '%s'%s%s%s", url,
+             sum[0] ? " && [ \"$(sha256sum < " UPDATE_ZIP " | cut -c1-64)\" = \"" : "",
+             sum, sum[0] ? "\" ]" : "");
+    /* unpacked beside the install and moved in file by file: a download cut
+     * short changes nothing, and a library in use is replaced, not rewritten */
+    if (system(cmd) ||
+        system("rm -rf " UPDATE_DIR "; mkdir " UPDATE_DIR
+               " && unzip -o -q " UPDATE_ZIP " -d " UPDATE_DIR
+               " && [ -f " UPDATE_DIR ROCKBOX_DIR "/" BOOTFILE " ] && cd " UPDATE_DIR
+               " && find . -type d -exec mkdir -p " PIVOT_ROOT "/{} \\;"
+               " && find . -type f -exec mv -f {} " PIVOT_ROOT "/{} \\;"))
+    {
+        system("rm -rf " UPDATE_DIR " " UPDATE_ZIP);
+        splash(HZ*2, ID2P(LANG_WIFI_UPDATE_FAILED));
+        return;
+    }
+    system("rm -rf " UPDATE_DIR " " UPDATE_ZIP "; sync");
+    system_reboot();
+}
+
 static int wifi_ok_cancel(int action, struct gui_synclist *lists)
 {
     (void)lists;
@@ -418,6 +515,7 @@ int hiby_wifi_menu(void)
                            ssid[0] ? ssid : (const char *)str(LANG_BT_DISCONNECTED));
         simplelist_addline("%s: %s", (const char *)str(LANG_WIFI_ADDRESS),
                            ip[0] ? ip : "-");
+        simplelist_addline("%s", (const char *)str(LANG_WIFI_UPDATE));
         info.count = simplelist_get_line_count();
         simplelist_show_list(&info);
 
@@ -432,6 +530,13 @@ int hiby_wifi_menu(void)
         }
         else if (info.selection == 1)
             wifi_show_networks();
+        else if (info.selection == 3)
+        {
+            if (ip[0])
+                wifi_update();
+            else
+                splash(HZ*2, ID2P(LANG_BT_DISCONNECTED));
+        }
         /* the address line: just re-show */
     }
     return 0;
