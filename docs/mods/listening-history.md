@@ -15,4 +15,4 @@ A track that never started is not logged. A short listen is, and marked by its `
 
 The file is tab separated, so a spreadsheet opens it as it is. Past 8 MiB (about 70 000 listens) it moves to `listens.1.tsv` and a new one starts. It is not part of the database: rebuilding the database keeps it, and a listen to a file that has since moved still counts.
 
-*Settings > Advanced > Library > Listening History* turns it off. Delete the file to forget it. *Gather Runtime Data* (play counts and last played, in the database) is now on by default too.
+*Settings > Library > Advanced > Listening History* turns it off. Delete the file to forget it. *Gather Runtime Data* (play counts and last played, in the database) is now on by default too.

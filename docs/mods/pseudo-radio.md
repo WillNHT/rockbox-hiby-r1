@@ -260,7 +260,8 @@ See [Station cover](#station-cover) above.
 ## A radio WPS
 
 **Radio WPS** in the settings picks a skin used only while a station is
-playing. `SnappyRadio` ships with the theme family: Snappy Animated with
+playing. `SnappyRadio` ships with the theme family and is the default (the
+music WPS is used when the file is not on the card): Snappy Animated with
 the parts that do not apply to a radio taken out - no elapsed, no total, no
 "3 of 52", and no file name, because the file is how the station is made
 rather than a second thing you tuned to. The station has the block to
@@ -289,7 +290,7 @@ radio minimum length: 10
 radio static: on
 radio static strength: 100
 radio band noise: on
-radio wps:
+radio wps: SnappyRadio
 radio screensaver:
 ```
 

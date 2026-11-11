@@ -517,7 +517,6 @@ MAKE_MENU(main_menu_, ID2P(LANG_SETTINGS), NULL,
         &recording_settings,
 #endif
         &system_menu,
-        &settings_advanced_menu,
         );
 /*    MAIN MENU                    */
 /***********************************/

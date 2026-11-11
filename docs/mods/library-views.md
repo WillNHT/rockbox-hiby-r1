@@ -15,12 +15,16 @@
 The stick works the same in every view: up and down move through the items, and a sideways flick means yes or no. In Grid, up and down also move one item at a time.
 
 It applies to:
-- **Database:** album and track lists. An album's cover comes from its first track.
+- **Database:** album and track lists. An album's cover comes from its first track, and the second line is the artist.
 - **File browser:** any folder with music or playlists in it. A folder that only contains other folders stays a text list.
 - **Playlists:** the playlist catalogue.
 - **Audiobooks:** every book list. The second line shows the author and progress.
 
 Artists aren't covered yet.
+
+In Shelves the row is two lines of text tall and the cover fills it. A name too long for its line, with nothing to put under it, carries on onto the second.
+
+![Tracks in Shelves: title, artist under it](screenshots/library-tracks.png)
 
 Items without a cover show a tile with their first letter. Covers are decoded the first time they appear on screen, and the last twelve are kept in a cache.
 

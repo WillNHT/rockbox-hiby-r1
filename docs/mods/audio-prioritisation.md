@@ -14,7 +14,7 @@ and the channel comes back a fraction of a second later.
 
 ## The settings
 
-**Settings > Sound > Device Sounds** and **Settings > Advanced > Device Sounds**
+**Settings > Sound > Device Sounds**
 
 | Setting | Default | What it does |
 | --- | --- | --- |
@@ -29,9 +29,11 @@ the way through a menu; a lock cue happens once and has to be heard with
 the player already in a pocket.
 
 Depth is how far the music drops, so 0% is no ducking at all and 90% is
-nearly silent. The music returns 150 ms after the sound ends, which is long
-enough that a run of chirps - the arming run, or the two-note lock cue -
-holds one duck rather than flapping the volume between notes.
+nearly silent. The music stays down for 600 ms after the sound ends and then
+comes back over a tenth of a second or so, which is long enough that a run
+of sounds - the clicks of a scroll through a list, the arming run, the
+two-note lock cue - holds one duck rather than flapping the volume between
+them.
 
 ## Track Change Static
 

@@ -245,6 +245,7 @@ MAKE_MENU(sound_settings, ID2P(LANG_SOUND_SETTINGS), NULL, Icon_Audio,
           ,&balance
           ,&equalizer_menu, &crossfeed_menu, &replaygain_settings_menu
           ,&device_sounds_menu
+          ,&audio_effects_menu
          );
 
 MAKE_MENU(audio_effects_menu, ID2P(LANG_AUDIO_EFFECTS), NULL, Icon_Audio,
