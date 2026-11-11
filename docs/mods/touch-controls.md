@@ -46,8 +46,8 @@ Hold **Power** and let go:
 The countdown says what letting go now will do and, under it, what holding on gets instead and how long that is away. The three bars are the three steps - lock, screen off, power off - and the border round the screen starts again at each one.
 
 <p align="center">
-<img width="160" alt="Let go to lock" src="screenshots/power-hold-lock.png" />
-<img width="160" alt="Let go for screen off" src="screenshots/power-hold-screen-off.png" />
+<img width="160" alt="Ready to lock" src="screenshots/power-hold-lock.png" />
+<img width="160" alt="Ready: screen off" src="screenshots/power-hold-screen-off.png" />
 </p>
 
 ## Quickscreen
