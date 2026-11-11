@@ -854,22 +854,24 @@ static inline int action_wpsab_single(long button)
 /* The iPods/X5/M5 use a single button for the A-B mode markers,
    defined as ACTION_WPSAB_SINGLE in their config files. */
 #ifdef ACTION_WPSAB_SINGLE
-        static int wps_ab_state = 0;
+        static enum { AB_SET_A, AB_SET_B, AB_RESET } wps_ab_state = AB_SET_A;
         if (button == ACTION_WPSAB_SINGLE && ab_repeat_mode_enabled())
         {
             switch (wps_ab_state)
             {
-                case 0: /* set the A spot */
+                case AB_SET_A: /* set the A spot */
                     button = ACTION_WPS_ABSETA_PREVDIR;
+                    wps_ab_state = AB_SET_B;
                     break;
-                case 1: /* set the B spot */
+                case AB_SET_B: /* set the B spot */
                     button = ACTION_WPS_ABSETB_NEXTDIR;
+                    wps_ab_state = AB_RESET;
                     break;
-                case 2:
+                case AB_RESET:
                     button = ACTION_WPS_ABRESET;
+                    wps_ab_state = AB_SET_A;
                     break;
             }
-            wps_ab_state = (wps_ab_state+1) % 3;
         }
 #endif /* def ACTION_WPSAB_SINGLE */
     return button;
