@@ -37,17 +37,17 @@ For right-to-left languages, the left/right shortcuts are swapped.
 
 ## Touch lock and screen off
 
-Hold **Power**:
+Hold **Power** and let go:
 
-- at **0.5 s** - the touchscreen locks or unlocks, there and then, still held. The keys keep working while it is locked; `LOCKED` shows under the header.
-- past **2 s**, let go - screen off, on top of the lock. The keys still work in the dark and do not wake it, and the touchscreen is off; a **Power** press brings the screen back and does nothing else. While it is off the LED blinks while playing and stays lit while paused (not on the charger, where it shows charging).
+- at **0.5 s** - lock or unlock the touchscreen. The keys keep working while it is locked; `LOCKED` shows under the header.
+- at **2 s** - screen off. The keys still work in the dark and do not wake it, and the touchscreen is off; a **Power** press brings the screen back and does nothing else. While it is off the LED blinks while playing and stays lit while paused (not on the charger, where it shows charging).
 - hold **4 s** - shut down, as before.
 
-The countdown says what the hold has done (`Locked`), what letting go now adds (`turning off screen`) and, under it, what holding on gets next and how long that is away. The three bars are the three steps - lock, screen off, power off - and the border round the screen starts again at each one.
+The countdown says what letting go now will do and, under it, what holding on gets instead and how long that is away. The three bars are the three steps - lock, screen off, power off - and the border round the screen starts again at each one.
 
 <p align="center">
 <img width="160" alt="Locked" src="screenshots/power-hold-lock.png" />
-<img width="160" alt="Locked, turning off screen" src="screenshots/power-hold-screen-off.png" />
+<img width="160" alt="Screen off" src="screenshots/power-hold-screen-off.png" />
 </p>
 
 ## Quickscreen

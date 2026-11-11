@@ -428,8 +428,7 @@ static void countdown_draw(long held_ticks)
 
     if (held_ticks >= SCREEN_OFF_HOLD_TICKS)
     {
-        what = locked ? "Locked, turning off screen"
-                      : "Unlocked, turning off screen";
+        what = "Screen off";
         next = "Power off in ";
         target = SHUTDOWN_HOLD_TICKS;
         start = SCREEN_OFF_HOLD_TICKS;
@@ -437,9 +436,9 @@ static void countdown_draw(long held_ticks)
     }
     else if (held_ticks >= LOCK_HOLD_TICKS)
     {
-        /* Short: the line is one line of a big face. What the hold has
-         * done, and under it what holding on gets next. */
-        what = locked ? "Locked" : "Unlocked";
+        /* Short: the line is one line of a big face. What letting go
+         * does now, as done, and under it what holding on gets instead. */
+        what = locked ? "Unlocked" : "Locked";
         next = "Screen off in ";
         target = SCREEN_OFF_HOLD_TICKS;
         start = LOCK_HOLD_TICKS;
@@ -672,15 +671,24 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
         power_consumed = false;
         shot_taken = false;
 
-        /* The lock already flipped while held; past it, letting go turns
-         * the screen off. Shutdown never gets here - it fires while held. */
+        /* Each hold does the one thing it was let go in: the lock, or past
+         * it the screen. Shutdown never gets here - it fires while held. */
         if (!spent && held_ticks >= SCREEN_OFF_HOLD_TICKS)
         {
             screen_off(true);
             return true;
         }
         if (!spent && held_ticks >= LOCK_HOLD_TICKS)
+        {
+            locked = !locked;
+#ifdef HAVE_BACKLIGHT_DIM_IDLE
+            backlight_set_locked(locked);
+#endif
+#if defined(BUTTON_TOUCH_WAKES) && !defined(SIMULATOR)
+            button_set_touch_wake(!locked);
+#endif
             return true;
+        }
 
         /* Away from the WPS a tap is the way back to it and nothing
          * more: the screen the user asked for should not arrive with
@@ -782,19 +790,10 @@ static bool handle_power(int held, bool repeat, bool release, int *action)
             }
         }
 
-        /* The run ends on the lock's threshold, and the lock flips there,
-         * still held. A falling chirp says the next let-go is the screen. */
-        if (held_ticks >= LOCK_HOLD_TICKS && !lock_cue_done)
-        {
+        /* The run ends on the lock's threshold; letting go from here on
+         * toggles it. A falling chirp says the next let-go is the screen. */
+        if (held_ticks >= LOCK_HOLD_TICKS)
             lock_cue_done = true;
-            locked = !locked;
-#ifdef HAVE_BACKLIGHT_DIM_IDLE
-            backlight_set_locked(locked);
-#endif
-#if defined(BUTTON_TOUCH_WAKES) && !defined(SIMULATOR)
-            button_set_touch_wake(!locked);
-#endif
-        }
         if (held_ticks >= SCREEN_OFF_HOLD_TICKS && !off_cue_done)
         {
             off_cue_done = true;
