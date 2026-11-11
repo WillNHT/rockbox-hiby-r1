@@ -155,6 +155,12 @@ jobs:
         RBSIM_DIR=$PWD/sim OUT=$PWD/shots/golden \
           xvfb-run -a bash tools/simctl/golden.sh
 
+    # The runs above booted a card with no database: it has to have built
+    # and committed itself by now, with no reboot in between (#152).
+    - name: Database built itself
+      if: env.SIM_SCRIPT == 'tools/simctl/tests/smoke.txt'
+      run: test -f sim/simdisk/.rockbox/database_idx.tcd
+
     # Viewports over viewports (skin_layer.c). After the goldens: its setup
     # replaces the simdisk's theme and config.
     - name: Layering

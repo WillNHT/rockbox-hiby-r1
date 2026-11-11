@@ -409,21 +409,11 @@ static void dirty_point(int x, int y, int pad)
  * attempt at it was a throttle - 60 ms, then 150 ms on skins, then
  * suppressing it mid-dial. A throttle on the wrong mechanism.
  *
- * So stop asking. The compositor (apps/canvas_glue.c) has had exactly the
- * right facility since it was written and nothing had adopted it: save the
- * pixels the overlay is about to cover, put them back before the next
- * frame. The overlay then erases itself, the screen underneath is never
- * asked to repaint on the overlay's account, and there is nothing left to
- * flicker.
- *
- * The regions are kept apart rather than unioned into one rectangle
- * because they are naturally far apart - a ring under the thumb, a readout
- * at the top, a bar down one edge - and their bounding box is most of the
- * panel, which is more memory than the pool has.
- *
- * Slots are claimed on demand, and grown if a style needs more than the
- * last one did, so only the style in use costs anything. If the pool
- * cannot provide them every call here reports failure and the old
+ * So stop asking: the overlay takes its own ink off again, the screen
+ * underneath is never asked to repaint on the overlay's account, and there
+ * is nothing left to flicker. A copy of what the overlay covered did that
+ * first (apps/canvas_glue.c, since removed); the layer below does it now.
+ * Without a layer every call here reports failure and the old
  * ask-for-a-repaint path runs unchanged. */
 
 static void dirty_flush(void);
@@ -532,198 +522,7 @@ static void layer_end(struct viewport *oldvp)
     layer_drawing = false;
 }
 
-#elif defined(HAVE_COMPOSITOR)
-#include "canvas.h"
-#include "canvas_glue.h"
-
-extern struct frame_buffer_t lcd_framebuffer_default;
-
-/* Fixed sizes, claimed once. The pool is a bump allocator by design -
- * releasing an overlay frees the slot and not the bytes - so a slot that
- * grew to fit whatever this frame needed would leak the pool over a few
- * gestures. Each slot is therefore claimed at its worst case for any
- * style, and a capture that does not fit is refused rather than clipped:
- * a partly-saved region puts back a partly-erased overlay, which is worse
- * than the flicker it was meant to cure. */
-enum {
-    BD_MAIN,        /* the ring and cap, the plate, the HUD panel */
-    BD_BAND,        /* the readout pill, across the top          */
-    BD_EDGE_T,      /* the four edge lights, which are far apart  */
-    BD_EDGE_B,
-    BD_EDGE_L,
-    BD_EDGE_R,
-    BD_COUNT
-};
-
-#define BD_MAIN_H   320     /* the HUD panel is 300; the plate 150 */
-#define BD_BAND_H    56
-#define BD_EDGE_TH   16
-#define BD_EDGE_LW   16
-
-static const struct { short w, h; } bd_size[BD_COUNT] =
-{
-    [BD_MAIN]   = { LCD_WIDTH,   BD_MAIN_H   },
-    [BD_BAND]   = { LCD_WIDTH,   BD_BAND_H   },
-    [BD_EDGE_T] = { LCD_WIDTH,   BD_EDGE_TH  },
-    [BD_EDGE_B] = { LCD_WIDTH,   BD_EDGE_TH  },
-    [BD_EDGE_L] = { BD_EDGE_LW,  LCD_HEIGHT  },
-    [BD_EDGE_R] = { BD_EDGE_LW,  LCD_HEIGHT  },
-};
-
-static struct canvas_overlay *bd_ov[BD_COUNT];
-/* What each slot is currently covering. Kept here as well as inside the
- * compositor because the sticky-edge fix has to ask "did the repaint that
- * just happened cover this one?", and only the caller knows the answer. */
-static short bd_rx[BD_COUNT], bd_ry[BD_COUNT], bd_rw[BD_COUNT], bd_rh[BD_COUNT];
-static bool bd_held[BD_COUNT];
-static bool bd_holding;     /* at least one slot is covering something */
-static bool bd_off;         /* the pool said no; do not keep asking    */
-static bool bd_short;       /* something would not fit this frame      */
-
-static bool bd_slot(int slot)
-{
-    if (bd_off)
-        return false;
-
-    if (!bd_ov[slot])
-    {
-        /* The claim is what brings the pool up, so this must not be
-         * guarded by canvas_available(): before the first claim there is
-         * no pool and there never would be one. */
-        bd_ov[slot] = canvas_overlay_claim_backing(bd_size[slot].w,
-                                                   bd_size[slot].h);
-        if (!bd_ov[slot])
-        {
-            bd_off = true;
-            return false;
-        }
-    }
-    return true;
-}
-
-/* Save what is about to be covered. Must be called *before* the region is
- * drawn - that is the whole contract, and the reason the painters below
- * report their rectangle first and draw second rather than the other way
- * round as they used to. */
-static bool bd_capture(int slot, int x, int y, int w, int h)
-{
-    if (x < 0) { w += x; x = 0; }
-    if (y < 0) { h += y; y = 0; }
-    if (x + w > LCD_WIDTH)  w = LCD_WIDTH - x;
-    if (y + h > LCD_HEIGHT) h = LCD_HEIGHT - y;
-    if (w <= 0 || h <= 0)
-        return false;
-
-    if (w > bd_size[slot].w || h > bd_size[slot].h || !bd_slot(slot) ||
-        !canvas_overlay_capture(bd_ov[slot], x, y, w, h))
-    {
-        bd_short = true;
-        return false;
-    }
-
-    bd_rx[slot] = (short)x;
-    bd_ry[slot] = (short)y;
-    bd_rw[slot] = (short)w;
-    bd_rh[slot] = (short)h;
-    bd_held[slot] = true;
-    bd_holding = true;
-    return true;
-}
-
-/* Whether the backing store is carrying this gesture. False means every
- * caller keeps the old ask-the-screen-to-repaint path, which still works
- * and still flickers. bd_short latches for the life of the gesture: a
- * single frame that could not be saved leaves ink nothing will take off,
- * and only a repaint can clear that. */
-static bool bd_active(void)
-{
-    return !bd_off && !bd_short;
-}
-
-/* Put every slot back and push the result. This is the erase. */
-static void bd_restore_all(void)
-{
-    int i;
-    if (!bd_holding)
-        return;
-    for (i = 0; i < BD_COUNT; i++)
-        if (bd_ov[i] && bd_held[i])
-        {
-            canvas_overlay_restore(bd_ov[i]);
-            /* What was put back has to be pushed, and only the caller
-             * knows the rectangle: canvas_overlay_restore() writes into
-             * the framebuffer and adds to the compositor's pending box,
-             * and nothing here was calling canvas_present(). On a list
-             * that went unnoticed because the list's own repaint pushed
-             * the same pixels a moment later. On a skin nothing repaints
-             * on its own, so the last frame of the overlay stayed lit on
-             * the panel while the framebuffer underneath was already
-             * correct - which is the edge lights that would not clear. */
-            dirty_add(bd_rx[i], bd_ry[i],
-                      bd_rx[i] + bd_rw[i] - 1, bd_ry[i] + bd_rh[i] - 1);
-            bd_held[i] = false;
-        }
-    canvas_present();
-    bd_holding = false;
-}
-
-/* The screen underneath repainted on its own account, so what we saved is
- * a frame out of date. Drop it rather than putting it back over content
- * that is newer than it is. */
-static void bd_forget_all(void)
-{
-    int i;
-    for (i = 0; i < BD_COUNT; i++)
-        if (bd_ov[i])
-        {
-            canvas_overlay_invalidate(bd_ov[i]);
-            bd_held[i] = false;
-        }
-    bd_holding = false;
-}
-
-/* Only the slots the given rectangle actually covered.
- *
- * A list repaint is not a screen repaint: it puts its rows back inside its
- * own viewport and touches nothing else. Forgetting every slot after one
- * meant the edge lights - which live at the rim, outside any list viewport
- * - had their saved pixels dropped while their ink stayed on the panel,
- * and nothing in the system would ever paint over it again. That is the
- * bar that stuck to the top and bottom of the screen during a scroll.
- *
- * So: slots the repaint covered are stale and are dropped; slots it did
- * not touch are still good and stay, to be put back on the next frame. */
-static void bd_forget_within(int rx, int ry, int rw, int rh)
-{
-    int i;
-    bool any = false;
-
-    for (i = 0; i < BD_COUNT; i++)
-    {
-        if (!bd_ov[i] || !bd_held[i])
-            continue;
-
-        if (bd_rx[i] < rx + rw && bd_rx[i] + bd_rw[i] > rx &&
-            bd_ry[i] < ry + rh && bd_ry[i] + bd_rh[i] > ry)
-        {
-            canvas_overlay_invalidate(bd_ov[i]);
-            bd_held[i] = false;
-        }
-        else
-            any = true;
-    }
-    bd_holding = any;
-}
-
-/* A gesture is over: whatever went wrong during it should not condemn the
- * next one. */
-static void bd_gesture_reset(void)
-{
-    bd_short = false;
-}
-#endif /* HAVE_LCD_LAYERS / HAVE_COMPOSITOR */
-
-#if !defined(HAVE_LCD_LAYERS) && !defined(HAVE_COMPOSITOR)
+#else /* !HAVE_LCD_LAYERS */
 #define BD_MAIN   0
 #define BD_BAND   1
 #define BD_EDGE_T 2
@@ -738,7 +537,7 @@ static inline void bd_forget_all(void) { }
 static inline void bd_forget_within(int rx, int ry, int rw, int rh)
 { (void)rx; (void)ry; (void)rw; (void)rh; }
 static inline void bd_gesture_reset(void) { }
-#endif /* HAVE_COMPOSITOR */
+#endif /* HAVE_LCD_LAYERS */
 
 /* The plate: the study's 1c/2a "permanent control at the bottom" - a groove
  * with a ring in it and a cap that actually moves. Anchored to the panel
@@ -1072,10 +871,6 @@ static void paint_canvas(const struct overlay_shape *s, bool minimal)
     }
 
     lcd_setfont(FONT_UI);
-
-    /* The compositor knows every rectangle that changed, so the panel
-     * update is its job rather than dirty_add()'s. */
-    canvas_present();
 }
 #endif /* HAVE_COMPOSITOR */
 

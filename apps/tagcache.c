@@ -5278,16 +5278,21 @@ void do_tagcache_build(const char *path[])
         return ;
     }
 
-    /* Commit changes to the database. */
-#ifdef __PCTOOL__
-    allocate_tempbuf();
+    /* Commit changes to the database. With no dircache or RAM cache to
+       take a buffer from - the R1 has neither - commit() would put itself
+       off until the next boot, so it is given one here. */
+#if defined(__PCTOOL__) || !defined(HAVE_DIRCACHE)
+    bool own_tempbuf = tempbuf_size == 0;
+    if (own_tempbuf)
+        allocate_tempbuf();
 #endif
     if (commit())
     {
         logf("tagcache built!");
     }
-#ifdef __PCTOOL__
-    free_tempbuf();
+#if defined(__PCTOOL__) || !defined(HAVE_DIRCACHE)
+    if (own_tempbuf)
+        free_tempbuf();
 #endif
 
 #ifdef HAVE_TC_RAMCACHE

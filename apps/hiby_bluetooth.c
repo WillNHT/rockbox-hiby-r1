@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/resource.h>
 #include <sys/syscall.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -148,6 +149,7 @@ static struct
     int ncodecs;
     int rate;
     char busy[18];          /* being paired or connected */
+    bool pairing;           /* busy is being paired */
     char last[18];          /* the last headset that played */
     int msg;                /* lang id the screen shows once, 0 if none */
     char passkey[8];        /* waiting for the user to confirm it */
@@ -1003,6 +1005,7 @@ static void bt_connect(const char *mac, bool quiet)
     snprintf(bt.busy, sizeof(bt.busy), "%s", mac);
     d = bt_find(bt.dev, bt.count, mac);
     paired = !d || d->paired;   /* the last device is not listed at boot */
+    bt.pairing = !paired;
     snprintf(link, sizeof(link), "%s", bt.link);
     pthread_mutex_unlock(&bt_mtx);
     bt_changed();
@@ -1014,6 +1017,8 @@ static void bt_connect(const char *mac, bool quiet)
     }
     else
     {
+        bt.pairing = false;
+        bt_changed();
         sender = bt_is_sender(mac);
         /* one headset at a time; a sender plays beside it */
         if (!sender && link[0] && strcmp(link, mac))
@@ -1130,11 +1135,20 @@ static void bt_power_on(void)
         fclose(fp);
     bt_power = BT_ON;
     bt_changed();
-    /* brcm_patchram_plus has nothing left to do but hold the serial line
-     * open, and HiBy's build spins doing it: half the CPU, for as long as
-     * Bluetooth is up. Stopped, it still holds the line. */
-    bt_cmd("for p in $(pidof brcm_patchram_plus); do "
-           "grep -q '^State:.R' /proc/$p/status && kill -STOP $p; done", NULL);
+    /* HiBy's brcm_patchram_plus spins for as long as Bluetooth is up, half
+     * the CPU. Stopped (as it was for a while) the radio found and paired
+     * nothing, so it runs, but only when nothing else wants the CPU. */
+#ifndef SIMULATOR
+    if ((fp = popen("pidof brcm_patchram_plus", "r")))
+    {
+        while (fscanf(fp, "%d", &i) == 1)
+        {
+            kill(i, SIGCONT);
+            setpriority(PRIO_PROCESS, i, 19);
+        }
+        pclose(fp);
+    }
+#endif
     if (bt_rx_on)
         bt_restart_bluealsa(true);
     bt_reconnect();
@@ -1335,7 +1349,19 @@ static void *bt_worker(void *arg)
         pthread_mutex_unlock(&bt_mtx);
         if (job != BT_JOB_NONE)
         {
+            /* the one radio pages a headset badly while it is also
+               searching: a phone stops its search to pair, too */
+            if (job == BT_JOB_CONNECT && scan)
+            {
+                fputs("scan off\n", scan);
+                fflush(scan);
+            }
             bt_run_job(job, mac, codec);
+            if (job == BT_JOB_CONNECT && scan)
+            {
+                fputs("scan on\n", scan);
+                fflush(scan);
+            }
             next_refresh = 0;
         }
 
@@ -1866,7 +1892,7 @@ static struct
     char link[18], rx[18], busy[18], codec[BT_CODEC_LEN];
     char codecs[BT_MAX_CODECS][BT_CODEC_LEN];
     int ncodecs, rate;
-    bool scanning;
+    bool scanning, pairing;
     long scan_since;
     int gen;
 } snap;
@@ -1888,6 +1914,7 @@ static void bt_snapshot(void)
     snap.ncodecs = bt.ncodecs;
     snap.rate = bt.rate;
     snap.scanning = bt.scanning;
+    snap.pairing = bt.pairing;
     snap.scan_since = bt.scan_since;
     msg = bt.msg;
     bt.msg = 0;
@@ -1907,14 +1934,16 @@ static void bt_snapshot(void)
 
 static const char *bt_device_state(const struct bt_device *d, char *buf, size_t len)
 {
+    /* the state first: after a long name it scrolled out of sight */
     if (!strcmp(d->mac, snap.busy))
-        snprintf(buf, len, "%s (%s)", d->name, S(LANG_BT_CONNECTING));
+        snprintf(buf, len, "%s %s", S(snap.pairing ? LANG_BT_PAIRING :
+                                      LANG_BT_CONNECTING), d->name);
     else if (!strcmp(d->mac, snap.link) && d->battery >= 0)
-        snprintf(buf, len, "%s (%s, %d%%)", d->name, S(LANG_BT_CONNECTED), d->battery);
+        snprintf(buf, len, "%s %d%%: %s", S(LANG_BT_CONNECTED), d->battery, d->name);
     else if (!strcmp(d->mac, snap.link))
-        snprintf(buf, len, "%s (%s)", d->name, S(LANG_BT_CONNECTED));
+        snprintf(buf, len, "%s: %s", S(LANG_BT_CONNECTED), d->name);
     else if (!strcmp(d->mac, snap.rx))
-        snprintf(buf, len, "%s (%s)", d->name, S(LANG_BT_RECEIVING));
+        snprintf(buf, len, "%s: %s", S(LANG_BT_RECEIVING), d->name);
     else
         snprintf(buf, len, "%s", d->name);
     return buf;
@@ -2155,7 +2184,8 @@ static void bt_device_page(const char *mac)
         simplelist_info_init(&info, title, 0, NULL);
         simplelist_reset_lines();
         simplelist_addline("%s: %s", S(LANG_BT_STATUS),
-                           S(busy ? LANG_BT_CONNECTING :
+                           S(busy && snap.pairing ? LANG_BT_PAIRING :
+                             busy ? LANG_BT_CONNECTING :
                              linked ? LANG_BT_CONNECTED : LANG_BT_DISCONNECTED));
         kind[n++] = DET_STATUS;
         if (headset)

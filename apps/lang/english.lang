@@ -20946,3 +20946,17 @@
     *: "Listening History"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_BT_PAIRING
+  desc: Hiby Bluetooth: a new device is being paired
+  user: core
+  <source>
+    *: "Pairing..."
+  </source>
+  <dest>
+    *: "Pairing..."
+  </dest>
+  <voice>
+    *: "Pairing"
+  </voice>
+</phrase>

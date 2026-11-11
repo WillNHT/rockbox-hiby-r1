@@ -10,6 +10,9 @@
 # Battery level: the simulated battery drains on the wall clock.
 Snappy-Animated * 376,20 420,80
 Snappy-V2 * 376,20 420,80
+# and by the last shot its percentage is a digit either way.
+Snappy-Animated shot07 420,20 450,80
+Snappy-V2 shot07 420,20 450,80
 # Peak meter bar ends: the level of whatever audio has been played.
 Snappy-Animated * 178,610 210,683
 Snappy-V2 * 179,568 207,649
