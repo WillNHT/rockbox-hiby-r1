@@ -1,5 +1,5 @@
 # Appended to tests/library.txt by golden.sh, which leaves the WPS playing.
-# Shots after library.txt's: the WPS paused, then the WPS with a thumb held
+# Shots after plate.txt's two and library.txt's four: the WPS paused, then the WPS with a thumb held
 # down on it (the stick armed, its overlay up), then the quickscreen.
 key play
 sleep 1500

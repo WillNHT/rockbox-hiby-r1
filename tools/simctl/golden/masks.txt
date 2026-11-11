@@ -11,21 +11,21 @@
 Snappy-Animated * 376,20 420,80
 Snappy-V2 * 376,20 420,80
 # and by the last shot its percentage is a digit either way.
-Snappy-Animated shot07 420,20 450,80
-Snappy-V2 shot07 420,20 450,80
+Snappy-Animated shot09 420,20 450,80
+Snappy-V2 shot09 420,20 450,80
 # Peak meter bar ends: the level of whatever audio has been played.
 Snappy-Animated * 178,610 210,683
 Snappy-V2 * 179,568 207,649
 # The held stick's band is mid-animation when the shot is taken.
-Snappy-Animated shot06 31,324 449,377
+Snappy-Animated shot08 31,324 449,377
 # The selected line scrolls on the scroll thread's own timer.
-Snappy-Animated shot03 184,200 443,249
-Snappy-V2 shot03 184,200 443,249
+Snappy-Animated shot05 184,200 443,249
+Snappy-V2 shot05 184,200 443,249
 # The cover's sheen: its frame comes from the tick of the last render
-# before the shot, which the UI thread reaches at its own pace. shot04
+# before the shot, which the UI thread reaches at its own pace. shot06
 # still checks the cover.
-Snappy-Animated shot05 31,150 449,600
-Snappy-Animated shot06 31,150 449,600
+Snappy-Animated shot07 31,150 449,600
+Snappy-Animated shot08 31,150 449,600
 # The database drum: the simulator's database builds itself at boot, and
 # whether a shot lands while it does depends on the card scan's pace.
 Snappy-Animated * 238,30 264,62
