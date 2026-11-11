@@ -85,6 +85,23 @@ one press is a hundred-odd detents. Release commits. Dragging outside the
 work zone cancels the whole spin and reverts to the value it had when the
 gesture armed — not to the last detent.
 
+### The plate
+
+With *Overlay Style* set to `Plate` and a theme that leaves the bottom tenth
+of the screen free (Snappy V2 and Snappy Animated do), a joystick sits in
+that strip on every themed screen. It is there at rest, and its cap follows
+the thumb from wherever the gesture started — including a list's own drag,
+which the engine never sees. The WPS and plugins have no strip; a gesture
+there lights the screen edge instead.
+
+Tapping a list row does nothing in this scheme, and it is the first thing a
+phone user tries. The plate answers it for three seconds with `< back` and
+`open >` either side of the stick. A sideways drag also carries the selected
+row with it, up to the distance the release needs.
+
+The strip's height is `PLATE_H` in `apps/stick_glue.c`; the Snappy `.sbs`
+files reserve the same 80 px and have to change with it.
+
 ---
 
 ## What a binding actually does
