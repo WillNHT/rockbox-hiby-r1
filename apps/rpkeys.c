@@ -428,7 +428,7 @@ static void countdown_draw(long held_ticks)
 
     if (held_ticks >= SCREEN_OFF_HOLD_TICKS)
     {
-        what = "Ready: screen off";
+        what = "Turning off screen";
         next = "Power off in ";
         target = SHUTDOWN_HOLD_TICKS;
         start = SCREEN_OFF_HOLD_TICKS;
@@ -438,7 +438,7 @@ static void countdown_draw(long held_ticks)
     {
         /* Short: the line is one line of a big face. What letting go
          * does now, and under it what holding on gets instead. */
-        what = locked ? "Ready to unlock" : "Ready to lock";
+        what = locked ? "Unlocking" : "Locking";
         next = "Screen off in ";
         target = SCREEN_OFF_HOLD_TICKS;
         start = LOCK_HOLD_TICKS;
