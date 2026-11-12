@@ -83,9 +83,10 @@ jobs:
         fetch-depth: 0  # version string comes from git describe
 
     - name: Install dependencies
+      timeout-minutes: 15
       run: |
-        sudo apt-get update
-        sudo apt-get install -y automake bison build-essential ccache flex libc6-dev libgmp3-dev libmpfr-dev \
+        sudo apt-get -o Acquire::Retries=5 update
+        sudo apt-get -o Acquire::Retries=5 install -y automake bison build-essential ccache flex libc6-dev libgmp3-dev libmpfr-dev \
         libsdl1.2-dev libtool-bin texinfo zip gawk wget libmpc-dev gettext gtk-doc-tools
 
     - name: root suid tar
@@ -206,9 +207,10 @@ jobs:
     steps:
     - uses: actions/checkout@v7
     - name: Install dependencies
+      timeout-minutes: 15
       run: |
-        sudo apt-get update
-        sudo apt-get install -y automake build-essential libtool-bin \
+        sudo apt-get -o Acquire::Retries=5 update
+        sudo apt-get -o Acquire::Retries=5 install -y automake build-essential libtool-bin \
           pkg-config texinfo wget zip zlib1g-dev
     - name: Restore toolchain
       id: cache
@@ -262,8 +264,8 @@ jobs:
         name: bootloader
     - name: Patch
       run: |
-        sudo apt-get update
-        sudo apt-get install -y p7zip-full squashfs-tools genisoimage coreutils
+        sudo apt-get -o Acquire::Retries=5 update
+        sudo apt-get -o Acquire::Retries=5 install -y p7zip-full squashfs-tools genisoimage coreutils
         curl -fL -o r1.upt "https://github.com/bidhata/Hiby-R1-Mod/releases/download/file-limit/r1.upt"
         chmod +x tools/r1_patcher/r1_patcher.sh
         sudo ./tools/r1_patcher/r1_patcher.sh r1.upt bootloader.r1
