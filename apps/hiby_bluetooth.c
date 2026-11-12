@@ -129,6 +129,7 @@ struct bt_now
 };
 
 enum { BT_OFF, BT_STARTING, BT_ON };
+enum { RX_SETTLED, RX_TURNING_ON, RX_TURNING_OFF };
 
 enum bt_job
 {
@@ -179,7 +180,7 @@ static volatile int bt_remote_vol = INT_MIN;
 static volatile bool bt_rx_on;      /* Receive Audio: bluealsa takes a2dp-sink too */
 static volatile bool bt_rx_linked;
 static volatile int bt_rx_gen;      /* the sender changed */
-static volatile int bt_rx_switching; /* Receive Audio going 1 on, 2 off */
+static volatile int bt_rx_switching; /* Receive Audio on its way: RX_TURNING_* */
 static volatile int bt_duck_now;    /* % the music is ducked under the sender */
 
 static void bt_mix_apply(void);
@@ -1101,7 +1102,7 @@ static void bt_set_receive(bool on)
     if (bt_power == BT_ON)
         bt_restart_bluealsa(on);
     /* done as far as the screen goes: the headset reconnects on its own */
-    bt_rx_switching = 0;
+    bt_rx_switching = RX_SETTLED;
     bt_changed();
     if (bt_power == BT_ON)
         bt_reconnect();
@@ -2013,8 +2014,8 @@ static const char *bt_row_name(int i, void *data, char *buf, size_t len)
             return buf;
         case ROW_RECEIVE:
             snprintf(buf, len, "%s: %s", S(LANG_BT_RECEIVE),
-                     S(bt_rx_switching == 1 ? LANG_BT_TURNING_ON :
-                       bt_rx_switching == 2 ? LANG_BT_TURNING_OFF :
+                     S(bt_rx_switching == RX_TURNING_ON ? LANG_BT_TURNING_ON :
+                       bt_rx_switching == RX_TURNING_OFF ? LANG_BT_TURNING_OFF :
                        bt_rx_on ? LANG_ON : LANG_OFF));
             return buf;
         case ROW_DEVICES:
@@ -2289,11 +2290,11 @@ static void bt_list(bool devices)
                 settings_save();
                 break;
             case ROW_RECEIVE:
-                if (bt_rx_switching)
+                if (bt_rx_switching != RX_SETTLED)
                     break;
                 /* bluealsa restarts: the headset's PCM goes with it */
                 bt_unroute(true);
-                bt_rx_switching = bt_rx_on ? 2 : 1;
+                bt_rx_switching = bt_rx_on ? RX_TURNING_OFF : RX_TURNING_ON;
                 bt_post(BT_JOB_RECEIVE, NULL, bt_rx_on ? "0" : "1");
                 break;
             case ROW_DEVICE:
