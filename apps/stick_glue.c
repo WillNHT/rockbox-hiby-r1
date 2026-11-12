@@ -383,6 +383,9 @@ static void rose_ring(const struct overlay_shape *s, int rad)
  * long enough that the list's own redraw lands in the middle of it, and the
  * overlay came out half-drawn or not at all. */
 static int dirty_x0, dirty_y0, dirty_x1, dirty_y1;
+/* Set while a list is about to draw: its update takes the overlay's box
+ * with it - see stick_predraw_overlay(). */
+static bool dirty_rides;
 
 static void dirty_reset(void)
 {
@@ -1348,8 +1351,16 @@ static void dirty_flush(void)
 
     w = dirty_x1 - dirty_x0 + 1;
     h = dirty_y1 - dirty_y0 + 1;
-    if (w > 0 && h > 0)
-        lcd_update_rect(dirty_x0, dirty_y0, w, h);
+    if (w <= 0 || h <= 0)
+        return;
+#ifdef HAVE_LCD_LAYERS
+    if (dirty_rides)
+    {
+        lcd_update_rect_owe(dirty_x0, dirty_y0, w, h);
+        return;
+    }
+#endif
+    lcd_update_rect(dirty_x0, dirty_y0, w, h);
 }
 
 static void overlay_clear(void)
@@ -1591,6 +1602,11 @@ void stick_draw_overlay(void)
 {
     bool moved;
 
+#ifdef HAVE_LCD_LAYERS
+    if (!dirty_rides)
+        lcd_update_owed();
+#endif
+
     if (!overlay.want && !plate_at_rest(&overlay.want_s))
     {
         overlay_clear();
@@ -1643,6 +1659,19 @@ void stick_draw_overlay(void)
     overlay.drawn = true;
 
     overlay_paint(&overlay.have_s);
+}
+
+/* From a list that is about to draw. The plate's cap moves with every
+ * frame of the list's own drag, and presented by itself it was a second
+ * update a frame: this puts it in the layer now and lets the list's
+ * update show it. */
+void stick_predraw_overlay(void)
+{
+#ifdef HAVE_LCD_LAYERS
+    dirty_rides = true;
+    stick_draw_overlay();
+    dirty_rides = false;
+#endif
 }
 
 /* Called when the gesture has just produced a button: the screen is about

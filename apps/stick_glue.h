@@ -81,6 +81,10 @@ void stick_draw_overlay(void);
  * rather than forgotten. */
 void stick_redraw_overlay(int rx, int ry, int rw, int rh);
 
+/* Call before a list draws, so that a plate moving with the list's drag
+ * goes out with the list's update and not one of its own. */
+void stick_predraw_overlay(void);
+
 /* True while the volume dial is armed - the thumb is down and turning it
  * changes the volume. What the %sd skin tag reports, so a skin can say so
  * on its own volume bar instead of the engine drawing a ring. */

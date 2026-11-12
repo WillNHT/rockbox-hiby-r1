@@ -303,6 +303,9 @@ void gui_synclist_draw(struct gui_synclist *gui_list)
             list_init_item_height(gui_list, i);
         gui_synclist_select_item(gui_list, gui_list->selected_item);
     }
+#ifdef HAVE_TOUCHSCREEN
+    stick_predraw_overlay();
+#endif
     FOR_NB_SCREENS(i)
     {
         if (!skinlist_draw(&screens[i], gui_list))
