@@ -96,8 +96,9 @@ there lights the screen edge instead.
 
 Tapping a list row does nothing in this scheme, and it is the first thing a
 phone user tries. The plate answers it all the time: the stick takes the
-middle half of the strip, and `up`, `down`, `back` and `open` sit around it
-on the side each one is pushed to. A sideways drag also carries the selected
+middle half of the strip, a little above centre, and `scroll up`,
+`scroll down`, `go back` and `open` sit around it in grey on the side each
+one is pushed to, the one the thumb is pushing lit. A sideways drag also carries the selected
 row with it, up to the distance the release needs.
 
 The strip's height is `PLATE_H` in `apps/stick_glue.c`; the Snappy `.sbs`

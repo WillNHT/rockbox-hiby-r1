@@ -560,6 +560,8 @@ static inline void bd_gesture_reset(void) { }
  * says what each direction does. */
 #define PLATE_H   (LCD_HEIGHT * 7 / 20)
 #define PLATE_RAD (PLATE_H / 4)
+/* The glass runs on a little below the panel, so dead centre looks low. */
+#define PLATE_LIFT 16
 #define PLATE_PAD  8
 
 /* What the lists tell the plate. They run their own drag (see
@@ -570,6 +572,7 @@ static struct
     bool down;
     int  dx, dy;
     bool painted;       /* the strip and its labels are in the layer */
+    int  lit;           /* the label lit in it, or -1 */
 } plate;
 
 static bool plate_has_room(void)
@@ -659,7 +662,7 @@ static void paint_plate(const struct overlay_shape *s)
 {
     int top = LCD_HEIGHT - PLATE_H;
     int cx = LCD_WIDTH / 2;
-    int cy = top + PLATE_H / 2;
+    int cy = top + PLATE_H / 2 - PLATE_LIFT;
     int rad = PLATE_RAD;
     int capr = rad * 3 / 8;
     int travel = rad - capr;
@@ -667,14 +670,25 @@ static void paint_plate(const struct overlay_shape *s)
     unsigned fg = global_settings.fg_color;
     unsigned ground = global_settings.bg_color;
     unsigned grain = ground;
+    unsigned dim = fg;
     int box = 2 * rad + 3;
+    int dx = s->x - s->ox;
+    int dy = s->y - s->oy;
+    int lit = -1;
     int capx, capy;
     long d2;
 
+    /* Which way the thumb has gone, once it has gone a quarter of the
+     * way: 0 up, 1 down, 2 left, 3 right, as the labels are. */
+    if (abs(dy) >= abs(dx) && abs(dy) > reach / 4)
+        lit = dy > 0;
+    else if (abs(dx) > reach / 4)
+        lit = 2 + (dx > 0);
+
     /* The cap goes where the thumb has pushed to, scaled so that full
      * travel puts its edge exactly on the ring, and no further. */
-    capx = ((s->x - s->ox) * travel) / reach;
-    capy = ((s->y - s->oy) * travel) / reach;
+    capx = (dx * travel) / reach;
+    capy = (dy * travel) / reach;
     d2 = (long)capx * capx + (long)capy * capy;
     if (d2 > (long)travel * travel)
     {
@@ -693,13 +707,18 @@ static void paint_plate(const struct overlay_shape *s)
                              (canvas_px)fg, 24);
     grain = canvas_blend_px((canvas_px)global_settings.bg_color,
                             (canvas_px)fg, 56);
+    dim = canvas_blend_px((canvas_px)global_settings.bg_color,
+                          (canvas_px)fg, 120);
 #endif
 
-    if (!plate.painted)
+    /* A label lighting or going out takes the strip with it: the text is
+     * blended in, so only fresh ground takes it off again. */
+    if (!plate.painted || lit != plate.lit)
     {
-        static const char * const label[4] = { "up", "down", "back", "open" };
-        int gap = PLATE_H / 2 - rad;
-        int w, h;
+        static const char * const label[4] =
+            { "scroll up", "scroll down", "go back", "open" };
+        int gap = cy - rad - top;
+        int i, w, h;
 
         /* Saved before a single pixel of it is drawn - see bd_capture(). */
         bd_capture(BD_MAIN, 0, top, LCD_WIDTH, PLATE_H);
@@ -710,16 +729,24 @@ static void paint_plate(const struct overlay_shape *s)
         lcd_hline(0, LCD_WIDTH - 1, top);
 
         /* What each direction does on a list, which is where the plate
-         * lives. Foreground only: solid text would paint its box in the
-         * layer's key and cut a hole in the ground. */
+         * lives: greyed, and the one the thumb is on lit. Foreground only:
+         * solid text would paint its box in the layer's key and cut a hole
+         * in the ground. */
         lcd_set_drawmode(DRMODE_FG);
-        lcd_getstringsize(label[0], &w, &h);
-        lcd_putsxy(cx - w / 2, top + (gap - h) / 2, label[0]);
-        lcd_getstringsize(label[1], &w, &h);
-        lcd_putsxy(cx - w / 2, cy + rad + (gap - h) / 2, label[1]);
-        lcd_getstringsize(label[2], &w, &h);
-        lcd_putsxy(cx - rad - PLATE_PAD * 3 - w, cy - h / 2, label[2]);
-        lcd_putsxy(cx + rad + PLATE_PAD * 3, cy - h / 2, label[3]);
+        for (i = 0; i < 4; i++)
+        {
+            lcd_getstringsize(label[i], &w, &h);
+            lcd_set_foreground(i == lit ? fg : dim);
+            if (i < 2)
+                lcd_putsxy(cx - w / 2, (i ? cy + rad : top) + (gap - h) / 2,
+                           label[i]);
+            else
+                lcd_putsxy(i == 2 ? cx - rad - PLATE_PAD * 3 - w
+                                  : cx + rad + PLATE_PAD * 3,
+                           cy - h / 2, label[i]);
+        }
+        lcd_set_foreground(fg);
+        plate.lit = lit;
         lcd_set_drawmode(DRMODE_SOLID);
         plate.painted = true;
     }
