@@ -14,7 +14,7 @@ before this feature existed.
 
 ## Turning it on
 
-*Settings → Controls → Rockpocket Stick*. Sectors, Rose Rotation, Arming Window and Degrees Per Detent are in *Settings → Controls → Advanced*.
+*Settings → Controls → Rockpocket Stick*. Sectors, Rose Rotation, Arming Window and Degrees Per Detent are in *Settings → Controls → Advanced*. How it looks - Stick Overlay and Overlay Style - is in *Settings → Display*.
 
 | Setting | Meaning |
 |---|---|
@@ -87,8 +87,8 @@ gesture armed — not to the last detent.
 
 ### The plate
 
-With *Overlay Style* set to `Plate` and a theme that leaves the bottom tenth
-of the screen free (Snappy V2 and Snappy Animated do), a joystick sits in
+With *Overlay Style* set to `Plate` and a theme that leaves the bottom three
+tenths of the screen free (Snappy V2 and Snappy Animated do), a joystick sits in
 that strip on every themed screen. It is there at rest, and its cap follows
 the thumb from wherever the gesture started — including a list's own drag,
 which the engine never sees. The WPS and plugins have no strip; a gesture
@@ -100,9 +100,11 @@ phone user tries. The plate answers it for three seconds with `< back` and
 row with it, up to the distance the release needs.
 
 The strip's height is `PLATE_H` in `apps/stick_glue.c`; the Snappy `.sbs`
-files reserve the same 80 px and have to change with it. They reserve it
+files reserve the same 240 px and have to change with it. They reserve it
 only while the settings would draw a plate (stick touch mode, overlay on,
-style `plate`); otherwise the list and footer use the whole panel.
+style `plate`), and then drop the now-playing footer so the list runs down
+to the plate; otherwise the list and footer use the whole panel. The ring
+and cap are drawn anti-aliased into the plate's ground.
 
 ---
 
