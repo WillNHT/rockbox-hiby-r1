@@ -1096,9 +1096,6 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
                 action = ACTION_STD_CONTEXT;
             else
                 action = ACTION_REDRAW;
-            /* Which is what anyone used to a phone tries first. */
-            if (gevent.id == GESTURE_TAP)
-                stick_plate_hint();
         }
         else if (click_loc & TITLE)
         {

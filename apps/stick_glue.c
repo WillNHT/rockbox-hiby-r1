@@ -301,7 +301,6 @@ struct overlay_shape
      * the overlay draws no ring there. A list has no such language, so it
      * still gets one. */
     bool on_skin;
-    bool hint;        /* the plate is saying what sideways does         */
 };
 
 /* How often a moving overlay may ask the screen underneath to repaint. */
@@ -555,11 +554,13 @@ static inline void bd_gesture_reset(void) { }
  * files do); where the room is not there - the WPS, a plugin, another
  * theme - there is no plate and a gesture gets the edge lights instead.
  *
- * Three tenths of the panel: a tenth was too small a target for a thumb.
- * Change it here and in the SBS files together. */
-#define PLATE_H   (LCD_HEIGHT * 3 / 10)
+ * Seven twentieths of the panel: a tenth was too small a target for a
+ * thumb. Change it here and in the SBS files together. The stick itself is
+ * half the strip's height, in the middle of it, and the room around it
+ * says what each direction does. */
+#define PLATE_H   (LCD_HEIGHT * 7 / 20)
+#define PLATE_RAD (PLATE_H / 4)
 #define PLATE_PAD  8
-#define PLATE_HINT_TICKS (3 * HZ)
 
 /* What the lists tell the plate. They run their own drag (see
  * gui_synclist_do_touchscreen) and the engine never sees it, so the cap
@@ -568,13 +569,8 @@ static struct
 {
     bool down;
     int  dx, dy;
-    long hint_until;    /* 0, or the tick the hint comes off at */
+    bool painted;       /* the strip and its labels are in the layer */
 } plate;
-
-static bool plate_hinting(void)
-{
-    return plate.hint_until && TIME_BEFORE(current_tick, plate.hint_until);
-}
 
 static bool plate_has_room(void)
 {
@@ -588,26 +584,37 @@ static bool plate_has_room(void)
 
 /* A disc, or a ring when r_in > 0, with its edge blended into the ground
  * instead of stepped: each pixel gets the share of it that lies between the
- * radii, from its distance to the centre in 1/16 px. */
+ * radii, from its distance to the centre in 1/16 px. Only the pixels within
+ * one of an edge are worked out that way - a root and a blend for every
+ * pixel of the cap was most of a frame. The middle of a disc is spans. */
 static void plate_disc(int cx, int cy, int r_in, int r_out,
                        unsigned fg, unsigned ground)
 {
     int lim = r_out + 1;
+    int core = (r_in > 0 ? r_in : r_out) - 1;
     int x, y;
 
     for (y = -lim; y <= lim; y++)
     {
-        for (x = -lim; x <= lim; x++)
-        {
-            long d2 = (long)x * x + (long)y * y;
-            int d, a_out, a_in, a;
+        long y2 = (long)y * y;
 
-            if (d2 > (long)lim * lim ||
-                (r_in > 1 && d2 < (long)(r_in - 1) * (r_in - 1)))
-                continue;
-            d = fp_sqrt(d2 << 8, 8) >> 4;
-            a_out = r_out * 16 + 8 - d;
-            a_in = r_in > 0 ? d - r_in * 16 + 8 : 16;
+        x = 0;
+        if (y2 < (long)core * core)
+        {
+            x = fp_sqrt((long)core * core - y2, 0);
+            if (r_in <= 0)
+            {
+                lcd_set_foreground(fg);
+                lcd_hline(cx - x + 1, cx + x - 1, cy + y);
+            }
+        }
+        for (; (long)x * x + y2 <= (long)lim * lim; x++)
+        {
+            int d = fp_sqrt(((long)x * x + y2) << 8, 8) >> 4;
+            int a_out = r_out * 16 + 8 - d;
+            int a_in = r_in > 0 ? d - r_in * 16 + 8 : 16;
+            int a;
+
             if (a_out <= 0 || a_in <= 0)
                 continue;
             a = (a_out > 16 ? 16 : a_out) * (a_in > 16 ? 16 : a_in);
@@ -621,6 +628,8 @@ static void plate_disc(int cx, int cy, int r_in, int r_out,
                 continue;
 #endif
             lcd_drawpixel(cx + x, cy + y);
+            if (x)
+                lcd_drawpixel(cx - x, cy + y);
         }
     }
     lcd_set_foreground(fg);
@@ -631,12 +640,13 @@ static void paint_plate(const struct overlay_shape *s)
     int top = LCD_HEIGHT - PLATE_H;
     int cx = LCD_WIDTH / 2;
     int cy = top + PLATE_H / 2;
-    int rad = (PLATE_H / 2) - PLATE_PAD;
+    int rad = PLATE_RAD;
     int capr = rad * 3 / 4;
     int travel = rad - capr;
     int reach = s->R > 0 ? s->R : 1;
     unsigned fg = global_settings.fg_color;
-    unsigned ground = fg;
+    unsigned ground = global_settings.bg_color;
+    int box = 2 * rad + 3;
     int capx, capy;
     long d2;
 
@@ -655,38 +665,55 @@ static void paint_plate(const struct overlay_shape *s)
     capx += cx;
     capy += cy;
 
-    /* Saved before a single pixel of it is drawn - see bd_capture(). */
-    bd_capture(BD_MAIN, 0, top, LCD_WIDTH, PLATE_H);
-    dirty_add(0, top, LCD_WIDTH - 1, LCD_HEIGHT - 1);
-
 #if defined(HAVE_COMPOSITOR) && defined(HAVE_LCD_LAYERS)
     /* Ground of its own, a shade off the theme's, so the strip reads as a
      * control and not as an empty row. */
     ground = canvas_blend_px((canvas_px)global_settings.bg_color,
                              (canvas_px)fg, 24);
-    lcd_set_foreground(ground);
-    lcd_fillrect(0, top, LCD_WIDTH, PLATE_H);
-    lcd_set_foreground(fg);
 #endif
-    lcd_hline(0, LCD_WIDTH - 1, top);
+
+    if (!plate.painted)
+    {
+        static const char * const label[4] = { "up", "down", "back", "open" };
+        int gap = PLATE_H / 2 - rad;
+        int w, h;
+
+        /* Saved before a single pixel of it is drawn - see bd_capture(). */
+        bd_capture(BD_MAIN, 0, top, LCD_WIDTH, PLATE_H);
+        dirty_add(0, top, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+
+        lcd_set_foreground(ground);
+        lcd_fillrect(0, top, LCD_WIDTH, PLATE_H);
+        lcd_set_foreground(fg);
+        lcd_hline(0, LCD_WIDTH - 1, top);
+
+        /* What each direction does on a list, which is where the plate
+         * lives. Foreground only: solid text would paint its box in the
+         * layer's key and cut a hole in the ground. */
+        lcd_set_drawmode(DRMODE_FG);
+        lcd_getstringsize(label[0], &w, &h);
+        lcd_putsxy(cx - w / 2, top + (gap - h) / 2, label[0]);
+        lcd_getstringsize(label[1], &w, &h);
+        lcd_putsxy(cx - w / 2, cy + rad + (gap - h) / 2, label[1]);
+        lcd_getstringsize(label[2], &w, &h);
+        lcd_putsxy(cx - rad - PLATE_PAD * 3 - w, cy - h / 2, label[2]);
+        lcd_putsxy(cx + rad + PLATE_PAD * 3, cy - h / 2, label[3]);
+        lcd_set_drawmode(DRMODE_SOLID);
+        plate.painted = true;
+    }
+    else
+    {
+        /* Only the cap has moved. The strip and its labels are still in
+         * the layer, so the stick's own square is all that is repainted
+         * and all that is pushed. */
+        dirty_add(cx - rad - 1, cy - rad - 1, cx + rad + 1, cy + rad + 1);
+        lcd_set_foreground(ground);
+        lcd_fillrect(cx - rad - 1, cy - rad - 1, box, box);
+        lcd_set_foreground(fg);
+    }
 
     plate_disc(cx, cy, rad - 2, rad, fg, ground);
     plate_disc(capx, capy, 0, capr, fg, ground);
-
-    /* The hint: what sideways means, either side of the stick. Someone who
-     * tapped a row was looking for "open", and this is where it is. */
-    if (s->hint)
-    {
-        int w, h;
-
-        /* Foreground only: solid text would paint its box in the layer's
-         * key and cut a hole in the ground. */
-        lcd_set_drawmode(DRMODE_FG);
-        lcd_getstringsize("open >", &w, &h);
-        lcd_putsxy(PLATE_PAD * 3, cy - h / 2, "< back");
-        lcd_putsxy(LCD_WIDTH - PLATE_PAD * 3 - w, cy - h / 2, "open >");
-        lcd_set_drawmode(DRMODE_SOLID);
-    }
 }
 
 /* 2c: no widget at all. The screen edge nearest the direction of travel
@@ -1012,8 +1039,14 @@ static void overlay_paint(const struct overlay_shape *s)
 
     /* Put the previous frame's pixels back before anything else happens.
      * This is the erase, and it is why nothing below asks the screen
-     * underneath to repaint any more. */
-    bd_restore_all();
+     * underneath to repaint any more. A plate that is only moving its cap
+     * keeps what it has - see paint_plate(). */
+    if (!plate.painted || s->dial || s->style != STICK_OVERLAY_PLATE ||
+        !plate_has_room())
+    {
+        bd_restore_all();
+        plate.painted = false;
+    }
 
 #ifdef HAVE_LCD_LAYERS
     oldvp = layer_begin();
@@ -1222,6 +1255,7 @@ static void overlay_clear(void)
         return;
     overlay.drawn = false;
     overlay.repair_owed = false;
+    plate.painted = false;
 
     /* The backing store saved what the overlay covered, so it takes
      * itself off without asking the screen underneath to repaint. That is
@@ -1289,7 +1323,6 @@ static void overlay_update(const struct stick_state *st)
          * deflection mean nothing once the gesture is rotation. */
         overlay.want_s.dial = (phase == STICK_PHASE_DIAL);
         overlay.want_s.on_skin = on_a_skin();
-        overlay.want_s.hint = plate_hinting();
 
         /* The moment the dial arms or disarms, ask the skin to repaint.
          * A skin with no peak meter and no %an redraws only when something
@@ -1389,7 +1422,6 @@ static bool plate_at_rest(struct overlay_shape *s)
         s->x = plate.dx;
         s->y = plate.dy;
     }
-    s->hint = plate_hinting();
     return true;
 }
 
@@ -1398,13 +1430,6 @@ void stick_plate_thumb(bool down, int dx, int dy)
     plate.down = down;
     plate.dx = dx;
     plate.dy = dy;
-}
-
-void stick_plate_hint(void)
-{
-    plate.hint_until = current_tick + PLATE_HINT_TICKS;
-    if (!plate.hint_until)
-        plate.hint_until = 1;
 }
 
 void stick_draw_overlay(void)

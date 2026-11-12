@@ -87,24 +87,26 @@ gesture armed — not to the last detent.
 
 ### The plate
 
-With *Overlay Style* set to `Plate` and a theme that leaves the bottom three
-tenths of the screen free (Snappy V2 and Snappy Animated do), a joystick sits in
+With *Overlay Style* set to `Plate` and a theme that leaves the bottom seven
+twentieths of the screen free (Snappy V2 and Snappy Animated do), a joystick sits in
 that strip on every themed screen. It is there at rest, and its cap follows
 the thumb from wherever the gesture started — including a list's own drag,
 which the engine never sees. The WPS and plugins have no strip; a gesture
 there lights the screen edge instead.
 
 Tapping a list row does nothing in this scheme, and it is the first thing a
-phone user tries. The plate answers it for three seconds with `< back` and
-`open >` either side of the stick. A sideways drag also carries the selected
+phone user tries. The plate answers it all the time: the stick takes the
+middle half of the strip, and `up`, `down`, `back` and `open` sit around it
+on the side each one is pushed to. A sideways drag also carries the selected
 row with it, up to the distance the release needs.
 
 The strip's height is `PLATE_H` in `apps/stick_glue.c`; the Snappy `.sbs`
-files reserve the same 240 px and have to change with it. They reserve it
+files reserve the same 280 px and have to change with it. They reserve it
 only while the settings would draw a plate (stick touch mode, overlay on,
 style `plate`), and then drop the now-playing footer so the list runs down
 to the plate; otherwise the list and footer use the whole panel. The ring
-and cap are drawn anti-aliased into the plate's ground.
+and cap are anti-aliased into the plate's ground along their edges only,
+and a moving cap repaints the stick's own square rather than the strip.
 
 ---
 

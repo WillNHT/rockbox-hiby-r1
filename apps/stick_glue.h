@@ -87,10 +87,8 @@ void stick_redraw_overlay(int rx, int ry, int rw, int rh);
 bool stick_dial_armed(void);
 
 /* For the lists, which run their own drag and never reach the engine: where
- * the thumb is relative to its press, so the plate's cap can follow it, and
- * a tap on a row, which does nothing there and earns the plate's hint. */
+ * the thumb is relative to its press, so the plate's cap can follow it. */
 void stick_plate_thumb(bool down, int dx, int dy);
-void stick_plate_hint(void);
 
 /* Read-only view for the lab plugin and, later, the presentation layer. */
 const struct stick_state *stick_get_state(void);
