@@ -635,17 +635,38 @@ static void plate_disc(int cx, int cy, int r_in, int r_out,
     lcd_set_foreground(fg);
 }
 
+/* The plate's ground over a rectangle: flat, with a dot a shade lighter
+ * every PLATE_GRAIN pixels so the strip has a grain to it. The dots sit on
+ * the panel's grid, not the rectangle's, so a part repainted lines up. */
+#define PLATE_GRAIN 6
+static void plate_ground(int x, int y, int w, int h,
+                         unsigned ground, unsigned grain)
+{
+    int gx, gy;
+
+    lcd_set_foreground(ground);
+    lcd_fillrect(x, y, w, h);
+    lcd_set_foreground(grain);
+    for (gy = y + PLATE_GRAIN - 1 - (y + PLATE_GRAIN - 1) % PLATE_GRAIN;
+         gy < y + h; gy += PLATE_GRAIN)
+        for (gx = x + PLATE_GRAIN - 1 - (x + PLATE_GRAIN - 1) % PLATE_GRAIN
+                  + (gy / PLATE_GRAIN % 2) * (PLATE_GRAIN / 2);
+             gx < x + w; gx += PLATE_GRAIN)
+            lcd_drawpixel(gx, gy);
+}
+
 static void paint_plate(const struct overlay_shape *s)
 {
     int top = LCD_HEIGHT - PLATE_H;
     int cx = LCD_WIDTH / 2;
     int cy = top + PLATE_H / 2;
     int rad = PLATE_RAD;
-    int capr = rad * 3 / 4;
+    int capr = rad * 3 / 8;
     int travel = rad - capr;
     int reach = s->R > 0 ? s->R : 1;
     unsigned fg = global_settings.fg_color;
     unsigned ground = global_settings.bg_color;
+    unsigned grain = ground;
     int box = 2 * rad + 3;
     int capx, capy;
     long d2;
@@ -670,6 +691,8 @@ static void paint_plate(const struct overlay_shape *s)
      * control and not as an empty row. */
     ground = canvas_blend_px((canvas_px)global_settings.bg_color,
                              (canvas_px)fg, 24);
+    grain = canvas_blend_px((canvas_px)global_settings.bg_color,
+                            (canvas_px)fg, 56);
 #endif
 
     if (!plate.painted)
@@ -682,8 +705,7 @@ static void paint_plate(const struct overlay_shape *s)
         bd_capture(BD_MAIN, 0, top, LCD_WIDTH, PLATE_H);
         dirty_add(0, top, LCD_WIDTH - 1, LCD_HEIGHT - 1);
 
-        lcd_set_foreground(ground);
-        lcd_fillrect(0, top, LCD_WIDTH, PLATE_H);
+        plate_ground(0, top, LCD_WIDTH, PLATE_H, ground, grain);
         lcd_set_foreground(fg);
         lcd_hline(0, LCD_WIDTH - 1, top);
 
@@ -707,8 +729,7 @@ static void paint_plate(const struct overlay_shape *s)
          * the layer, so the stick's own square is all that is repainted
          * and all that is pushed. */
         dirty_add(cx - rad - 1, cy - rad - 1, cx + rad + 1, cy + rad + 1);
-        lcd_set_foreground(ground);
-        lcd_fillrect(cx - rad - 1, cy - rad - 1, box, box);
+        plate_ground(cx - rad - 1, cy - rad - 1, box, box, ground, grain);
         lcd_set_foreground(fg);
     }
 

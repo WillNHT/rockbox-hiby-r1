@@ -104,9 +104,11 @@ The strip's height is `PLATE_H` in `apps/stick_glue.c`; the Snappy `.sbs`
 files reserve the same 280 px and have to change with it. They reserve it
 only while the settings would draw a plate (stick touch mode, overlay on,
 style `plate`), and then drop the now-playing footer so the list runs down
-to the plate; otherwise the list and footer use the whole panel. The ring
+to the plate, and put the title in the status row, left of the icons, so
+the list also starts a row higher; otherwise the list and footer use the whole panel. The ring
 and cap are anti-aliased into the plate's ground along their edges only,
-and a moving cap repaints the stick's own square rather than the strip.
+and a moving cap repaints the stick's own square rather than the strip. The
+strip's ground carries a faint dot grain.
 
 ---
 
