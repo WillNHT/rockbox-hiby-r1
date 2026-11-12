@@ -87,10 +87,18 @@ void stick_redraw_overlay(int rx, int ry, int rw, int rh);
 bool stick_dial_armed(void);
 
 /* For the lists, which run their own drag and never reach the engine: where
- * the thumb is relative to its press, so the plate's cap can follow it, and
- * a tap on a row, which does nothing there and earns the plate's hint. */
+ * the thumb is relative to its press, so the plate's cap can follow it. */
 void stick_plate_thumb(bool down, int dx, int dy);
-void stick_plate_hint(void);
+
+/* Where on the plate a point is, so the lists can take a press there: on
+ * the stick itself, elsewhere in the strip, or not on a plate at all. */
+enum { STICK_PLATE_NONE = 0, STICK_PLATE_STRIP, STICK_PLATE_STICK };
+int stick_plate_zone(int x, int y);
+
+/* The angle of a point round the plate's stick, for the list's dial: 1/64
+ * degree, clockwise from straight up, or -1 too near the middle to say.
+ * The cap goes round with it. */
+int stick_plate_angle(int x, int y);
 
 /* Read-only view for the lab plugin and, later, the presentation layer. */
 const struct stick_state *stick_get_state(void);

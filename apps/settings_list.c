@@ -2654,6 +2654,12 @@ const struct settings_list settings[] = {
 
     OFFON_SETTING(0, stick_edge_swipe, LANG_STICK_EDGE_SWIPE, false,
                   "stick edge swipe", NULL),
+    CHOICE_SETTING(0, stick_list_scroll, LANG_STICK_LIST_SCROLL,
+                   STICK_SCROLL_NATURAL, "stick list scroll",
+                   "natural,inverted,dial", NULL, 3,
+                   ID2P(LANG_STICK_SCROLL_NATURAL),
+                   ID2P(LANG_STICK_SCROLL_INVERTED),
+                   ID2P(LANG_STICK_SCROLL_DIAL)),
     OFFON_SETTING(0, stick_dial_lists, LANG_STICK_DIAL_LISTS, false,
                   "stick dial lists", NULL),
     CUSTOM_SETTING(0, ts_calibration_data, -1,

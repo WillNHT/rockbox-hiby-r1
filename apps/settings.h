@@ -120,6 +120,13 @@ enum {
     STICK_ZONE_PLATE,       /* a circle low enough to reach one-handed  */
 };
 
+/* What a drag does to a list. */
+enum {
+    STICK_SCROLL_NATURAL = 0,   /* the rows follow the thumb            */
+    STICK_SCROLL_INVERTED,      /* the selection follows the thumb      */
+    STICK_SCROLL_DIAL,          /* round the plate's stick, like a wheel */
+};
+
 enum {
     STICK_PRESET_4WAY = 0,
     STICK_PRESET_CUSTOM,    /* read from /.rockbox/stick.cfg            */
@@ -933,6 +940,7 @@ struct user_settings
     int stick_arm_ms;          /* arming window, 0..400 ms              */
     int stick_dial_wps;        /* volume dial in the WPS                */
     int stick_dial_lists;      /* scroll dial in lists and menus        */
+    int stick_list_scroll;     /* STICK_SCROLL_*                        */
     int stick_deg_per_detent;  /* dial detent size, 8..30 degrees       */
     int stick_overlay;         /* draw the live gesture on screen       */
     int stick_overlay_style;   /* STICK_OVERLAY_*                       */

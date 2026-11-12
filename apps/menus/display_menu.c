@@ -601,6 +601,8 @@ MENUITEM_SETTING(stick_dial_wps, &global_settings.stick_dial_wps,
                  stick_setting_callback);
 MENUITEM_SETTING(stick_dial_lists, &global_settings.stick_dial_lists,
                  stick_setting_callback);
+MENUITEM_SETTING(stick_list_scroll, &global_settings.stick_list_scroll,
+                 stick_setting_callback);
 MENUITEM_SETTING(stick_overlay, &global_settings.stick_overlay,
                  stick_setting_callback);
 MENUITEM_SETTING(stick_edge_swipe, &global_settings.stick_edge_swipe,
@@ -611,7 +613,7 @@ MENUITEM_SETTING(stick_deg_per_detent, &global_settings.stick_deg_per_detent,
                  stick_setting_callback);
 
 MAKE_MENU(stick_menu, ID2P(LANG_STICK_SETTINGS), NULL, Icon_NOICON,
-            &stick_preset, &stick_zone,
+            &stick_preset, &stick_zone, &stick_list_scroll,
             &stick_dial_wps, &stick_dial_lists, &stick_edge_swipe);
 #endif
 
