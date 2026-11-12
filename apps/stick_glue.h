@@ -90,6 +90,16 @@ bool stick_dial_armed(void);
  * the thumb is relative to its press, so the plate's cap can follow it. */
 void stick_plate_thumb(bool down, int dx, int dy);
 
+/* Where on the plate a point is, so the lists can take a press there: on
+ * the stick itself, elsewhere in the strip, or not on a plate at all. */
+enum { STICK_PLATE_NONE = 0, STICK_PLATE_STRIP, STICK_PLATE_STICK };
+int stick_plate_zone(int x, int y);
+
+/* The angle of a point round the plate's stick, for the list's dial: 1/64
+ * degree, clockwise from straight up, or -1 too near the middle to say.
+ * The cap goes round with it. */
+int stick_plate_angle(int x, int y);
+
 /* Read-only view for the lab plugin and, later, the presentation layer. */
 const struct stick_state *stick_get_state(void);
 const struct stick_config *stick_get_config(void);

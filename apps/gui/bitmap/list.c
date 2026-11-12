@@ -59,6 +59,7 @@ enum {
     SCROLL_SWIPE,           /* scroll by wiping over the screen */
     SCROLL_KINETIC,         /* state after releasing swipe */
     SCROLL_ANSWER,          /* sideways drag: right is yes, left is no */
+    SCROLL_DIAL,            /* round the joystick plate's stick */
 };
 #endif
 
@@ -221,6 +222,24 @@ static bool draw_title(struct screen *display,
 /* How far a sideways drag has gone, for the row that goes with it. Only
  * read while the list is in SCROLL_ANSWER, so nothing has to clear it. */
 static int answer_dx;
+
+/* SCROLL_DIAL: the last angle round the plate's stick, -1 for none, and
+ * how far round the thumb has gone since the press, both in 1/64 degree. */
+static int dial_last, dial_turned;
+
+/* How a drag scrolls: a STICK_SCROLL_*. Only the stick's lists have a say. */
+static int list_scroll_type(void)
+{
+    return global_settings.touch_mode == TOUCHSCREEN_STICK ?
+           global_settings.stick_list_scroll : STICK_SCROLL_NATURAL;
+}
+
+/* A drag's vertical travel, in the sense the rows move. */
+static int list_drag_dy(const struct gesture_event *gevent)
+{
+    int dy = gevent->y - gevent->oy;
+    return list_scroll_type() == STICK_SCROLL_INVERTED ? -dy : dy;
+}
 #endif
 
 void list_draw(struct screen *display, struct gui_synclist *list)
@@ -722,7 +741,7 @@ static bool list_kinetic_scroll_resumed_same_direction(const struct gui_synclist
     if (kinetic.cb_data.velocity == 0)
         return false;
 
-    const int dy = gevent->y - gevent->oy;
+    const int dy = list_drag_dy(gevent);
     if (dy == 0 || SIGN(dy) != SIGN(kinetic.cb_data.velocity))
         return false;
 
@@ -869,6 +888,8 @@ static bool kinetic_start_scrolling(struct kinetic *k, struct gui_synclist *list
 {
     int xvel, yvel;
     gesture_vel_get(&list_gvel, &xvel, &yvel);
+    if (list_scroll_type() == STICK_SCROLL_INVERTED)
+        yvel = -yvel;
     logf("list_touch: kinetic_start yvel=%d y_pos=%d base=%d mode=%d velocity=%ld\n",
           yvel, list->y_pos, list->scroll_base_y, list->scroll_mode,
           k->cb_data.velocity);
@@ -1089,7 +1110,11 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
         }
 
         click_loc = get_click_location(list, gevent.x, gevent.y);
-        if (click_loc & LIST)
+        /* The plate's stick is a button too: now playing, from anywhere. */
+        if (gevent.id == GESTURE_TAP &&
+            stick_plate_zone(gevent.x, gevent.y) == STICK_PLATE_STICK)
+            action = ACTION_TREE_WPS;
+        else if (click_loc & LIST)
         {
             /* Touching a row never picks it: the top row is the selection. */
             if (gevent.id == GESTURE_LONG_PRESS)
@@ -1136,7 +1161,7 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
         gesture_vel_reset(&list_gvel);
         if (list->scroll_mode == SCROLL_KINETIC)
         {
-            const int dy = gevent.y - gevent.oy;
+            const int dy = list_drag_dy(&gevent);
             if (kinetic.cb_data.velocity != 0 && dy != 0 &&
                 SIGN(dy) != SIGN(kinetic.cb_data.velocity))
                 _gui_synclist_stop_kinetic_scrolling(list);
@@ -1158,21 +1183,55 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
         {
             sel_pos = list->selected_item * list->line_height[screen];
             list->scroll_base_y = sel_pos;
+            const int zone = stick_plate_zone(gevent.ox, gevent.oy);
             click_loc = get_click_location(list, gevent.ox, gevent.oy);
+            /* A press on the plate drives the list as one on its rows. */
+            if (zone != STICK_PLATE_NONE)
+                click_loc = LIST_TEXT;
 
             if (click_loc & SCROLLBAR)
                 list->scroll_mode = SCROLL_BAR;
+            /* The dial is the strip round the stick; the stick itself
+             * still answers sideways. */
+            else if (list_scroll_type() == STICK_SCROLL_DIAL &&
+                     zone == STICK_PLATE_STRIP)
+            {
+                list->scroll_mode = SCROLL_DIAL;
+                dial_last = -1;
+                dial_turned = 0;
+            }
             else if ((click_loc & LIST) &&
                      abs(gevent.x - gevent.ox) > abs(gevent.y - gevent.oy))
                 list->scroll_mode = SCROLL_ANSWER;
-            else if (click_loc & LIST)
+            /* Up and down are the dial's alone when there is one. */
+            else if ((click_loc & LIST) &&
+                     list_scroll_type() != STICK_SCROLL_DIAL)
                 list->scroll_mode = SCROLL_SWIPE;
         }
 
         if (list->scroll_mode == SCROLL_BAR)
             action = scrollbar_scroll(list, gevent.y);
         else if (list->scroll_mode == SCROLL_SWIPE)
-            action = swipe_scroll(list, gevent.y - gevent.oy);
+            action = swipe_scroll(list, list_drag_dy(&gevent));
+        else if (list->scroll_mode == SCROLL_DIAL)
+        {
+            /* Clockwise is down the list, a row a detent. An angle too
+             * near the middle to trust breaks the chain, not the turn. */
+            const int a = stick_plate_angle(gevent.x, gevent.y);
+            if (a >= 0 && dial_last >= 0)
+            {
+                int d = a - dial_last;
+                if (d > 180 * 64)
+                    d -= 360 * 64;
+                else if (d < -180 * 64)
+                    d += 360 * 64;
+                dial_turned += d;
+            }
+            dial_last = a;
+            action = swipe_scroll(list, -dial_turned *
+                                  list->line_height[screen] /
+                                  (global_settings.stick_deg_per_detent * 64));
+        }
         else if (list->scroll_mode == SCROLL_ANSWER)
         {
             /* As far as the release needs and no further, so the row
@@ -1208,7 +1267,9 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
                 system_sound_play(SOUND_KEYCLICK);
             break;
         }
-        if (list->scroll_mode == SCROLL_BAR)
+        /* A dial is not thrown: nor is the nothing up and down do there. */
+        if (list->scroll_mode == SCROLL_BAR ||
+            list_scroll_type() == STICK_SCROLL_DIAL)
             list_mark_scroll_stopped(list);
         else if(!kinetic_start_scrolling(&kinetic, list) &&
                 list->scroll_mode != SCROLL_KINETIC)

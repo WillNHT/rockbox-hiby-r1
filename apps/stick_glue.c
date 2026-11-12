@@ -301,6 +301,11 @@ struct overlay_shape
      * the overlay draws no ring there. A list has no such language, so it
      * still gets one. */
     bool on_skin;
+    /* The plate's labels: which the list under it can act on now, and
+     * how it scrolls. */
+    int  avail;       /* 1 << direction: up, down, left, right          */
+    int  scroll;      /* a STICK_SCROLL_*                               */
+    bool turning;     /* the thumb is going round the stick             */
 };
 
 /* How often a moving overlay may ask the screen underneath to repaint. */
@@ -562,6 +567,8 @@ static inline void bd_gesture_reset(void) { }
 #define PLATE_RAD (PLATE_H / 4)
 /* The glass runs on a little below the panel, so dead centre looks low. */
 #define PLATE_LIFT 16
+#define PLATE_CX  (LCD_WIDTH / 2)
+#define PLATE_CY  (LCD_HEIGHT - PLATE_H / 2 - PLATE_LIFT)
 #define PLATE_PAD  8
 
 /* What the lists tell the plate. They run their own drag (see
@@ -571,8 +578,10 @@ static struct
 {
     bool down;
     int  dx, dy;
+    bool turn;          /* dx, dy are from the stick's centre: a dial */
     bool painted;       /* the strip and its labels are in the layer */
-    int  lit;           /* the label lit in it, or -1 */
+    int  labels;        /* which labels are in it, and which is lit */
+    int  avail;         /* the last a list was there to be asked */
 } plate;
 
 static bool plate_has_room(void)
@@ -658,11 +667,29 @@ static void plate_ground(int x, int y, int w, int h,
             lcd_drawpixel(gx, gy);
 }
 
+/* An arrowhead for a label, centred on x, y: 0 up, 1 down, 2 left,
+ * 3 right. */
+#define PLATE_ARROW 5
+static void plate_arrow(int x, int y, int dir)
+{
+    int i;
+
+    for (i = 0; i <= PLATE_ARROW; i++)
+    {
+        int at = (dir & 1) ? PLATE_ARROW / 2 + 1 - i : i - PLATE_ARROW / 2 - 1;
+
+        if (dir < 2)
+            lcd_hline(x - i, x + i, y + at);
+        else
+            lcd_vline(x + at, y - i, y + i);
+    }
+}
+
 static void paint_plate(const struct overlay_shape *s)
 {
     int top = LCD_HEIGHT - PLATE_H;
-    int cx = LCD_WIDTH / 2;
-    int cy = top + PLATE_H / 2 - PLATE_LIFT;
+    int cx = PLATE_CX;
+    int cy = PLATE_CY;
     int rad = PLATE_RAD;
     int capr = rad * 3 / 8;
     int travel = rad - capr;
@@ -675,15 +702,22 @@ static void paint_plate(const struct overlay_shape *s)
     int dx = s->x - s->ox;
     int dy = s->y - s->oy;
     int lit = -1;
+    int labels;
     int capx, capy;
     long d2;
 
     /* Which way the thumb has gone, once it has gone a quarter of the
-     * way: 0 up, 1 down, 2 left, 3 right, as the labels are. */
-    if (abs(dy) >= abs(dx) && abs(dy) > reach / 4)
+     * way: 0 up, 1 down, 2 left, 3 right, as the labels are. Going round
+     * lights the one that says to. */
+    if (s->turning)
+        lit = 0;
+    else if (abs(dy) >= abs(dx) && abs(dy) > reach / 4)
         lit = dy > 0;
     else if (abs(dx) > reach / 4)
         lit = 2 + (dx > 0);
+    if (lit >= 0 && !(s->avail & (1 << lit)))
+        lit = -1;
+    labels = (lit + 1) | s->avail << 4 | s->scroll << 8;
 
     /* The cap goes where the thumb has pushed to, scaled so that full
      * travel puts its edge exactly on the ring, and no further. */
@@ -711,12 +745,15 @@ static void paint_plate(const struct overlay_shape *s)
                           (canvas_px)fg, 120);
 #endif
 
-    /* A label lighting or going out takes the strip with it: the text is
-     * blended in, so only fresh ground takes it off again. */
-    if (!plate.painted || lit != plate.lit)
+    /* A label lighting, going out or changing takes the strip with it:
+     * the text is blended in, so only fresh ground takes it off again. */
+    if (!plate.painted || labels != plate.labels)
     {
-        static const char * const label[4] =
-            { "scroll up", "scroll down", "go back", "open" };
+        /* What each direction does to the list: the rows follow the thumb
+         * unless the scrolling is inverted, and a dial has one label for
+         * both ways. The arrow points the way the selection goes. */
+        static const char * const scroll[2] = { "scroll up", "scroll down" };
+        bool inv = s->scroll == STICK_SCROLL_INVERTED;
         int gap = cy - rad - top;
         int i, w, h;
 
@@ -728,25 +765,43 @@ static void paint_plate(const struct overlay_shape *s)
         lcd_set_foreground(fg);
         lcd_hline(0, LCD_WIDTH - 1, top);
 
-        /* What each direction does on a list, which is where the plate
-         * lives: greyed, and the one the thumb is on lit. Foreground only:
-         * solid text would paint its box in the layer's key and cut a hole
-         * in the ground. */
+        /* Greyed, the one the thumb is on lit, and one the list cannot
+         * act on from here left out. Foreground only: solid text would
+         * paint its box in the layer's key and cut a hole in the ground. */
         lcd_set_drawmode(DRMODE_FG);
         for (i = 0; i < 4; i++)
         {
-            lcd_getstringsize(label[i], &w, &h);
+            const char *text = i == 2 ? "previous" : i == 3 ? "next" :
+                               s->scroll == STICK_SCROLL_DIAL ?
+                               "turn to scroll" : scroll[inv ? i : !i];
+            int arrow = i >= 2 ? i : s->scroll == STICK_SCROLL_DIAL ? -1 :
+                        inv ? i : !i;
+            int aw = arrow < 0 ? 0 : PLATE_ARROW * 2 + 7;
+            int x, y;
+
+            if (!(s->avail & (1 << i)))
+                continue;
+            lcd_getstringsize(text, &w, &h);
             lcd_set_foreground(i == lit ? fg : dim);
             if (i < 2)
-                lcd_putsxy(cx - w / 2, (i ? cy + rad : top) + (gap - h) / 2,
-                           label[i]);
+            {
+                x = cx - (w + aw) / 2;
+                y = (i ? cy + rad : top) + (gap - h) / 2;
+            }
             else
-                lcd_putsxy(i == 2 ? cx - rad - PLATE_PAD * 3 - w
-                                  : cx + rad + PLATE_PAD * 3,
-                           cy - h / 2, label[i]);
+            {
+                x = i == 2 ? cx - rad - PLATE_PAD * 3 - w - aw
+                           : cx + rad + PLATE_PAD * 3;
+                y = cy - h / 2;
+            }
+            /* The arrow leads, except the one that points on. */
+            if (arrow >= 0)
+                plate_arrow(i == 3 ? x + w + aw - PLATE_ARROW - 1
+                                   : x + PLATE_ARROW, y + h / 2, arrow);
+            lcd_putsxy(i == 3 ? x : x + aw, y, text);
         }
         lcd_set_foreground(fg);
-        plate.lit = lit;
+        plate.labels = labels;
         lcd_set_drawmode(DRMODE_SOLID);
         plate.painted = true;
     }
@@ -1371,6 +1426,10 @@ static void overlay_update(const struct stick_state *st)
          * deflection mean nothing once the gesture is rotation. */
         overlay.want_s.dial = (phase == STICK_PHASE_DIAL);
         overlay.want_s.on_skin = on_a_skin();
+        /* The engine's up is the key's up, whatever the lists do. */
+        overlay.want_s.avail = 0xf;
+        overlay.want_s.scroll = STICK_SCROLL_INVERTED;
+        overlay.want_s.turning = false;
 
         /* The moment the dial arms or disarms, ask the skin to repaint.
          * A skin with no peak meter and no %an redraws only when something
@@ -1444,6 +1503,7 @@ static void plate_theme_changed(unsigned short id, void *data)
 static bool plate_at_rest(struct overlay_shape *s)
 {
     static bool listening;
+    struct gui_synclist *list;
 
     if (!global_settings.stick_overlay || stick_session != STICK_LIVE ||
         global_settings.stick_overlay_style != STICK_OVERLAY_PLATE ||
@@ -1465,11 +1525,33 @@ static bool plate_at_rest(struct overlay_shape *s)
     memset(s, 0, sizeof(*s));
     s->style = STICK_OVERLAY_PLATE;
     s->R = STICK_DEF_TRAVEL_PX;
+    s->scroll = global_settings.stick_list_scroll;
     if (plate.down)
     {
         s->x = plate.dx;
         s->y = plate.dy;
+        s->turning = plate.turn;
     }
+
+    /* What the list can do from where it is. It is only there to ask
+     * while its own loop is polling; a theme change asks from outside. */
+    list = gui_synclist_is_active();
+    if (list)
+    {
+        int up = list->selected_item > 0;
+        int down = list->selected_item < list->nb_items - 1;
+
+        /* Left is back, and the main menu has nowhere to go back to. */
+        plate.avail = 1 << 3 |
+                      (get_current_activity() != ACTIVITY_MAINMENU) << 2;
+        if (s->scroll == STICK_SCROLL_DIAL)
+            plate.avail |= up | down;
+        else if (s->scroll == STICK_SCROLL_INVERTED)
+            plate.avail |= up | down << 1;
+        else
+            plate.avail |= down | up << 1;
+    }
+    s->avail = plate.avail;
     return true;
 }
 
@@ -1478,6 +1560,31 @@ void stick_plate_thumb(bool down, int dx, int dy)
     plate.down = down;
     plate.dx = dx;
     plate.dy = dy;
+    plate.turn = false;
+}
+
+int stick_plate_zone(int x, int y)
+{
+    struct overlay_shape s;
+    long dx = x - PLATE_CX, dy = y - PLATE_CY;
+    /* The ring and a little over: a thumb is not a stylus. */
+    long r = PLATE_RAD + PLATE_PAD;
+
+    if (y < LCD_HEIGHT - PLATE_H || !plate_at_rest(&s))
+        return STICK_PLATE_NONE;
+    return dx * dx + dy * dy <= r * r ? STICK_PLATE_STICK : STICK_PLATE_STRIP;
+}
+
+int stick_plate_angle(int x, int y)
+{
+    long dx = x - PLATE_CX, dy = y - PLATE_CY;
+
+    plate.dx = dx;
+    plate.dy = dy;
+    plate.turn = true;
+    if (dx * dx + dy * dy < (long)(PLATE_RAD / 3) * (PLATE_RAD / 3))
+        return -1;
+    return stick_atan2_deg64(dx, dy);
 }
 
 void stick_draw_overlay(void)

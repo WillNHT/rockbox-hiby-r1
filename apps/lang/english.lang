@@ -21408,3 +21408,71 @@
     *: "Not enough listening history yet"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_STICK_LIST_SCROLL
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "List Scrolling"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "List Scrolling"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "List Scrolling"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_SCROLL_NATURAL
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Natural"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Natural"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Natural"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_SCROLL_INVERTED
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Inverted"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Inverted"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Inverted"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STICK_SCROLL_DIAL
+  desc: in Settings -> General -> Display -> Touchscreen Settings -> Stick
+  user: core
+  <source>
+    *: none
+    touchscreen: "Dial"
+  </source>
+  <dest>
+    *: none
+    touchscreen: "Dial"
+  </dest>
+  <voice>
+    *: none
+    touchscreen: "Dial"
+  </voice>
+</phrase>

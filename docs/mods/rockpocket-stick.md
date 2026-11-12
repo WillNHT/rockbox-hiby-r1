@@ -20,6 +20,7 @@ before this feature existed.
 |---|---|
 | **Touch Navigation** | `Classic` (default), `Stick`, or `Both` |
 | **Arm Zone** | Where a press is allowed to start a gesture: whole screen, bottom half, or a thumb plate |
+| **List Scrolling** | What a drag does to a list: `Natural`, `Inverted` or `Dial` — see [The plate](#the-plate) |
 | **Sectors** | 1–8. At 1 the whole disc is a single sector: hold-only, no direction |
 | **Rose Rotation** | Rotates the sector rose. Sector 0 is always centred on this angle |
 | **Arming Window** | 0–400 ms. A window, not a dwell — see below |
@@ -96,9 +97,23 @@ there lights the screen edge instead.
 
 Tapping a list row does nothing in this scheme, and it is the first thing a
 phone user tries. The plate answers it all the time: the stick takes the
-middle half of the strip, a little above centre, and `scroll up`,
-`scroll down`, `go back` and `open` sit around it in grey on the side each
-one is pushed to, the one the thumb is pushing lit. A sideways drag also carries the selected
+middle half of the strip, a little above centre, and a label with an arrow
+sits in grey on each side that does something — `scroll up`, `scroll down`,
+`previous`, `next` — the one the thumb is pushing lit. A label the list
+cannot act on is left out: no `previous` on the main menu, no `scroll up`
+on the first row.
+
+A press on the plate drives the list the way a press on its rows does, and
+a tap on the stick itself goes to the now-playing screen. *List Scrolling*
+(Settings → Stick) picks what a drag means:
+
+| Setting | Drag |
+| --- | --- |
+| **Natural** | the rows follow the thumb: up brings the next rows |
+| **Inverted** | the selection follows the thumb: down is down the list |
+| **Dial** | round the stick, in the strip outside the ring: clockwise is down, a row per *Degrees per Detent*; up and down do nothing |
+
+A sideways drag also carries the selected
 row with it, up to the distance the release needs.
 
 The strip's height is `PLATE_H` in `apps/stick_glue.c`; the Snappy `.sbs`
