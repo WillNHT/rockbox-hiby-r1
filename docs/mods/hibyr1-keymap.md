@@ -10,7 +10,7 @@ navigates a list or a menu - the stick and the touchscreen do that.
 | | hold 0.5 s | Lock / unlock the touchscreen, on release |
 | | hold 2 s | Screen off, on release; any press wakes it |
 | | hold 4 s | Shut down |
-| **Vol Up / Vol Down** | tap | One volume step |
+| **Vol Up / Vol Down** | tap | Four volume steps (2 dB) |
 | | hold | Continuous volume change |
 | **Next** | hold | Previous track |
 | **Play** | hold | Next track |

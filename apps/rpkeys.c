@@ -21,7 +21,7 @@
  *            hold 0.5 s     lock / unlock the touchscreen, on release
  *            hold 2 s       screen off, on release; a press wakes it
  *            hold 4 s       shut down
- *   VOL+/-   tap            one step
+ *   VOL+/-   tap            four steps, 2 dB
  *            hold           continuous, linear in the volume value
  *   Next key hold           previous track
  *   Play key hold           next track
@@ -115,6 +115,10 @@
 #define VOL_REPEAT_TICKS     (HZ / 20)
 /* How long a press waits before it starts repeating. */
 #define VOL_REPEAT_DELAY     (HZ / 4)
+/* A tap is this many steps, 2 dB: one step, half a dB, could hardly be
+ * heard, and the key wanted a dozen presses to do anything. The hold stays
+ * a step at a time, so it still lands on any value. */
+#define VOL_TAP_STEPS        4
 
 /* One POWER press, from going down to the let-go. */
 static enum {
@@ -783,9 +787,9 @@ static bool handle_volume(int button, bool repeat, bool release)
 
     if (!repeat)
     {
-        /* The tap: exactly one step, and the repeat below is timed from
-         * here so a hold does not double-count it. */
-        volume_step(steps);
+        /* The tap, and the repeat below is timed from here so a hold does
+         * not double-count it. */
+        volume_step(steps * VOL_TAP_STEPS);
         vol_next_tick = current_tick + VOL_REPEAT_DELAY;
         return true;
     }

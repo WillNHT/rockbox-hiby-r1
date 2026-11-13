@@ -1070,10 +1070,11 @@ long gui_wps_show(void)
 
             case ACTION_WPS_VOLUP: /* fall through */
             case ACTION_WPS_VOLDOWN:
+                /* the stick's dial: a detent is 1 dB, a step was too little */
                 if (button == ACTION_WPS_VOLUP)
-                    adjust_volume(1);
+                    adjust_volume(2);
                 else
-                    adjust_volume(-1);
+                    adjust_volume(-2);
 
                 setvol();
                 FOR_NB_SCREENS(i)
