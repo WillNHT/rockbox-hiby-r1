@@ -58,6 +58,7 @@
 #include "root_menu.h"
 #include "settings.h"
 #include "splash.h"
+#include "yesno.h"
 #include "string-extra.h"
 #include "tree.h"
 #include "filetypes.h"
@@ -406,6 +407,23 @@ static int main_menu_title_screen(void)
     settings_save();
     return 0;
 }
+
+/* The menu as a fresh install has it: order, hidden rows and row names.
+ * The title is its own setting and is left alone. */
+static int main_menu_reset_screen(void)
+{
+    if (!yesno_pop(ID2P(LANG_ARE_YOU_SURE)))
+        return 0;
+
+    root_menu_set_default(&global_settings.root_menu_customized, NULL);
+    root_menu_names_set_default(&global_settings.root_menu_renamed, NULL);
+    settings_save();
+    splash(HZ, ID2P(LANG_RESET_DONE_CLEAR));
+    return 0;
+}
+
+MENUITEM_FUNCTION(main_menu_reset_item, 0, ID2P(LANG_MAIN_MENU_RESET),
+                  main_menu_reset_screen, NULL, Icon_NOICON);
 
 MENUITEM_FUNCTION(main_menu_title_item, 0, ID2P(LANG_MAIN_MENU_TITLE),
                   main_menu_title_screen, NULL, Icon_Rockbox);

@@ -73,6 +73,7 @@ extern const struct menu_item_ex
         hiby_wifi_root_item,        /* hiby_bluetooth_menu.c */
 #endif
         main_menu_layout_item,      /* main_menu_layout.c */
+        main_menu_reset_item,       /* main_menu_layout.c */
         main_menu_title_item,       /* main_menu_layout.c */
 #ifdef HAVE_VIDEO
         video_settings_menu,        /* video_menu.c     */

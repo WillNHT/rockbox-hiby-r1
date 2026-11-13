@@ -862,6 +862,7 @@ MAKE_MENU(controls_menu, ID2P(LANG_CONTROLS), 0, Icon_Menu_setting,
 #endif
           &main_menu_layout_item,
           &main_menu_title_item,
+          &main_menu_reset_item,
 #ifndef HAS_BUTTON_HOLD
           &sel_softlock,
 #endif
