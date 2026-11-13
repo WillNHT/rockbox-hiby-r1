@@ -562,22 +562,24 @@ static inline void bd_gesture_reset(void) { }
  * files do); where the room is not there - the WPS, a plugin, another
  * theme - there is no plate and a gesture gets the edge lights instead.
  *
- * Seven twentieths of the panel: a tenth was too small a target for a
- * thumb. Change it here and in the SBS files together. The stick itself is
- * half the strip's height, in the middle of it, and the room around it
- * says what each direction does. */
-#define PLATE_H   (LCD_HEIGHT * 7 / 20)
-#define PLATE_RAD (PLATE_H / 4)
+ * Seven twentieths of the panel and a tenth again: a tenth was too small a
+ * target for a thumb. Change it here and in the SBS files together. The
+ * stick and its labels keep to the bottom seven twentieths, the stick half
+ * that height, in the middle of it, and the room around it says what each
+ * direction does. */
+#define PLATE_STICK_H (LCD_HEIGHT * 7 / 20)
+#define PLATE_H   (PLATE_STICK_H * 11 / 10)
+#define PLATE_RAD (PLATE_STICK_H / 4)
 /* The glass runs on a little below the panel, so dead centre looks low. */
 #define PLATE_LIFT 16
 #define PLATE_CX  (LCD_WIDTH / 2)
-#define PLATE_CY  (LCD_HEIGHT - PLATE_H / 2 - PLATE_LIFT)
+#define PLATE_CY  (LCD_HEIGHT - PLATE_STICK_H / 2 - PLATE_LIFT)
 #define PLATE_PAD  8
 /* Left bare between the last row and the strip, out of the strip's own
  * height: the theme's room stays PLATE_H. */
 #define PLATE_GAP  8
 /* How long the cap takes to settle after the thumb lets go. */
-#define PLATE_BOUNCE (HZ / 4)
+#define PLATE_BOUNCE (HZ / 5)
 
 /* What the lists tell the plate. They run their own drag (see
  * gui_synclist_do_touchscreen) and the engine never sees it, so the cap
@@ -702,7 +704,7 @@ static void paint_plate(const struct overlay_shape *s)
     int cx = PLATE_CX;
     int cy = PLATE_CY;
     int rad = PLATE_RAD;
-    int capr = rad * 3 / 8;
+    int capr = rad * 5 / 12;
     int travel = rad - capr;
     int reach = s->R > 0 ? s->R : 1;
     unsigned fg = global_settings.fg_color;
@@ -714,6 +716,7 @@ static void paint_plate(const struct overlay_shape *s)
     int dy = s->y - s->oy;
     int lit = -1;
     int labels;
+    bool full;
     int capx, capy;
     long d2;
 
@@ -728,12 +731,16 @@ static void paint_plate(const struct overlay_shape *s)
         lit = 2 + (dx > 0);
     if (lit >= 0 && !(s->avail & (1 << lit)))
         lit = -1;
-    labels = (lit + 1) | s->avail << 4 | s->scroll << 8;
+    labels = (lit + 1) | s->scroll << 8;
 
     /* The cap goes where the thumb has pushed to, scaled so that full
      * travel puts its edge exactly on the ring, and no further. */
     capx = (dx * travel) / reach;
     capy = (dy * travel) / reach;
+    /* A thumb scrolling goes up at a slant, not straight: the cap leans
+     * toward the vertical the nearer the push is to it. For the eye only. */
+    if (!s->turning && abs(capy) > abs(capx))
+        capx = capx * abs(capx) / abs(capy);
     d2 = (long)capx * capx + (long)capy * capy;
     if (d2 > (long)travel * travel)
     {
@@ -756,18 +763,13 @@ static void paint_plate(const struct overlay_shape *s)
                           (canvas_px)fg, 120);
 #endif
 
-    /* A label lighting, going out or changing takes the strip with it:
-     * the text is blended in, so only fresh ground takes it off again. */
-    if (!plate.painted || labels != plate.labels)
+    /* The strip goes down once. After that the stick's own square is all
+     * that is repainted for a cap that has moved, and a label lighting or
+     * going out takes fresh ground under itself alone: the text is blended
+     * in, so only that takes it off again. */
+    full = !plate.painted || (labels ^ plate.labels) >> 8;
+    if (full)
     {
-        /* What each direction does to the list: the rows follow the thumb
-         * unless the scrolling is inverted, and a dial has one label for
-         * both ways. The arrow points the way the selection goes. */
-        static const char * const scroll[2] = { "scroll up", "scroll down" };
-        bool inv = s->scroll == STICK_SCROLL_INVERTED;
-        int gap = cy - rad - top;
-        int i, w, h;
-
         /* Saved before a single pixel of it is drawn - see bd_capture(). */
         bd_capture(BD_MAIN, 0, top, LCD_WIDTH, LCD_HEIGHT - top);
         dirty_add(0, top, LCD_WIDTH - 1, LCD_HEIGHT - 1);
@@ -775,11 +777,27 @@ static void paint_plate(const struct overlay_shape *s)
         plate_ground(0, top, LCD_WIDTH, LCD_HEIGHT - top, ground, grain);
         lcd_set_foreground(fg);
         lcd_hline(0, LCD_WIDTH - 1, top);
+    }
+    else
+    {
+        dirty_add(cx - rad - 1, cy - rad - 1, cx + rad + 1, cy + rad + 1);
+        plate_ground(cx - rad - 1, cy - rad - 1, box, box, ground, grain);
+    }
+
+    if (full || labels != plate.labels)
+    {
+        /* What each direction does to the list: the rows follow the thumb
+         * unless the scrolling is inverted, and a dial has one label for
+         * both ways. The arrow points the way the selection goes. */
+        static const char * const scroll[2] = { "scroll up", "scroll down" };
+        bool inv = s->scroll == STICK_SCROLL_INVERTED;
+        int was = (plate.labels & 0xf) - 1;
+        int gap = cy - rad - (LCD_HEIGHT - PLATE_STICK_H + PLATE_GAP);
+        int i, w, h;
 
         /* Greyed, the one the thumb is on lit - which one the list cannot
          * act on from here never is. Foreground only: solid text would
          * paint its box in the layer's key and cut a hole in the ground. */
-        lcd_set_drawmode(DRMODE_FG);
         for (i = 0; i < 4; i++)
         {
             const char *text = i == 2 ? "previous" : i == 3 ? "next" :
@@ -790,12 +808,13 @@ static void paint_plate(const struct overlay_shape *s)
             int aw = arrow < 0 ? 0 : PLATE_ARROW * 2 + 7;
             int x, y;
 
+            if (!full && (i == lit) == (i == was))
+                continue;
             lcd_getstringsize(text, &w, &h);
-            lcd_set_foreground(i == lit ? fg : dim);
             if (i < 2)
             {
                 x = cx - (w + aw) / 2;
-                y = (i ? cy + rad : top) + (gap - h) / 2;
+                y = (i ? cy + rad : cy - rad - gap) + (gap - h) / 2;
             }
             else
             {
@@ -803,26 +822,24 @@ static void paint_plate(const struct overlay_shape *s)
                            : cx + rad + PLATE_PAD * 3;
                 y = cy - h / 2;
             }
+            if (!full)
+            {
+                dirty_add(x, y, x + w + aw - 1, y + h - 1);
+                plate_ground(x, y, w + aw, h, ground, grain);
+            }
+            lcd_set_drawmode(DRMODE_FG);
+            lcd_set_foreground(i == lit ? fg : dim);
             /* The arrow leads, except the one that points on. */
             if (arrow >= 0)
                 plate_arrow(i == 3 ? x + w + aw - PLATE_ARROW - 1
                                    : x + PLATE_ARROW, y + h / 2, arrow);
             lcd_putsxy(i == 3 ? x : x + aw, y, text);
+            lcd_set_drawmode(DRMODE_SOLID);
         }
-        lcd_set_foreground(fg);
         plate.labels = labels;
-        lcd_set_drawmode(DRMODE_SOLID);
-        plate.painted = true;
     }
-    else
-    {
-        /* Only the cap has moved. The strip and its labels are still in
-         * the layer, so the stick's own square is all that is repainted
-         * and all that is pushed. */
-        dirty_add(cx - rad - 1, cy - rad - 1, cx + rad + 1, cy + rad + 1);
-        plate_ground(cx - rad - 1, cy - rad - 1, box, box, ground, grain);
-        lcd_set_foreground(fg);
-    }
+    plate.painted = true;
+    lcd_set_foreground(fg);
 
     plate_disc(cx, cy, rad - 2, rad, fg, ground);
     plate_disc(capx, capy, 0, capr, fg, ground);
@@ -1565,8 +1582,9 @@ static bool plate_at_rest(struct overlay_shape *s)
     else if (plate.bouncing &&
              TIME_BEFORE(current_tick, plate.bounce_tick + PLATE_BOUNCE))
     {
-        /* A spring for the eye only: past the centre, back, and still. */
-        static const signed char spring[] = { 9, 3, -3, -5, -3, 1, 2, 0 };
+        /* A spring for the eye only: past the centre and back, a few times. */
+        static const signed char spring[] =
+            { 6, -1, -4, 0, 3, 0, -2, 0, 1, 0 };
         int f = spring[(current_tick - plate.bounce_tick) *
                        (int)sizeof(spring) / PLATE_BOUNCE];
 

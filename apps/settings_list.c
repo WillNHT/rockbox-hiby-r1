@@ -2880,7 +2880,7 @@ const struct settings_list settings[] = {
                 "fallback font", "16-GNU-Unifont", FONT_DIR "/", ".fnt"),
    OFFON_SETTING(0, sound_duck, LANG_SOUND_DUCK, true,
                  "audio prioritization", NULL),
-   INT_SETTING(0, sound_duck_click, LANG_SOUND_DUCK_CLICK, 25,
+   INT_SETTING(0, sound_duck_click, LANG_SOUND_DUCK_CLICK, 0,
                "audio prioritization click", UNIT_PERCENT, 0, 90, 5,
                NULL, NULL, NULL),
    INT_SETTING(0, sound_duck_alert, LANG_SOUND_DUCK_ALERT, 45,
