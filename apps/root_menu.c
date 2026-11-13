@@ -518,12 +518,12 @@ MENUITEM_RETURNVALUE(pseudo_radio_item, ID2P(LANG_PSEUDO_RADIO),
                         GO_TO_PSEUDO_RADIO, NULL, Icon_Radio_screen);
 
 MENUITEM_RETURNVALUE(foryou_item, ID2P(LANG_FORYOU),
-                        GO_TO_FORYOU, NULL, Icon_Playlist);
+                        GO_TO_FORYOU, NULL, Icon_Heart);
 
 MENUITEM_RETURNVALUE(file_browser, ID2P(LANG_DIR_BROWSER), GO_TO_FILEBROWSER,
                         NULL, Icon_file_view_menu);
 #ifdef HAVE_TAGCACHE
-MENUITEM_RETURNVALUE(db_browser, ID2P(LANG_TAGCACHE), GO_TO_DBBROWSER,
+MENUITEM_RETURNVALUE(db_browser, ID2P(LANG_MUSIC), GO_TO_DBBROWSER,
                         NULL, Icon_Audio);
 #endif
 MENUITEM_RETURNVALUE(rocks_browser, ID2P(LANG_PLUGINS), GO_TO_BROWSEPLUGINS,
@@ -574,12 +574,14 @@ void root_menu_apply_title(void)
 
 static struct menu_table menu_table[] = {
     /* Order here represents the default ordering */
-    { "bookmarks", &bookmarks, true },
-    { "files", &file_browser, true },
+    { "wps", &wps_item },
+    { "for you", &foryou_item },
 #ifdef HAVE_TAGCACHE
     { "database", &db_browser },
 #endif
-    { "wps", &wps_item },
+    { "playlists", &playlists },
+    { "audiobooks", &audiobooks_item },
+    { "pseudo radio", &pseudo_radio_item },
     { "settings", &menu_ },
 #ifdef HAVE_RECORDING
     { "recording", &rec },
@@ -587,7 +589,8 @@ static struct menu_table menu_table[] = {
 #if CONFIG_TUNER
     { "radio", &fm },
 #endif
-    { "playlists", &playlists },
+    { "bookmarks", &bookmarks, true },
+    { "files", &file_browser, true },
 #ifdef HAVE_HIBY_BLUETOOTH
     { "bluetooth", &hiby_bluetooth_root_item, true },
 #endif
@@ -598,9 +601,6 @@ static struct menu_table menu_table[] = {
     { "system_menu", &system_menu_, true },
     { "shortcuts", &shortcut_menu, true },
     { "custom folder", &custom_folder_item, true },
-    { "audiobooks", &audiobooks_item },
-    { "pseudo radio", &pseudo_radio_item },
-    { "for you", &foryou_item },
 };
 #define MAX_MENU_ITEMS (sizeof(menu_table) / sizeof(struct menu_table))
 static struct menu_item_ex *root_menu__[MAX_MENU_ITEMS];
