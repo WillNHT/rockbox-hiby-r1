@@ -41,7 +41,7 @@
 # its own (title_p; LOCKED has that place while the hold is on), and main_p
 # starts that much higher.
 %?mv(1.5)<%Vd(vol)|%?and(%if(%St(touchscreen mode),=,stick),%if(%St(stick overlay),=,on),%if(%St(stick overlay style),=,plate))<%?Lt<%?mh<%Vd(status)|%Vd(title_p)>%Vd(rule_p)|%Vd(status)%Vd(no_title)>|%Vd(status)%?Lt<%Vd(title)|%Vd(no_title)>>>
-# The bottom 280 px are the joystick plate's (PLATE_H in apps/stick_glue.c),
+# The bottom 308 px are the joystick plate's (PLATE_H in apps/stick_glue.c),
 # but only while the settings would draw one: main_p ends right above it and
 # there is no now-playing footer, the plain viewports use the whole panel.
 %?if(%cs, =, 21)<%Vd(USB)%VI(USB)|%?and(%if(%St(touchscreen mode),=,stick),%if(%St(stick overlay),=,on),%if(%St(stick overlay style),=,plate))<%VI(main_p)|%?mp<%VI(main_l)%Vd(main_l)|%VI(main)%Vd(main)>>>
@@ -104,7 +104,7 @@
 # ---------
 %Vi(main,30,152,-30,-104,-)
 %Vi(main_l,30,152,-30,-56,-)
-%Vi(main_p,30,104,-30,-280,-)
+%Vi(main_p,30,104,-30,-308,-)
 %Vi(USB,30,152,2,2,-)
 #
 %Vl(USB,30,154,-30,-136,5)
