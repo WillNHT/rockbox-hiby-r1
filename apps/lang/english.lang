@@ -21476,3 +21476,17 @@
     touchscreen: "Dial"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_MUSIC
+  desc: main menu: the music library (the database browser)
+  user: core
+  <source>
+    *: "Music"
+  </source>
+  <dest>
+    *: "Music"
+  </dest>
+  <voice>
+    *: "Music"
+  </voice>
+</phrase>

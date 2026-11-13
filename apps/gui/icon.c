@@ -147,6 +147,33 @@ void screen_put_iconxy(struct screen * display,
         return;
     }
 
+    if (icon == Icon_Heart)
+    {
+        /* A solid heart: two round lobes over a point, a row at a time. */
+        int r  = (MIN(width, height) - 2 * (height / 8)) / 4;
+        int cx = xpos + width / 2, cy = ypos + (height - 7 * r / 2) / 2 + r;
+        int dx = 0, dy;
+
+        if (is_rtl)
+            cx = display->getwidth() - cx;
+        if (r < 2)
+            return;
+
+        for (dy = -r; dy < 0; dy++)
+        {
+            while ((dx + 1) * (dx + 1) + dy * dy <= r * r)
+                dx++;
+            display->hline(cx - r - dx, cx - r + dx, cy + dy);
+            display->hline(cx + r - dx, cx + r + dx, cy + dy);
+        }
+        for (dy = 0; dy <= 5 * r / 2; dy++)
+        {
+            dx = 2 * r - (4 * dy + 2) / 5;
+            display->hline(cx - dx, cx + dx, cy + dy);
+        }
+        return;
+    }
+
     if (icon <= Icon_NOICON)
     {
         if (is_rtl)

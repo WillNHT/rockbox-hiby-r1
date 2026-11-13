@@ -1354,7 +1354,7 @@ MIX(skips_item, LANG_FORYOU_SKIPS, skips);
 MENUITEM_SETTING(mix_size_item, &global_settings.foryou_mix_size, NULL);
 MENUITEM_SETTING(age_item, &global_settings.foryou_age, NULL);
 
-MAKE_MENU(foryou_menu, ID2P(LANG_FORYOU), NULL, Icon_Playlist,
+MAKE_MENU(foryou_menu, ID2P(LANG_FORYOU), NULL, Icon_Heart,
           &foryou_item, &daily_item, &similar_item, &rediscover_item,
           &forgotten_item, &shuffle_item, &mood_menu, &albums_item,
           &years_ago_item, &charts_menu, &recap_item, &wrapped_item,

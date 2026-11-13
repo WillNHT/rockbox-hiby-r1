@@ -37,6 +37,7 @@ enum themable_icons {
      * no cell, and a book made of rectangles inherits the list's own
      * foreground colour and is the right size at any icon height.
      * The radio needs none of this: Icon_Radio_screen is in every set. */
+    Icon_Heart = -3, /* For You; drawn for the same reason as the book */
     Icon_Book = -2,
     NOICON = -1,
     Icon_NOICON = NOICON, /* Dont put this in a .bmp */
