@@ -19,7 +19,7 @@ and the channel comes back a fraction of a second later.
 | Setting | Default | What it does |
 | --- | --- | --- |
 | Audio Prioritisation | On | Master switch. Off means the music is never touched. |
-| Click Depth | 25% | Keyclicks and the list edge beeps. |
+| Click Depth | 0% | Keyclicks and the list edge beeps. Off unless raised: a click on every press pumped the music. |
 | Alert Depth | 45% | Track skip, and the end of a playlist. |
 | Cue Depth | 70% | Lock, unlock and the stick arming run. |
 
