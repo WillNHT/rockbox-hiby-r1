@@ -90,6 +90,10 @@ bool stick_dial_armed(void);
  * the thumb is relative to its press, so the plate's cap can follow it. */
 void stick_plate_thumb(bool down, int dx, int dy);
 
+/* Draws the next frame of the cap springing back after a release. True
+ * while there are more to come. */
+bool stick_plate_settle(void);
+
 /* Where on the plate a point is, so the lists can take a press there: on
  * the stick itself, elsewhere in the strip, or not on a plate at all. */
 enum { STICK_PLATE_NONE = 0, STICK_PLATE_STRIP, STICK_PLATE_STICK };
