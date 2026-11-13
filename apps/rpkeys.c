@@ -23,10 +23,8 @@
  *            hold 4 s       shut down
  *   VOL+/-   tap            one step
  *            hold           continuous, linear in the volume value
- *   Next key press          back five seconds, at once
- *            hold           previous track
- *   Play key press          forward five seconds, at once
- *            hold           next track
+ *   Next key hold           previous track
+ *   Play key hold           next track
  *
  * The R1 has no prev key, so the two transport keys are prev and next,
  * and play/pause moves to the stick's centre tap. They are that way round
@@ -117,9 +115,6 @@
 #define VOL_REPEAT_TICKS     (HZ / 20)
 /* How long a press waits before it starts repeating. */
 #define VOL_REPEAT_DELAY     (HZ / 4)
-
-/* Seeking. */
-#define SEEK_STEP_MS         5000
 
 /* One POWER press, from going down to the let-go. */
 static enum {
@@ -607,52 +602,6 @@ bool rpkeys_countdown_active(void)
 
 /* ------------------------------------------------------------- the screen */
 
-/* --------------------------------------------------------------- playback */
-
-/* Two taps in quick succession have to add up, and reading id3->elapsed
- * every time is what stopped them. The reported position only advances
- * when the codec gets round to updating it, so a second tap arriving
- * before that read the same elapsed as the first and seeked to the same
- * place - the skip that "sometimes works and sometimes does not". Chain
- * from the previous target instead, for as long as the burst lasts. */
-#define SEEK_CHAIN_TICKS     (2 * HZ)
-
-static long seek_target_ms;
-static long seek_target_tick;
-
-static void seek_forget(void)
-{
-    seek_target_tick = 0;
-}
-
-static void seek_by(long ms)
-{
-    struct mp3entry *id3;
-    long pos;
-
-    if (!(audio_status() & AUDIO_STATUS_PLAY))
-        return;
-
-    id3 = audio_current_track();
-    if (!id3)
-        return;
-
-    if (seek_target_tick &&
-        TIME_BEFORE(current_tick, seek_target_tick + SEEK_CHAIN_TICKS))
-        pos = seek_target_ms + ms;
-    else
-        pos = (long)id3->elapsed + ms;
-
-    if (pos < 0)
-        pos = 0;
-    if (id3->length > 0 && pos > (long)id3->length)
-        pos = id3->length;
-
-    seek_target_ms = pos;
-    seek_target_tick = current_tick;
-    audio_ff_rewind(pos);
-}
-
 /* -------------------------------------------------------------- the keys */
 
 static bool handle_power(int held, bool repeat, bool release, int *action)
@@ -849,19 +798,13 @@ static bool handle_volume(int button, bool repeat, bool release)
     return true;
 }
 
-/* next/prev: the press seeks, the hold changes track.
+/* next/prev: the hold changes track; a press on its own does nothing.
  *
  * With Hold Prev/Next = Continuous Skip the hold keeps changing track: one
  * track per hold_skip_delay seconds for as long as the key stays down, the
  * one in progress playing on in between. With Seek it is the single
  * change. Either way the first change comes after SKIP_HOLD_TICKS: waiting
- * the whole hold_skip_delay before the first one made a hold feel dead.
- *
- * The seek happens on the press, not on the release. Waiting for the finger
- * to come up so the two could be told apart put a visible delay in front of
- * every skip - the one thing a transport key must not have. Holding still
- * changes the track when it crosses the threshold; the five seconds it
- * already seeked are simply part of the track being left behind. */
+ * the whole hold_skip_delay before the first one made a hold feel dead. */
 static struct
 {
     long down_tick;
@@ -890,15 +833,14 @@ static bool handle_skip(int idx, int dir, bool repeat, bool release)
         skipper[idx].down_tick = now;
         skipper[idx].consumed = false;
         skipper[idx].skipped = false;
-        /* the sender's tracks: AVRCP has no seek worth the name */
+        /* the sender's tracks change on the press: nothing to tell a
+         * hold from there */
         if (keys_to_sender())
         {
             skipper[idx].consumed = true;
             cue();
             bt_rx_skip(dir);
         }
-        else
-            seek_by(dir * SEEK_STEP_MS);
         return true;
     }
 
@@ -916,7 +858,6 @@ static bool handle_skip(int idx, int dir, bool repeat, bool release)
         else
             skipper[idx].consumed = true;
         cue();
-        seek_forget();          /* a new track: nothing to chain from */
         /* tuned in to the radio: the dial moves, not the track */
         if (pradio_skip(dir))
             ;
@@ -963,7 +904,6 @@ bool rpkeys_handle(int button, int *action)
         if (!repeat && !release)
         {
             int dir = (bare & BUTTON_NEXT) ? 1 : -1;
-            seek_forget();
             if (keys_to_sender())
                 bt_rx_skip(dir);
             else if (pradio_skip(dir))

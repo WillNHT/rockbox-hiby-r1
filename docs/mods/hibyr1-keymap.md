@@ -12,10 +12,8 @@ navigates a list or a menu - the stick and the touchscreen do that.
 | | hold 4 s | Shut down |
 | **Vol Up / Vol Down** | tap | One volume step |
 | | hold | Continuous volume change |
-| **Next** | press | Back five seconds |
-| | hold | Previous track |
-| **Play** | press | Forward five seconds |
-| | hold | Next track |
+| **Next** | hold | Previous track |
+| **Play** | hold | Next track |
 | **Power** + **Vol Up** | | Screenshot, on any screen, locked or not |
 
 The R1 has no previous key, so the two transport keys are previous and next
