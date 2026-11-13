@@ -1374,6 +1374,23 @@ static void *bt_worker(void *arg)
         if (bt.screen && bt_power == BT_ON && !scan && (scan = bt_scan_open()))
         {
             scan_rx = bt_rx_on;
+#ifndef SIMULATOR
+            /* An iPhone lists only what says it is audio, and BlueZ stops
+             * being visible after three minutes unless told otherwise. The
+             * class goes in through btmgmt, which the kernel keeps; some
+             * builds of it wait on a terminal, so it gets a second, and
+             * hciconfig, which the next change of profile undoes, is the
+             * fallback. 4/20: audio, a loudspeaker. */
+            if (scan_rx)
+                bt_cmd("bluetoothctl discoverable-timeout 0 2>&1; "
+                       "bluetoothctl discoverable on 2>&1; "
+                       "hciconfig hci0 class 2>&1 | grep -q 'Class: 0x..04' || { "
+                       "btmgmt class 4 20 </dev/null >/dev/null 2>&1 & p=$!; "
+                       "sleep 1; kill $p 2>/dev/null; "
+                       "hciconfig hci0 class 2>&1 | grep -q 'Class: 0x..04' || "
+                       "hciconfig hci0 class 0x240414 2>&1; }; "
+                       "hciconfig hci0 class 2>&1", NULL);
+#endif
             fputs(scan_rx ? "agent NoInputNoOutput\ndefault-agent\npairable on\n"
                             "discoverable on\nscan on\n" : "scan on\n", scan);
             fflush(scan);
