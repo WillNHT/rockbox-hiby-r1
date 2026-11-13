@@ -98,10 +98,11 @@ there lights the screen edge instead.
 Tapping a list row does nothing in this scheme, and it is the first thing a
 phone user tries. The plate answers it all the time: the stick takes the
 middle half of the strip, a little above centre, and a label with an arrow
-sits in grey on each side that does something — `scroll up`, `scroll down`,
-`previous`, `next` — the one the thumb is pushing lit. A label the list
-cannot act on is left out: no `previous` on the main menu, no `scroll up`
-on the first row.
+sits in grey on each side — `scroll up`, `scroll down`, `previous`,
+`next` — the one the thumb is pushing lit. A label the list cannot act on
+stays grey: `previous` on the main menu, `scroll up` on the first row. Let
+go and the cap springs back to the centre. The plate is hidden while the
+touch lock is on and on the USB screen.
 
 A press on the plate drives the list the way a press on its rows does, and
 a tap on the stick itself goes to the now-playing screen. *List Scrolling*
@@ -124,7 +125,8 @@ to the plate, and put the title in the status row, left of the icons, so
 the list also starts a row higher; otherwise the list and footer use the whole panel. The ring
 and cap are anti-aliased into the plate's ground along their edges only,
 and a moving cap repaints the stick's own square rather than the strip. The
-strip's ground carries a faint dot grain.
+strip's ground carries a dot grain, and its top 8 px (`PLATE_GAP`) are left
+bare as a margin under the list.
 
 ---
 

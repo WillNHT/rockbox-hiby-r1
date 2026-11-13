@@ -573,6 +573,11 @@ static inline void bd_gesture_reset(void) { }
 #define PLATE_CX  (LCD_WIDTH / 2)
 #define PLATE_CY  (LCD_HEIGHT - PLATE_H / 2 - PLATE_LIFT)
 #define PLATE_PAD  8
+/* Left bare between the last row and the strip, out of the strip's own
+ * height: the theme's room stays PLATE_H. */
+#define PLATE_GAP  8
+/* How long the cap takes to settle after the thumb lets go. */
+#define PLATE_BOUNCE (HZ / 4)
 
 /* What the lists tell the plate. They run their own drag (see
  * gui_synclist_do_touchscreen) and the engine never sees it, so the cap
@@ -585,6 +590,9 @@ static struct
     bool painted;       /* the strip and its labels are in the layer */
     int  labels;        /* which labels are in it, and which is lit */
     int  avail;         /* the last a list was there to be asked */
+    bool bouncing;      /* let go, and the cap is on its way back */
+    long bounce_tick;   /* when */
+    int  bx, by;        /* where the cap was let go, in travel units */
 } plate;
 
 static bool plate_has_room(void)
@@ -690,7 +698,7 @@ static void plate_arrow(int x, int y, int dir)
 
 static void paint_plate(const struct overlay_shape *s)
 {
-    int top = LCD_HEIGHT - PLATE_H;
+    int top = LCD_HEIGHT - PLATE_H + PLATE_GAP;
     int cx = PLATE_CX;
     int cy = PLATE_CY;
     int rad = PLATE_RAD;
@@ -743,7 +751,7 @@ static void paint_plate(const struct overlay_shape *s)
     ground = canvas_blend_px((canvas_px)global_settings.bg_color,
                              (canvas_px)fg, 24);
     grain = canvas_blend_px((canvas_px)global_settings.bg_color,
-                            (canvas_px)fg, 56);
+                            (canvas_px)fg, 96);
     dim = canvas_blend_px((canvas_px)global_settings.bg_color,
                           (canvas_px)fg, 120);
 #endif
@@ -761,15 +769,15 @@ static void paint_plate(const struct overlay_shape *s)
         int i, w, h;
 
         /* Saved before a single pixel of it is drawn - see bd_capture(). */
-        bd_capture(BD_MAIN, 0, top, LCD_WIDTH, PLATE_H);
+        bd_capture(BD_MAIN, 0, top, LCD_WIDTH, LCD_HEIGHT - top);
         dirty_add(0, top, LCD_WIDTH - 1, LCD_HEIGHT - 1);
 
-        plate_ground(0, top, LCD_WIDTH, PLATE_H, ground, grain);
+        plate_ground(0, top, LCD_WIDTH, LCD_HEIGHT - top, ground, grain);
         lcd_set_foreground(fg);
         lcd_hline(0, LCD_WIDTH - 1, top);
 
-        /* Greyed, the one the thumb is on lit, and one the list cannot
-         * act on from here left out. Foreground only: solid text would
+        /* Greyed, the one the thumb is on lit - which one the list cannot
+         * act on from here never is. Foreground only: solid text would
          * paint its box in the layer's key and cut a hole in the ground. */
         lcd_set_drawmode(DRMODE_FG);
         for (i = 0; i < 4; i++)
@@ -782,8 +790,6 @@ static void paint_plate(const struct overlay_shape *s)
             int aw = arrow < 0 ? 0 : PLATE_ARROW * 2 + 7;
             int x, y;
 
-            if (!(s->avail & (1 << i)))
-                continue;
             lcd_getstringsize(text, &w, &h);
             lcd_set_foreground(i == lit ? fg : dim);
             if (i < 2)
@@ -1393,6 +1399,8 @@ static void overlay_clear(void)
     request_repaint();
 }
 
+static void plate_let_go(long dx, long dy, int reach);
+
 /* Records where the overlay should be. The drawing itself happens later,
  * from stick_draw_overlay(), because anything drawn from here is painted
  * over the moment the screen underneath redraws in response to whatever
@@ -1400,12 +1408,19 @@ static void overlay_clear(void)
 static void overlay_update(const struct stick_state *st)
 {
     int phase = stick_phase(st);
+    bool was = overlay.want;
 
     overlay.want = global_settings.stick_overlay &&
                    (phase == STICK_PHASE_ARMED || phase == STICK_PHASE_DIAL);
 
     if (!overlay.want)
+    {
+        if (was && overlay.want_s.style == STICK_OVERLAY_PLATE)
+            plate_let_go(overlay.want_s.x - overlay.want_s.ox,
+                         overlay.want_s.y - overlay.want_s.oy,
+                         overlay.want_s.R);
         return;
+    }
 
     overlay.want_s.ox = st->ox;
     overlay.want_s.oy = st->oy;
@@ -1533,6 +1548,10 @@ static bool plate_at_rest(struct overlay_shape *s)
     if (!plate_has_room())
         return false;
 
+    /* Nothing to steer behind the lock or the USB screen. */
+    if (rpkeys_locked() || get_current_activity() == ACTIVITY_USBSCREEN)
+        return false;
+
     memset(s, 0, sizeof(*s));
     s->style = STICK_OVERLAY_PLATE;
     s->R = STICK_DEF_TRAVEL_PX;
@@ -1542,6 +1561,17 @@ static bool plate_at_rest(struct overlay_shape *s)
         s->x = plate.dx;
         s->y = plate.dy;
         s->turning = plate.turn;
+    }
+    else if (plate.bouncing &&
+             TIME_BEFORE(current_tick, plate.bounce_tick + PLATE_BOUNCE))
+    {
+        /* A spring for the eye only: past the centre, back, and still. */
+        static const signed char spring[] = { 9, 3, -3, -5, -3, 1, 2, 0 };
+        int f = spring[(current_tick - plate.bounce_tick) *
+                       (int)sizeof(spring) / PLATE_BOUNCE];
+
+        s->x = plate.bx * f / 16;
+        s->y = plate.by * f / 16;
     }
 
     /* What the list can do from where it is. It is only there to ask
@@ -1566,8 +1596,41 @@ static bool plate_at_rest(struct overlay_shape *s)
     return true;
 }
 
+/* The thumb has let go with the cap at dx, dy of a reach: start it back. */
+static void plate_let_go(long dx, long dy, int reach)
+{
+    long d;
+
+    if (reach <= 0)
+        reach = 1;
+    dx = dx * STICK_DEF_TRAVEL_PX / reach;
+    dy = dy * STICK_DEF_TRAVEL_PX / reach;
+    d = fp_sqrt(dx * dx + dy * dy, 0);
+    if (d > STICK_DEF_TRAVEL_PX)
+    {
+        dx = dx * STICK_DEF_TRAVEL_PX / d;
+        dy = dy * STICK_DEF_TRAVEL_PX / d;
+    }
+    plate.bx = dx;
+    plate.by = dy;
+    plate.bounce_tick = current_tick;
+    plate.bouncing = dx || dy;
+}
+
+bool stick_plate_settle(void)
+{
+    if (!plate.bouncing)
+        return false;
+    plate.bouncing = TIME_BEFORE(current_tick,
+                                 plate.bounce_tick + PLATE_BOUNCE);
+    stick_draw_overlay();
+    return plate.bouncing;
+}
+
 void stick_plate_thumb(bool down, int dx, int dy)
 {
+    if (plate.down && !down)
+        plate_let_go(plate.dx, plate.dy, STICK_DEF_TRAVEL_PX);
     plate.down = down;
     plate.dx = dx;
     plate.dy = dy;
