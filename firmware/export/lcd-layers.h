@@ -143,6 +143,11 @@ void lcd_layers_snapshot(fb_data *dst);
  * screen on the panel, so those are put off. */
 void lcd_present_hold(bool on);
 
+/* Have the next update carry this rectangle too, rather than present it
+ * now; lcd_update_owed() presents it if nothing has. */
+void lcd_update_rect_owe(int x, int y, int width, int height);
+void lcd_update_owed(void);
+
 /* Coverage of a layer or surface pixel, or NULL if px is in neither. */
 unsigned char *lcd_surface_coverage(const fb_data *px);
 
