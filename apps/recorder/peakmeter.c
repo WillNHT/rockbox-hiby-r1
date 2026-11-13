@@ -548,6 +548,57 @@ static void set_trig_status(int new_state)
 
 #endif
 
+#ifdef HAVE_HIBY_LINUX_CODEC
+/* On this player the meter is a visualiser, and one that showed the level
+ * itself sat at its top through a loud master and barely moved for a quiet
+ * one. So the bars show where a peak lies in the window the music has
+ * lately been using, whatever its level: the window's top is the loudest
+ * peak, coming down slowly, and it reaches twice as far below that as the
+ * peaks have averaged, so an average passage sits mid-bar and a compressed
+ * track bounces as far as a dynamic one. In 1/100 dB, as calc_db() counts. */
+#define PM_NORM_FALL    400     /* the top comes down this much a second */
+#define PM_NORM_AVG     (2*HZ)  /* the average is over about this long */
+#define PM_NORM_MIN     800     /* the window is never narrower... */
+#define PM_NORM_MAX     3000    /* ...nor wider */
+#define PM_NORM_SILENT  34      /* -60 dBFS: nothing playing, left alone */
+
+static void pm_normalise(int *left, int *right)
+{
+    static int top, avg;        /* avg in 1/256 of the unit */
+    static long last_tick;
+    int peak = MAX(*left, *right);
+    int db, dt, span, i;
+
+    if (peak < PM_NORM_SILENT)
+        return;
+    db = calc_db(peak);
+    dt = current_tick - last_tick;
+    last_tick = current_tick;
+    if (dt < 0 || dt > HZ / 5)
+        dt = HZ / 5;
+    if (!top)
+        avg = (db - PM_NORM_MIN / 2) * 256;
+    top = MAX(db, top - dt * PM_NORM_FALL / HZ);
+    avg += (db * 256 - avg) * dt / PM_NORM_AVG;
+    span = 2 * (top - avg / 256);
+    span = MIN(MAX(span, PM_NORM_MIN), PM_NORM_MAX);
+
+    for (i = 0; i < 2; i++)
+    {
+        int *ch = i ? right : left;
+        int pos = calc_db(*ch) - (top - span);
+
+        pos = MIN(MAX(pos, 0), span);
+        /* back to a sample the meter's own scale puts at that height */
+        if (pm_use_dbfs)
+            *ch = db_to_sample_bin_search(0, MAX_PEAK,
+                                          pm_db_min + pos * pm_db_range / span);
+        else
+            *ch = peak_meter_range_min + pos * pm_range / span;
+    }
+}
+#endif /* HAVE_HIBY_LINUX_CODEC */
+
 /**
  * Reads peak values from the MAS, and detects clips. The
  * values are stored in pm_max_left pm_max_right for later
@@ -614,6 +665,15 @@ void peak_meter_peek(void)
        many calls of peak_meter_peek the maximum value will be
        stored in pm_max_xxx. This maximum is reset by the
        functions peak_meter_read_x. */
+#ifdef HAVE_HIBY_LINUX_CODEC
+    /* after the clips: those are the real level's */
+    if (pm_playback)
+    {
+        pm_normalise(&left, &right);
+        pm_cur_left = left;
+        pm_cur_right = right;
+    }
+#endif
     pm_max_left = MAX(pm_max_left, left);
     pm_max_right = MAX(pm_max_right, right);
 

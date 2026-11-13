@@ -590,6 +590,7 @@ static struct
     int  dx, dy;
     bool turn;          /* dx, dy are from the stick's centre: a dial */
     bool painted;       /* the strip and its labels are in the layer */
+    bool over;          /* the cap was out past the ring, over the labels */
     int  labels;        /* which labels are in it, and which is lit */
     int  avail;         /* the last a list was there to be asked */
     bool bouncing;      /* let go, and the cap is on its way back */
@@ -674,8 +675,8 @@ static void plate_ground(int x, int y, int w, int h,
     lcd_set_foreground(grain);
     for (gy = y + PLATE_GRAIN - 1 - (y + PLATE_GRAIN - 1) % PLATE_GRAIN;
          gy < y + h; gy += PLATE_GRAIN)
-        for (gx = x + PLATE_GRAIN - 1 - (x + PLATE_GRAIN - 1) % PLATE_GRAIN
-                  + (gy / PLATE_GRAIN % 2) * (PLATE_GRAIN / 2);
+        for (gx = x + ((gy / PLATE_GRAIN % 2) * (PLATE_GRAIN / 2)
+                       + PLATE_GRAIN - x % PLATE_GRAIN) % PLATE_GRAIN;
              gx < x + w; gx += PLATE_GRAIN)
             lcd_drawpixel(gx, gy);
 }
@@ -705,18 +706,20 @@ static void paint_plate(const struct overlay_shape *s)
     int cy = PLATE_CY;
     int rad = PLATE_RAD;
     int capr = rad * 5 / 12;
-    int travel = rad - capr;
+    /* how far the cap goes: its centre to the ring, half of it over */
+    int travel = rad;
+    int out = rad + 1;          /* what a moved cap has to repaint */
     int reach = s->R > 0 ? s->R : 1;
     unsigned fg = global_settings.fg_color;
     unsigned ground = global_settings.bg_color;
     unsigned grain = ground;
     unsigned dim = fg;
-    int box = 2 * rad + 3;
+    int box;
     int dx = s->x - s->ox;
     int dy = s->y - s->oy;
     int lit = -1;
     int labels;
-    bool full;
+    bool full, over;
     int capx, capy;
     long d2;
 
@@ -733,10 +736,10 @@ static void paint_plate(const struct overlay_shape *s)
         lit = -1;
     labels = (lit + 1) | s->scroll << 8;
 
-    /* The cap goes where the thumb has pushed to, scaled so that full
-     * travel puts its edge exactly on the ring, and no further. */
-    capx = (dx * travel) / reach;
-    capy = (dy * travel) / reach;
+    /* The cap goes twice as far as the thumb has pushed, until its centre
+     * is on the ring, and no further. */
+    capx = dx * 2;
+    capy = dy * 2;
     /* A thumb scrolling goes up at a slant, not straight: the cap leans
      * toward the vertical the nearer the push is to it. For the eye only. */
     if (!s->turning && abs(capy) > abs(capx))
@@ -749,6 +752,13 @@ static void paint_plate(const struct overlay_shape *s)
         capx = capx * travel / d;
         capy = capy * travel / d;
     }
+    /* Out past the ring the cap is over the labels, and takes the ground
+     * from under them as it moves: they go back on for as long as it is,
+     * and once more when it has come back in. */
+    over = d2 > (long)(rad - capr) * (rad - capr);
+    if (over || plate.over)
+        out += capr;
+    box = 2 * out + 1;
     capx += cx;
     capy += cy;
 
@@ -780,11 +790,11 @@ static void paint_plate(const struct overlay_shape *s)
     }
     else
     {
-        dirty_add(cx - rad - 1, cy - rad - 1, cx + rad + 1, cy + rad + 1);
-        plate_ground(cx - rad - 1, cy - rad - 1, box, box, ground, grain);
+        dirty_add(cx - out, cy - out, cx + out, cy + out);
+        plate_ground(cx - out, cy - out, box, box, ground, grain);
     }
 
-    if (full || labels != plate.labels)
+    if (full || labels != plate.labels || over || plate.over)
     {
         /* What each direction does to the list: the rows follow the thumb
          * unless the scrolling is inverted, and a dial has one label for
@@ -808,7 +818,7 @@ static void paint_plate(const struct overlay_shape *s)
             int aw = arrow < 0 ? 0 : PLATE_ARROW * 2 + 7;
             int x, y;
 
-            if (!full && (i == lit) == (i == was))
+            if (!full && !over && !plate.over && (i == lit) == (i == was))
                 continue;
             lcd_getstringsize(text, &w, &h);
             if (i < 2)
@@ -838,6 +848,7 @@ static void paint_plate(const struct overlay_shape *s)
         }
         plate.labels = labels;
     }
+    plate.over = over;
     plate.painted = true;
     lcd_set_foreground(fg);
 
@@ -1854,6 +1865,11 @@ static void play_cue(int cue)
     if (!global_settings.keyclick)
         return;
     if (!keyclick_enabled(cue_source(cue)))
+        return;
+    /* On the WPS a gesture is one thing done, and clicks once, when it is:
+     * the click for arming and the one for the direction came before the
+     * commit's, and a drag up to the menu clicked two or three times. */
+    if (on_a_skin() && (cue == STICK_CUE_ARM || cue == STICK_CUE_SECTOR))
         return;
 
     /* One short click for every cue point is the default (spec 7). The

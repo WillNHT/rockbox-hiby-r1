@@ -1140,6 +1140,12 @@ static inline int update_action_last(action_last_t *last, action_cur_t *cur)
     last->tick   = current_tick;
 
     /* Produce keyclick */
+#ifdef HAVE_TOUCHSCREEN
+    /* Not for a key the stick made: the stick has clicked for the gesture
+     * already, and a key with no release in it (MENU, out of the WPS)
+     * clicked a second time here. */
+    if (!cur->stick_made && !cur->stick_queued)
+#endif
     keyclick_click(false, action);
 
     return action;
