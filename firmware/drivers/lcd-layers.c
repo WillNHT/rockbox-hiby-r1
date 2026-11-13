@@ -609,6 +609,10 @@ bool lcd_surface_flatten(void)
 }
 
 static bool present_held, present_owed;
+/* A rectangle waiting for the next update to carry it. Two rectangles
+ * presented in turn cost a double-buffered panel two flips a frame, and
+ * each plane a replay of the box around both. */
+static struct lrect owed;
 static unsigned int present_owner;
 
 static bool present_put_off(void)
@@ -629,6 +633,7 @@ void lcd_update(void)
 #endif
     if (present_put_off())
         return;
+    owed.w = 0;
     lcd_update_base();
 }
 
@@ -640,7 +645,39 @@ void lcd_update_rect(int x, int y, int width, int height)
 #endif
     if (present_put_off())
         return;
+    if (owed.w)
+    {
+        int x2 = MAX(x + width, owed.x + owed.w);
+        int y2 = MAX(y + height, owed.y + owed.h);
+        x = MIN(x, owed.x);
+        y = MIN(y, owed.y);
+        width = x2 - x;
+        height = y2 - y;
+        owed.w = 0;
+    }
     lcd_update_rect_base(x, y, width, height);
+}
+
+void lcd_update_rect_owe(int x, int y, int width, int height)
+{
+    if (!clip(&x, &y, &width, &height))
+        return;
+    if (owed.w)
+    {
+        int x2 = MAX(x + width, owed.x + owed.w);
+        int y2 = MAX(y + height, owed.y + owed.h);
+        x = MIN(x, owed.x);
+        y = MIN(y, owed.y);
+        width = x2 - x;
+        height = y2 - y;
+    }
+    owed.x = x; owed.y = y; owed.w = width; owed.h = height;
+}
+
+void lcd_update_owed(void)
+{
+    if (owed.w)
+        lcd_update_rect(owed.x, owed.y, owed.w, owed.h);
 }
 
 void lcd_present_hold(bool on)

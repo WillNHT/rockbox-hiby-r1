@@ -81,6 +81,10 @@ void stick_draw_overlay(void);
  * rather than forgotten. */
 void stick_redraw_overlay(int rx, int ry, int rw, int rh);
 
+/* Call before a list draws, so that a plate moving with the list's drag
+ * goes out with the list's update and not one of its own. */
+void stick_predraw_overlay(void);
+
 /* True while the volume dial is armed - the thumb is down and turning it
  * changes the volume. What the %sd skin tag reports, so a skin can say so
  * on its own volume bar instead of the engine drawing a ring. */
@@ -89,6 +93,10 @@ bool stick_dial_armed(void);
 /* For the lists, which run their own drag and never reach the engine: where
  * the thumb is relative to its press, so the plate's cap can follow it. */
 void stick_plate_thumb(bool down, int dx, int dy);
+
+/* Draws the next frame of the cap springing back after a release. True
+ * while there are more to come. */
+bool stick_plate_settle(void);
 
 /* Where on the plate a point is, so the lists can take a press there: on
  * the stick itself, elsewhere in the strip, or not on a plate at all. */
