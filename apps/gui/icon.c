@@ -174,6 +174,63 @@ void screen_put_iconxy(struct screen * display,
         return;
     }
 
+    if (icon == Icon_Bluetooth)
+    {
+        /* The rune: a spine, and from each end of it a stroke out to the
+         * right and back across to the far side. */
+        int t  = MAX(2, height / 10);       /* the set's stroke */
+        int h  = (height - 2 * (height / 8)) / 4 * 4;
+        int w  = h / 3;
+        int cx = xpos + (width - t) / 2, y0 = ypos + (height - h) / 2;
+        int i;
+
+        if (is_rtl)
+            cx = display->getwidth() - cx - t;
+        if (h < 8)
+            return;
+
+        display->fillrect(cx, y0, t, h + 1);
+        for (i = 0; i <= t; i++)     /* a slanted stroke reads thinner */
+        {
+            display->drawline(cx + i, y0, cx + w + i, y0 + h / 4);
+            display->drawline(cx + w + i, y0 + h / 4,
+                              cx - w + i, y0 + 3 * h / 4);
+            display->drawline(cx + i, y0 + h, cx + w + i, y0 + 3 * h / 4);
+            display->drawline(cx + w + i, y0 + 3 * h / 4,
+                              cx - w + i, y0 + h / 4);
+        }
+        return;
+    }
+
+    if (icon == Icon_Wifi)
+    {
+        /* A dot and three arcs fanning up from it, a pixel at a time:
+         * each arc is the band of its radius inside the quarter above. */
+        int t  = MAX(2, height / 10);
+        int r  = MIN(height - 2 * (height / 8), width * 2 / 3) / 3 * 3;
+        int cx = xpos + width / 2, cy = ypos + (height + r) / 2;
+        int dx, dy, k;
+
+        if (is_rtl)
+            cx = display->getwidth() - cx;
+        if (r < 9)
+            return;
+
+        for (dy = -r; dy <= t / 2; dy++)
+            for (dx = -r; dx <= r; dx++)
+            {
+                int d2 = dx * dx + dy * dy;
+                bool on = 4 * d2 <= (t + 1) * (t + 1);
+
+                for (k = 1; k <= 3 && !on && abs(dx) <= -dy; k++)
+                    on = d2 <= (k * r / 3) * (k * r / 3) &&
+                         d2 > (k * r / 3 - t) * (k * r / 3 - t);
+                if (on)
+                    display->drawpixel(cx + dx, cy + dy);
+            }
+        return;
+    }
+
     if (icon <= Icon_NOICON)
     {
         if (is_rtl)

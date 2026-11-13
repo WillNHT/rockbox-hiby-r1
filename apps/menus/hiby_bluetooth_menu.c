@@ -27,11 +27,11 @@
 #ifdef HAVE_HIBY_BLUETOOTH
 #include "hiby_bluetooth.h"
 MENUITEM_FUNCTION(hiby_bluetooth_root_item, 0, ID2P(LANG_BT_BLUETOOTH),
-                  hiby_bluetooth_menu, NULL, Icon_Submenu);
+                  hiby_bluetooth_menu, NULL, Icon_Bluetooth);
 #endif
 
 #if defined(HIBY_LINUX) && !defined(SIMULATOR)
 #include "hiby_wifi.h"
 MENUITEM_FUNCTION(hiby_wifi_root_item, 0, ID2P(LANG_WIFI),
-                  hiby_wifi_menu, NULL, Icon_Submenu);
+                  hiby_wifi_menu, NULL, Icon_Wifi);
 #endif /* HIBY_LINUX */
