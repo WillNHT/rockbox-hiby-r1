@@ -1855,6 +1855,11 @@ static void play_cue(int cue)
         return;
     if (!keyclick_enabled(cue_source(cue)))
         return;
+    /* On the WPS a gesture is one thing done, and clicks once, when it is:
+     * the click for arming and the one for the direction came before the
+     * commit's, and a drag up to the menu clicked two or three times. */
+    if (on_a_skin() && (cue == STICK_CUE_ARM || cue == STICK_CUE_SECTOR))
+        return;
 
     /* One short click for every cue point is the default (spec 7). The
      * mixer drops a click rather than queueing it, so this can never add
