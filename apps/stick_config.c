@@ -67,7 +67,9 @@ static const uint8_t wps_hold[STICK_MAX_SECTORS] =
 {
     STICK_BIND_QUICKSCREEN,   /* up    - shuffle and repeat */
     STICK_BIND_SEEK_FWD,      /* right */
-    STICK_BIND_STOP,          /* down  */
+    /* not stop: a pause that lingered stopped the track, and the WPS
+     * left for the list behind it. Held, down is still play/pause, once. */
+    STICK_BIND_PLAY_PAUSE,    /* down  */
     STICK_BIND_SEEK_BACK,     /* left  */
 };
 
