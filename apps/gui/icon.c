@@ -150,7 +150,7 @@ void screen_put_iconxy(struct screen * display,
     if (icon == Icon_Heart)
     {
         /* A solid heart: two round lobes over a point, a row at a time. */
-        int r  = (MIN(width, height) - 2 * (height / 8)) / 4;
+        int r  = (MIN(width, height) - height / 8) / 4;
         int cx = xpos + width / 2, cy = ypos + (height - 7 * r / 2) / 2 + r;
         int dx = 0, dy;
 
