@@ -21490,3 +21490,17 @@
     *: "Music"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_MAIN_MENU_RESET
+  desc: in Settings: put the main menu back to its default order and names
+  user: core
+  <source>
+    *: "Reset Main Menu"
+  </source>
+  <dest>
+    *: "Reset Main Menu"
+  </dest>
+  <voice>
+    *: "Reset Main Menu"
+  </voice>
+</phrase>
