@@ -13,7 +13,7 @@ tree is the dial.
 
 ## Tuning in
 
-The **radio** entry in the main menu does not open a list. It puts you back
+The **radio** entry under **Music** in the main menu does not open a list. It puts you back
 on the station you were on last, or picks one when there is no last - a
 radio hands you sound, not a menu. Walking into it while that station is
 already playing does nothing at all, which is what stops the entry from
@@ -92,8 +92,8 @@ rather than every two hours, and nothing is bookmarked. Its cover is the
 station's `cover.jpg` when it has one, and each song's own artwork when it
 does not.
 
-The radio WPS says which kind is on: `on air - static` or
-`on air - dynamic`. `%rd` is that word, for any skin, and is empty off the
+The radio WPS says which kind is on, `static` or `dynamic`, under
+`ON AIR`. `%rd` is that word, for any skin, and is empty off the
 radio.
 
 Stations that make themselves - from what you actually listen to, say -
@@ -270,10 +270,10 @@ music WPS is used when the file is not on the card): Snappy Animated with
 the parts that do not apply to a radio taken out - no elapsed, no total, no
 "3 of 52", and no file name, because the file is how the station is made
 rather than a second thing you tuned to. The station has the block to
-itself, and the footer says `on air` or `paused` with a red dot beside it
-that blinks while the carrier is up. No codec or bit rate either - how a
-file was ripped is not something a radio has to say - so the level meter
-has the whole width of the band.
+itself. No codec or bit rate either - how a file was ripped is not
+something a radio has to say - so the column beside the level meter says
+`ON AIR` or `PAUSED`, with a red dot beside it that blinks while the
+carrier is up, and the kind of station under it.
 
 A station running on from one recording into the next is not a track change
 anybody asked for, so it is not animated: the screen stays put and the sound
