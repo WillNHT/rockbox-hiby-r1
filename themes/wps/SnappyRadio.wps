@@ -421,11 +421,11 @@ SHF%xd(O,%ps)
 # The meter fills 62 px of an 66 px band. It used to be 24, because the
 # engine drew a peak meter one line of the viewport's font tall and
 # nothing else; %pm takes a height now.
-%Vl(pm_short,30,616,-30,66,2)
+%Vl(pm_short,30,616,240,66,2)
 %Vt(0)
 %pm(62)
 #
-%Vl(pm_long,30,616,-30,66,2)
+%Vl(pm_long,30,616,240,66,2)
 %Vt(0)
 %pm(62)
 #
@@ -437,29 +437,31 @@ SHF%xd(O,%ps)
 %Vt(0)
 %al%>%> FF
 #
-# Station
-# -------
-%V(30,700,-30,58,5)
+# On air
+# ------
+%V(280,622,-30,30,2)
 %Vt(0)
-%al%s%?rs<%rs|%?ia<%ia|radio>>
+%ar%?mp<OFF AIR|ON AIR|PAUSED|ON AIR|ON AIR>
 #
-# Footer
-# ======
-%V(30,768,-30,30,2)
+# "static" or "dynamic" (%rd): a folder of recordings, or a station made
+# from the library by its station.cfg (#88).
+%V(280,652,-30,30,2)
 %Vt(0)
-%ac%?mp<off air|on air - %rd|paused - %rd|on air - %rd|on air - %rd>
+%ar%rd
 #
-# "- static" or "- dynamic" after it (%rd): a folder of recordings, or a
-# station made from the library by its station.cfg (#88).
-#
-# The liveness light. Its own viewport so the caption stays centred on the
-# screen rather than on the pair of them, and two sublines so it blinks - a
-# red dot that sits still is a dot, one that blinks is a transmitter. Off
-# air and paused it is not enabled at all, which is the one state where a
-# light saying "live" would be lying.
-%Vl(live,116,777,14,14,-)
+# The liveness light. Its own viewport so the words stay against the edge,
+# and two sublines so it blinks - a red dot that sits still is a dot, one
+# that blinks is a transmitter. Off air and paused it is not enabled at
+# all, which is the one state where a light saying "live" would be lying.
+%Vl(live,362,629,14,14,-)
 %Vt(0)
 %t(0.7)%Vf(CC2B2B)%xd(L);%t(0.7)%Vf(0C0D0E)%xd(L)
+#
+# Station
+# -------
+%V(30,712,-30,58,5)
+%Vt(0)
+%al%s%?rs<%rs|%?ia<%ia|radio>>
 #
 # Locked
 # ======
