@@ -398,13 +398,13 @@ static int get_skip_length(struct mp3entry *id3);
 /* The static over a user-initiated skip. It plays across the skip rather
  * than in front of it: waiting it out first held the screen and the old
  * track for its whole length, then left a silence while the next one
- * loaded - the gap it exists to cover arriving after it had finished. */
+ * loaded - the gap it exists to cover arriving after it had finished.
+ * It does not duck: the old track is gone by then, and all a duck held
+ * down was the start of the new one, well after it had begun. */
 static void track_static(void)
 {
     if (!global_settings.track_static)
         return;
-    beep_duck(global_settings.track_static_ms,
-              global_settings.sound_duck_alert);
     beep_play_noise(global_settings.track_static_ms, TRACK_STATIC_AMP);
 }
 
