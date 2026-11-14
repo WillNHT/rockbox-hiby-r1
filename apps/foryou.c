@@ -1313,43 +1313,49 @@ static int skips(void)
 
 /* --- the menu ---------------------------------------------------------- */
 
-#define MIX(name, lang, func)                                               \
+/* An icon each, out of the set every theme has: a page of the same one
+ * down the side said nothing. */
+#define MIX(name, lang, func, icon)                                         \
     MENUITEM_FUNCTION(name, MENU_FUNC_CHECK_RETVAL, ID2P(lang), func, NULL, \
-                      Icon_Playlist)
-#define MIX_W_PARAM(name, lang, func, param)                                \
+                      icon)
+#define MIX_W_PARAM(name, lang, func, param, icon)                          \
     MENUITEM_FUNCTION_W_PARAM(name, MENU_FUNC_CHECK_RETVAL, ID2P(lang),     \
                               func, (void *)(intptr_t)(param), NULL,        \
-                              Icon_Playlist)
+                              icon)
 
-MIX(foryou_item, LANG_FORYOU, foryou_mix);
-MIX(daily_item, LANG_FORYOU_DAILY, daily_mix);
-MIX(similar_item, LANG_FORYOU_SIMILAR, similar_mix);
-MIX(rediscover_item, LANG_FORYOU_REDISCOVER, rediscover_mix);
-MIX(forgotten_item, LANG_FORYOU_FORGOTTEN, forgotten_mix);
-MIX(shuffle_item, LANG_FORYOU_SHUFFLE, smart_shuffle);
-MIX(albums_item, LANG_FORYOU_ALBUMS, album_rediscovery);
-MIX(years_ago_item, LANG_FORYOU_YEARS_AGO, years_ago);
+MIX(foryou_item, LANG_FORYOU, foryou_mix, Icon_Heart);
+MIX(daily_item, LANG_FORYOU_DAILY, daily_mix, Icon_Playlist);
+MIX(similar_item, LANG_FORYOU_SIMILAR, similar_mix, Icon_Playback_menu);
+MIX(rediscover_item, LANG_FORYOU_REDISCOVER, rediscover_mix, Icon_Bookmark);
+MIX(forgotten_item, LANG_FORYOU_FORGOTTEN, forgotten_mix, Icon_Questionmark);
+MIX(shuffle_item, LANG_FORYOU_SHUFFLE, smart_shuffle, Icon_Queued);
+MIX(albums_item, LANG_FORYOU_ALBUMS, album_rediscovery, Icon_Audio);
+MIX(years_ago_item, LANG_FORYOU_YEARS_AGO, years_ago, Icon_Preset);
 
-MIX_W_PARAM(mood_chill, LANG_FORYOU_CHILL, mood_mix, 0);
-MIX_W_PARAM(mood_energetic, LANG_FORYOU_ENERGETIC, mood_mix, 1);
-MIX_W_PARAM(mood_driving, LANG_FORYOU_DRIVING, mood_mix, 2);
-MIX_W_PARAM(mood_relaxing, LANG_FORYOU_RELAXING, mood_mix, 3);
-MAKE_MENU(mood_menu, ID2P(LANG_FORYOU_MOOD), NULL, Icon_Playlist,
+MIX_W_PARAM(mood_chill, LANG_FORYOU_CHILL, mood_mix, 0, Icon_Radio_screen);
+MIX_W_PARAM(mood_energetic, LANG_FORYOU_ENERGETIC, mood_mix, 1,
+            Icon_Radio_screen);
+MIX_W_PARAM(mood_driving, LANG_FORYOU_DRIVING, mood_mix, 2,
+            Icon_Radio_screen);
+MIX_W_PARAM(mood_relaxing, LANG_FORYOU_RELAXING, mood_mix, 3,
+            Icon_Radio_screen);
+MAKE_MENU(mood_menu, ID2P(LANG_FORYOU_MOOD), NULL, Icon_Radio_screen,
           &mood_chill, &mood_energetic, &mood_driving, &mood_relaxing);
 
-MIX_W_PARAM(charts_week, LANG_FORYOU_WEEK, charts, THIS_WEEK);
-MIX_W_PARAM(charts_month, LANG_FORYOU_MONTH, charts, THIS_MONTH);
-MIX_W_PARAM(charts_year, LANG_FORYOU_YEAR, charts, THIS_YEAR);
-MIX_W_PARAM(charts_all, LANG_FORYOU_ALL, charts, ALL_TIME);
-MAKE_MENU(charts_menu, ID2P(LANG_FORYOU_CHARTS), NULL, Icon_Playlist,
+MIX_W_PARAM(charts_week, LANG_FORYOU_WEEK, charts, THIS_WEEK, Icon_EQ);
+MIX_W_PARAM(charts_month, LANG_FORYOU_MONTH, charts, THIS_MONTH, Icon_EQ);
+MIX_W_PARAM(charts_year, LANG_FORYOU_YEAR, charts, THIS_YEAR, Icon_EQ);
+MIX_W_PARAM(charts_all, LANG_FORYOU_ALL, charts, ALL_TIME, Icon_EQ);
+MAKE_MENU(charts_menu, ID2P(LANG_FORYOU_CHARTS), NULL, Icon_EQ,
           &charts_week, &charts_month, &charts_year, &charts_all);
 
-MIX(recap_item, LANG_FORYOU_RECAP, monthly_recap);
-MIX(wrapped_item, LANG_FORYOU_WRAPPED, year_wrapped);
-MIX(calendar_item, LANG_FORYOU_CALENDAR, calendar);
-MIX(hours_item, LANG_FORYOU_HOURS, time_of_day);
-MIX(first_item, LANG_FORYOU_FIRST, first_listens);
-MIX(skips_item, LANG_FORYOU_SKIPS, skips);
+/* The pages that are read, not played. */
+MIX(recap_item, LANG_FORYOU_RECAP, monthly_recap, Icon_Menu_functioncall);
+MIX(wrapped_item, LANG_FORYOU_WRAPPED, year_wrapped, Icon_Menu_functioncall);
+MIX(calendar_item, LANG_FORYOU_CALENDAR, calendar, Icon_Menu_functioncall);
+MIX(hours_item, LANG_FORYOU_HOURS, time_of_day, Icon_Menu_functioncall);
+MIX(first_item, LANG_FORYOU_FIRST, first_listens, Icon_Menu_functioncall);
+MIX(skips_item, LANG_FORYOU_SKIPS, skips, Icon_Moving);
 
 MENUITEM_SETTING(mix_size_item, &global_settings.foryou_mix_size, NULL);
 MENUITEM_SETTING(age_item, &global_settings.foryou_age, NULL);
