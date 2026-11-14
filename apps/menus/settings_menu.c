@@ -402,7 +402,7 @@ MENUITEM_SETTING(hiby_charge_current, &global_settings.hiby_charge_current, NULL
 MENUITEM_SETTING(low_battery_poweroff, &global_settings.low_battery_poweroff_percent, NULL);
 #endif
 MENUITEM_SETTING(default_glyphs, &global_settings.glyphs_to_cache, NULL);
-MAKE_MENU(battery_menu, ID2P(LANG_BATTERY_MENU), 0, Icon_NOICON,
+MAKE_MENU(battery_menu, ID2P(LANG_BATTERY_MENU), 0, Icon_Battery,
 #if BATTERY_CAPACITY_INC > 0
             &battery_capacity,
 #endif
@@ -528,7 +528,7 @@ MAKE_MENU(sel_softlock, ID2P(LANG_SOFTLOCK_SELECTIVE),
 MENUITEM_SETTING(governor, &global_settings.governor, NULL);
 #endif
 
-MAKE_MENU(usb_menu, ID2P(LANG_USB_MENU), 0, Icon_NOICON,
+MAKE_MENU(usb_menu, ID2P(LANG_USB_MENU), 0, Icon_Usb,
 #ifdef USB_ENABLE_HID
             &usb_hid,
             &usb_keypad_mode,

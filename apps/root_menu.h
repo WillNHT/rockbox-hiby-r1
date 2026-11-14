@@ -83,7 +83,9 @@ enum {
      * the file browser cannot be talked into doing. */
     GO_TO_PSEUDO_RADIO,
     /* Mixes, charts and recaps out of the listening log. */
-    GO_TO_FORYOU
+    GO_TO_FORYOU,
+    /* The library, playlists, For You and the radio, behind one entry. */
+    GO_TO_MUSIC
 };
 #ifndef PLUGIN
 extern struct menu_item_ex root_menu_;

@@ -41,8 +41,9 @@ them.
 
 A burst of white noise on a user-initiated prev/next, the same static the
 [pseudo-radio](pseudo-radio.md) plays while tuning in - the old habit of a
-station change never arriving clean. It ducks at Alert Depth, the same as
-the track-skip beep it replaces the silence around.
+station change never arriving clean. It does not duck the music: the new
+track comes in at full volume as soon as it has loaded, under whatever is
+left of the burst.
 
 The skip happens at once and the static plays across it, covering the
 moment the next track takes to load. It used to play first and skip after,
@@ -57,7 +58,7 @@ songs and lets a skip start at full volume.
 | Setting | Default | What it does |
 | --- | --- | --- |
 | Track Change Static | On | Master switch. |
-| Track Change Static Duration | 1000 ms | How long it plays (100-3000 ms). |
+| Track Change Static Duration | 300 ms | How long it plays (100-3000 ms). |
 
 ## In config.cfg
 
@@ -67,7 +68,7 @@ audio prioritization click: 25
 audio prioritization alert: 45
 audio prioritization cue: 70
 track change static: on
-track change static duration: 1000
+track change static duration: 300
 ```
 
 ## Screenshots

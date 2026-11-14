@@ -2813,7 +2813,7 @@ const struct settings_list settings[] = {
                  "radio band noise", NULL),
    OFFON_SETTING(0, track_static, LANG_TRACK_STATIC, true,
                  "track change static", NULL),
-   INT_SETTING(F_TIME_SETTING, track_static_ms, LANG_TRACK_STATIC_MS, 1000,
+   INT_SETTING(F_TIME_SETTING, track_static_ms, LANG_TRACK_STATIC_MS, 300,
                "track change static duration", UNIT_MS, 100, 3000, 100,
                NULL, NULL, NULL),
    /* Resuming at power-up: whatever was playing last comes back capped and

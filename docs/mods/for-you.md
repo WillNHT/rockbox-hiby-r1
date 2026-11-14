@@ -1,7 +1,7 @@
 # For You
 
 Mixes, charts and recaps made from the [listening log](listening-history.md),
-on the main menu as **For You**. Nothing is computed in the background: a
+under **Music** on the main menu as **For You**. Nothing is computed in the background: a
 screen reads the log when it is opened, and nothing runs while music plays.
 
 There are no ratings. A track heard through counts for it, a track skipped

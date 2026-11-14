@@ -445,6 +445,9 @@ static int foryou(void* param)
     return foryou_screen();
 }
 
+/* Everything there is to listen to that is not a book, behind one entry. */
+static int music(void* param);
+
 static int load_bmarks(void* param)
 {
     (void)param;
@@ -492,6 +495,7 @@ static const struct root_items items[] = {
     [GO_TO_AUDIOBOOKS]   = { audiobooks, NULL, NULL },
     [GO_TO_PSEUDO_RADIO] = { pseudo_radio, NULL, NULL },
     [GO_TO_FORYOU]       = { foryou, NULL, NULL },
+    [GO_TO_MUSIC]        = { music, NULL, NULL },
 
 };
 //static const int nb_items = sizeof(items)/sizeof(*items);
@@ -557,6 +561,26 @@ MENUITEM_RETURNVALUE(playlists, ID2P(LANG_PLAYLISTS), GO_TO_PLAYLISTS_SCREEN,
 MENUITEM_RETURNVALUE(system_menu_, ID2P(LANG_SYSTEM), GO_TO_SYSTEM_SCREEN,
                      NULL, Icon_System_menu);
 
+MENUITEM_RETURNVALUE(music_item, ID2P(LANG_MUSIC), GO_TO_MUSIC,
+                        NULL, Icon_Audio);
+#ifdef HAVE_TAGCACHE
+MENUITEM_RETURNVALUE(library_item, ID2P(LANG_LIBRARY), GO_TO_DBBROWSER,
+                        NULL, Icon_Audio);
+#endif
+MAKE_MENU(music_menu, ID2P(LANG_MUSIC), NULL, Icon_Audio,
+#ifdef HAVE_TAGCACHE
+          &library_item,
+#endif
+          &playlists, &foryou_item, &pseudo_radio_item);
+
+static int music(void* param)
+{
+    static int selected;
+
+    (void)param;
+    return do_menu(&music_menu, &selected, NULL, false);
+}
+
 struct menu_item_ex root_menu_;
 static struct menu_callback_with_desc root_menu_desc = {
         item_callback, ID2P(LANG_ROCKBOX_TITLE), Icon_Rockbox };
@@ -575,13 +599,8 @@ void root_menu_apply_title(void)
 static struct menu_table menu_table[] = {
     /* Order here represents the default ordering */
     { "wps", &wps_item },
-    { "for you", &foryou_item },
-#ifdef HAVE_TAGCACHE
-    { "database", &db_browser },
-#endif
-    { "playlists", &playlists },
+    { "music", &music_item },
     { "audiobooks", &audiobooks_item },
-    { "pseudo radio", &pseudo_radio_item },
     { "settings", &menu_ },
 #ifdef HAVE_RECORDING
     { "recording", &rec },
@@ -601,6 +620,13 @@ static struct menu_table menu_table[] = {
     { "system_menu", &system_menu_, true },
     { "shortcuts", &shortcut_menu, true },
     { "custom folder", &custom_folder_item, true },
+    /* In the Music menu, and here for a main menu that wants them back. */
+    { "for you", &foryou_item, true },
+#ifdef HAVE_TAGCACHE
+    { "database", &db_browser, true },
+#endif
+    { "playlists", &playlists, true },
+    { "pseudo radio", &pseudo_radio_item, true },
 };
 #define MAX_MENU_ITEMS (sizeof(menu_table) / sizeof(struct menu_table))
 static struct menu_item_ex *root_menu__[MAX_MENU_ITEMS];

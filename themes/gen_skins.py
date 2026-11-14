@@ -292,9 +292,10 @@ def band(y, meter_h=78, h=82, codec=True):
     having it alternate with the sample rate as well meant the same
     "1 of 2279" appeared twice on the panel, in two places, out of phase.
 
-    codec=False drops the codec column and gives the meter the whole width:
-    a station's bit rate is how the file was ripped, not something the
-    radio has to say, and it flickered on every recording change.
+    codec=False drops the codec column: a station's bit rate is how the
+    file was ripped, not something the radio has to say, and it flickered
+    on every recording change. The meter keeps its width - across the whole
+    panel it was a wall - and the caller has the column for its own.
     """
     out = """#
 # The band
@@ -306,7 +307,7 @@ def band(y, meter_h=78, h=82, codec=True):
 %%Vt(0)
 %%pm(%d)
 #
-%%Vl(pm_long,30,%d,-30,%d,2)
+%%Vl(pm_long,30,%d,%s,%d,2)
 %%Vt(0)
 %%pm(%d)
 #
@@ -325,7 +326,8 @@ def band(y, meter_h=78, h=82, codec=True):
 %%V(280,%d,-30,30,2)
 %%Vt(0)
 %%ar%%?if(%%St(party mode),!=,off)<party|%%?if(%%St(single mode),!=,off)<%%St(single mode)|%%fk kHz>>""" % (
-        meter_h, h, y, "240" if codec else "-30", h, meter_h, y, h, meter_h,
+        meter_h, h, y, "240", h, meter_h, y, "-30" if codec else "240", h,
+        meter_h,
         y + 18, y + 18, y + 12, y + 42)
     if not codec:
         out = out[:out.index("#\n%V(280,")].rstrip("\n")
@@ -620,36 +622,41 @@ def animated(radio=False):
         # the file showing through - the file is how the station is made,
         # not a second thing the listener tuned to - so the station has the
         # whole block to itself.
-        content = [the_band, """#
-# Station
-# -------
-%V(30,700,-30,58,5)
-%Vt(0)
-%al%s%?rs<%rs|%?ia<%ia|radio>>"""]
-
         # No elapsed, no total, no "3 of 52". A radio has no duration you
         # are entitled to know and no queue you are allowed to see; showing
         # them is what made this look like a file player with the file names
         # changed. What is left is the one thing a radio does tell you - and
-        # the light beside it that says it is saying it now.
-        content.append("""#
-# Footer
-# ======
-%V(30,768,-30,30,2)
-%Vt(0)
-%ac%?mp<off air|on air - %rd|paused - %rd|on air - %rd|on air - %rd>
+        # the light beside it that says it is saying it now. It has the
+        # codec column's place beside the meter, so the footer it used to be
+        # is gone and the station sits in the middle of what is left.
+        content = [the_band, """#
+# On air
+# ------
+%%V(280,%d,-30,30,2)
+%%Vt(0)
+%%ar%%?mp<OFF AIR|ON AIR|PAUSED|ON AIR|ON AIR>
 #
-# "- static" or "- dynamic" after it (%rd): a folder of recordings, or a
-# station made from the library by its station.cfg (#88).
+# "static" or "dynamic" (%%rd): a folder of recordings, or a station made
+# from the library by its station.cfg (#88).
+%%V(280,%d,-30,30,2)
+%%Vt(0)
+%%ar%%rd
 #
-# The liveness light. Its own viewport so the caption stays centred on the
-# screen rather than on the pair of them, and two sublines so it blinks - a
-# red dot that sits still is a dot, one that blinks is a transmitter. Off
-# air and paused it is not enabled at all, which is the one state where a
-# light saying "live" would be lying.
-%Vl(live,116,777,14,14,-)
-%Vt(0)
-%t(0.7)%Vf(CC2B2B)%xd(L);%t(0.7)%Vf(0C0D0E)%xd(L)""")
+# The liveness light. Its own viewport so the words stay against the edge,
+# and two sublines so it blinks - a red dot that sits still is a dot, one
+# that blinks is a transmitter. Off air and paused it is not enabled at
+# all, which is the one state where a light saying "live" would be lying.
+%%Vl(live,%d,%d,14,14,-)
+%%Vt(0)
+%%t(0.7)%%Vf(CC2B2B)%%xd(L);%%t(0.7)%%Vf(0C0D0E)%%xd(L)
+#
+# Station
+# -------
+%%V(30,%d,-30,58,5)
+%%Vt(0)
+%%al%%s%%?rs<%%rs|%%?ia<%%ia|radio>>""" % (BAND_Y + 6, BAND_Y + 36,
+                                         450 - 6 * 11 - 22, BAND_Y + 13,
+                                         BAND_Y + 96)]
     else:
         track, enables = gate("""#
 # Track

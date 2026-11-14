@@ -37,6 +37,8 @@ enum themable_icons {
      * no cell, and a book made of rectangles inherits the list's own
      * foreground colour and is the right size at any icon height.
      * The radio needs none of this: Icon_Radio_screen is in every set. */
+    Icon_Usb = -7,
+    Icon_Battery = -6, /* System's two, drawn like the rest */
     Icon_Wifi = -5,
     Icon_Bluetooth = -4, /* Settings' two radios, drawn like the heart */
     Icon_Heart = -3, /* For You; drawn for the same reason as the book */

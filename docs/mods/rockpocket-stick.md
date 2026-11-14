@@ -88,7 +88,7 @@ gesture armed — not to the last detent.
 
 ### The plate
 
-With *Overlay Style* set to `Plate` and a theme that leaves the bottom 308 px
+With *Overlay Style* set to `Plate` and a theme that leaves the bottom 338 px
 of the screen free (Snappy V2 and Snappy Animated do), a joystick sits in
 that strip on every themed screen. It is there at rest, and its cap follows
 the thumb from wherever the gesture started — including a list's own drag,
@@ -97,11 +97,12 @@ there lights the screen edge instead.
 
 Tapping a list row does nothing in this scheme, and it is the first thing a
 phone user tries. The plate answers it all the time: the stick takes the
-middle half of the strip, a little above centre, and a label with an arrow
-sits in grey on each side — `scroll up`, `scroll down`, `previous`,
-`next` — the one the thumb is pushing lit. A label the list cannot act on
-stays grey: `previous` on the main menu, `scroll up` on the first row. Let
-go and the cap springs back to the centre. The plate is hidden while the
+lower part of the strip, with a grey arrow on each side of it, and the room
+above it names the direction the thumb is pushing — `scroll up`,
+`scroll down`, `previous`, `next` — with its arrow lit. One the list cannot
+act on stays grey and unnamed: `previous` on the main menu, `scroll up` on
+the first row. The cap moves as far as the thumb does, until a third of it
+is over the ring. Let go and it springs back to the centre. The plate is hidden while the
 touch lock is on and on the USB screen.
 
 A press on the plate drives the list the way a press on its rows does, and
@@ -118,14 +119,14 @@ A sideways drag also carries the selected
 row with it, up to the distance the release needs.
 
 The strip's height is `PLATE_H` in `apps/stick_glue.c`; the Snappy `.sbs`
-files reserve the same 308 px and have to change with it. They reserve it
+files reserve the same 338 px and have to change with it. They reserve it
 only while the settings would draw a plate (stick touch mode, overlay on,
 style `plate`), and then drop the now-playing footer so the list runs down
 to the plate, and put the title in the status row, left of the icons, so
 the list also starts a row higher; otherwise the list and footer use the whole panel. The ring
 and cap are anti-aliased into the plate's ground along their edges only,
 and a moving cap repaints the stick's own square rather than the strip; a
-label lighting repaints only itself. The cap leans toward the vertical on a
+caption changing repaints only its own line. The cap leans toward the vertical on a
 mostly vertical push, for the eye only. The
 strip's ground carries a dot grain, and its top 8 px (`PLATE_GAP`) are left
 bare as a margin under the list.

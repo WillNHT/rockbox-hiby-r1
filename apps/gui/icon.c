@@ -174,6 +174,55 @@ void screen_put_iconxy(struct screen * display,
         return;
     }
 
+    if (icon == Icon_Battery)
+    {
+        /* A cell on its side: a case of the set's stroke, the charge
+         * inside it clear of the case, and the terminal on the end. */
+        int t  = MAX(2, height / 10);
+        int bh = (height - 2 * (height / 8)) * 2 / 3;
+        int bw = MIN(width, height) - t;
+        int bx = xpos + (width - bw - t) / 2, by = ypos + (height - bh) / 2;
+
+        if (is_rtl)
+            bx = display->getwidth() - bx - bw - t;
+        if (bh < 4 * t || bw < 6 * t)
+            return;
+
+        display->fillrect(bx, by, bw, t);
+        display->fillrect(bx, by + bh - t, bw, t);
+        display->fillrect(bx, by, t, bh);
+        display->fillrect(bx + bw - t, by, t, bh);
+        display->fillrect(bx + bw, by + bh / 4, t, bh - 2 * (bh / 4));
+        display->fillrect(bx + 2 * t, by + 2 * t,
+                          (bw - 4 * t) * 2 / 3, bh - 4 * t);
+        return;
+    }
+
+    if (icon == Icon_Usb)
+    {
+        /* A plug, end up: the grip, and the shell over it with its two
+         * holes knocked out. */
+        int t  = MAX(2, height / 10);
+        int h  = height - 2 * (height / 8);
+        int bw = MIN(width, height) / 2 / 2 * 2, sw = bw - 2 * t;
+        int sh = h * 2 / 5;
+        int cx = xpos + width / 2, y0 = ypos + (height - h) / 2;
+
+        if (is_rtl)
+            cx = display->getwidth() - cx;
+        if (sw < 3 * t)
+            return;
+
+        display->fillrect(cx - sw / 2, y0, sw, sh);
+        display->fillrect(cx - bw / 2, y0 + sh, bw, h - sh);
+        display->set_drawmode(DRMODE_SOLID | DRMODE_INVERSEVID);
+        display->fillrect(cx - sw / 2 + t, y0 + t, (sw - 3 * t) / 2, sh - 2 * t);
+        display->fillrect(cx + sw / 2 - t - (sw - 3 * t) / 2, y0 + t,
+                          (sw - 3 * t) / 2, sh - 2 * t);
+        display->set_drawmode(DRMODE_SOLID);
+        return;
+    }
+
     if (icon == Icon_Bluetooth)
     {
         /* The rune: a spine, and from each end of it a stroke out to the
