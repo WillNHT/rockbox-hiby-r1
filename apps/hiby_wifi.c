@@ -42,9 +42,10 @@
 #include "gui/list.h"
 
 /* Wi-Fi brought up the way HiBy OS does it (wifi_on.sh): wpa_supplicant
- * joins a network, udhcpc gets an address. The bootloader unbinds the chip
- * from its driver before it starts Rockbox, so on binds it and off lets go.
- * Off until switched on - the radio is the biggest battery cost the player
+ * joins a network, udhcpc gets an address. The driver powers the chip with
+ * wlan0: up loads its firmware, down switches it off. A bootloader that
+ * still unbinds the chip leaves no wlan0, and the driver cannot be bound
+ * again. Off until switched on - the radio is the biggest battery cost the player
  * has - and nothing listens: Rockbox only ever talks out. Networks and
  * passwords are kept by wpa_supplicant itself, in wifi.conf. */
 #define WIFI_IF        "wlan0"
@@ -55,7 +56,6 @@
 #define WIFI_SSID_LEN  132  /* 32 bytes, escaped the way wpa_cli prints them */
 #define WIFI_OUT_OF_RANGE (-1000)
 #define WIFI_SDIO      "/sys/bus/sdio/drivers/bcmsdh_sdmmc/"
-#define WIFI_SDIO_ID   "mmc0:0001:2"    /* what the bootloader unbinds */
 #define WIFI_LOG       PIVOT_ROOT "/rockbox-wifi-debug.log"
 
 /* Updates: the release the fork's GitHub page calls latest, or the zip
@@ -156,13 +156,7 @@ static bool wifi_on(void)
     splash(0, ID2P(LANG_WAIT));
     system("[ -f " WIFI_CONF " ] || printf 'ctrl_interface=/var/run/wpa_supplicant\\n"
            "update_config=1\\n' > " WIFI_CONF);
-    system("rfkill unblock wifi; echo " WIFI_SDIO_ID " > " WIFI_SDIO "bind 2>/dev/null");
-    for (i = 0; i < 50 && access("/sys/class/net/" WIFI_IF, F_OK); i++)
-        sleep(HZ/10);
-    /* the address HiBy OS gave the radio at boot went with the unbind */
-    system("[ -f /usr/data/macaddr.txt ] && ifconfig " WIFI_IF
-           " hw ether $(cat /usr/data/macaddr.txt) 2>/dev/null; "
-           "ifconfig " WIFI_IF " up && wpa_supplicant -B -D nl80211 -i " WIFI_IF
+    system("ifconfig " WIFI_IF " up && wpa_supplicant -B -D nl80211 -i " WIFI_IF
            " -c " WIFI_CONF " >/tmp/wifi.log 2>&1");
     for (i = 0; i < 30 && !wifi_is_on(); i++)
         sleep(HZ/10);
@@ -186,7 +180,6 @@ static void wifi_off(void)
     system("killall udhcpc wpa_supplicant >/dev/null 2>&1; ifconfig " WIFI_IF " down");
     for (i = 0; i < 10 && wifi_is_on(); i++)
         sleep(HZ/10);
-    system("echo " WIFI_SDIO_ID " > " WIFI_SDIO "unbind 2>/dev/null");
 }
 
 static void wifi_add(const char *ssid, int signal, int id, bool secured)

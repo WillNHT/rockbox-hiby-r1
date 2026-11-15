@@ -1,9 +1,10 @@
 # Wi-Fi
 
 Settings > **Wi-Fi** brings the R1's radio up the way HiBy OS does: `wpa_supplicant`
-joins a network and `udhcpc` asks it for an address. The bootloader takes the Wi-Fi
-chip away from its driver before Rockbox starts, so switching on gives it back and
-switching off lets go again. Nothing listens on the network - Rockbox only ever
+joins a network and `udhcpc` asks it for an address. The chip is powered
+only while Wi-Fi is on. It needs this fork's bootloader (`r1_rb.upt` from the same
+release): an older one takes the chip away from its driver before Rockbox starts,
+and Wi-Fi then says it is unavailable. Nothing listens on the network - Rockbox only ever
 talks out.
 
 * **Wi-Fi: On/Off** - select to switch it. It starts off on every boot: the radio

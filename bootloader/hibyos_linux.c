@@ -742,7 +742,11 @@ int main(int argc, char **argv)
 #if defined(HIBY_R3PROII) || defined(HIBY_R1)
             /* Suspend wifi*/
             system("/usr/bin/wifi_down");
+#ifndef HIBY_R1
+            /* the R1's driver cannot be bound again, and Rockbox there has
+             * Wi-Fi: the chip stays powered off while wlan0 is down */
             system("echo \"mmc0:0001:2\" > /sys/bus/sdio/drivers/bcmsdh_sdmmc/unbind");
+#endif
 
             /* Suspend bluetooth as it's not currently supported */
             if (!is_rb_bluetooth_on())
