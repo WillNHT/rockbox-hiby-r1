@@ -36,6 +36,8 @@ jobs:
         # only, not input.
         # button-r1.c/button-target.h: Bluetooth AVRCP keys only (#29),
         # the physical key mapping is unchanged.
+        # bootloader/hibyos_linux.c: the Wi-Fi chip is left with its driver
+        # (#29), keys and the boot choice are unchanged.
         FLOOR="bootloader firmware/target/hosted/hiby apps/keymaps/keymap-hibyr1.c"
         git fetch --quiet origin "$BASE_REF" || exit 0
         CHANGED=$(git diff --name-only "origin/$BASE_REF"...HEAD -- $FLOOR \
@@ -43,7 +45,8 @@ jobs:
           ':!firmware/target/hosted/hiby/hibylinux_codec.c' \
           ':!firmware/target/hosted/hiby/bt-rx-hiby.c' \
           ':!firmware/target/hosted/hiby/r1/button-r1.c' \
-          ':!firmware/target/hosted/hiby/r1/button-target.h')
+          ':!firmware/target/hosted/hiby/r1/button-target.h' \
+          ':!bootloader/hibyos_linux.c')
         if [ -n "$CHANGED" ]; then
           echo "The stick may not touch the keymap, the HiBy target tree or the bootloader:"
           echo "$CHANGED"
