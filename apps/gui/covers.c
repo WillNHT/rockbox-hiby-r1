@@ -34,6 +34,7 @@
 #ifdef HAVE_COVER_VIEWS
 
 #include <string.h>
+#include "string-extra.h"
 #include "system.h"
 #include "kernel.h"
 #include "file.h"
