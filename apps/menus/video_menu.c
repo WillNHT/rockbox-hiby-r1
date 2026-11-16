@@ -121,7 +121,7 @@ static char *saver_name(int selected_item, void *data, char *buffer,
                 LANG_SAVER_BATTERY : LANG_SAVER_CHARGING;
     snprintf(buffer, buffer_len, "%s: %s", str(label),
              (setting[0] && setting[0] != '-') ? (const char *)setting
-                                               : str(LANG_OFF));
+                                               : (const char *)str(LANG_OFF));
     return buffer;
 }
 
