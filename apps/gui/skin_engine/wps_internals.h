@@ -251,6 +251,10 @@ struct skin_viewport {
     bool lifted;
     bool builds_backdrop;       /* has %Cb: draws into the backdrop */
     unsigned layer_bg;
+    /* lcd_surface_sum() as of the last pass, and whether it can be
+     * trusted: what skin_layer_damage() tells a change by */
+    unsigned layer_sum;
+    bool layer_sum_ok;
 #ifndef __PCTOOL__
     /* %Vo and %Vx: the layer's opacity (0..255) and offset, each easing
      * towards what the skin last asked for over %Va's time. */

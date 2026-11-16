@@ -124,6 +124,33 @@ static fb_data *lift_backdrop;
 /* A skin's surfaces were baked into the framebuffer; a viewport lifted
  * again now would show its own old pixels through its glass. */
 static bool flattened[SKINNABLE_SCREENS_COUNT];
+/* One of the skin's viewports found no room for a surface and draws
+ * into the framebuffer, where what it changes is not tracked. */
+static bool unlifted[SKINNABLE_SCREENS_COUNT];
+
+/* What the pass in hand has changed on the panel: one box round all of
+ * it, presented once by skin_layer_present(). A present is a wait for the
+ * panel's vertical blank and a copy to both of its planes, so a pass that
+ * changed a clock digit must not cost what a whole screen does - and one
+ * that changed nothing must cost nothing. */
+static struct { int x1, y1, x2, y2; } damage;
+
+static void damage_add(int x, int y, int w, int h)
+{
+    int x2 = MIN(x + w, LCD_WIDTH), y2 = MIN(y + h, LCD_HEIGHT);
+    x = MAX(x, 0);
+    y = MAX(y, 0);
+    if (x2 <= x || y2 <= y)
+        return;
+    if (damage.x2 > damage.x1)
+    {
+        x = MIN(x, damage.x1);
+        y = MIN(y, damage.y1);
+        x2 = MAX(x2, damage.x2);
+        y2 = MAX(y2, damage.y2);
+    }
+    damage.x1 = x; damage.y1 = y; damage.x2 = x2; damage.y2 = y2;
+}
 
 /* Which skin this is, as a surface tag, or -1 for one that does not lift:
  * the status bar, the WPS and the FM screen do, each dropping its own
@@ -176,6 +203,7 @@ void skin_layer_begin(struct gui_wps *gwps, bool full)
      * order, and none is left behind by a viewport that has gone. */
     lcd_surface_put_tag(skin);
     flattened[skin] = false;
+    unlifted[skin] = false;
 
     /* Every viewport that draws is lifted, hidden or not, so the
      * framebuffer beneath the skin holds the backdrop and nothing else:
@@ -221,8 +249,11 @@ bool skin_layer_enter(struct gui_wps *gwps, struct skin_viewport *svp,
                             (skin == CUSTOM_STATUSBAR ? 2000 : 1000) + z);
     if (!s)
     {
-        /* No room: this one draws the old way until the next full pass. */
+        /* No room: this one draws the old way until the next full pass,
+         * and where it draws is not tracked. */
         svp->lifted = false;
+        if (skin >= 0)
+            unlifted[skin] = true;
         return false;
     }
     vp->buffer = &s->fb;
@@ -260,9 +291,11 @@ void skin_layer_hide(struct screen *display, struct skin_viewport *svp)
     if (!s)
     {
         skin_layer_clear_viewport(display, svp);
+        damage_add(svp->vp.x, svp->vp.y, svp->vp.width, svp->vp.height);
         return;
     }
     lcd_scroll_stop_viewport(&svp->vp);
+    damage_add(s->x + s->dx, s->y + s->dy, s->w, s->h);
     lcd_surface_put(s);
 }
 
@@ -328,13 +361,31 @@ void skin_layer_compose_to(struct skin_viewport *svp, bool opacity,
     }
 }
 
-static void update_clipped(int x, int y, int w, int h)
+void skin_layer_damage(struct skin_viewport *svp, bool all)
 {
-    int x2 = MIN(x + w, LCD_WIDTH), y2 = MIN(y + h, LCD_HEIGHT);
-    x = MAX(x, 0);
-    y = MAX(y, 0);
-    if (x2 > x && y2 > y)
-        lcd_update_rect(x, y, x2 - x, y2 - y);
+    struct lcd_surface *s = svp->lifted ? lcd_surface_find(svp) : NULL;
+    unsigned sum;
+
+    if (!s)
+        return;
+    sum = lcd_surface_sum(s);
+    if (all || !svp->layer_sum_ok || sum != svp->layer_sum)
+        damage_add(s->x + s->dx, s->y + s->dy, s->w, s->h);
+    svp->layer_sum = sum;
+    svp->layer_sum_ok = true;
+}
+
+bool skin_layer_present(struct gui_wps *gwps)
+{
+    /* NULL: the caller updates the whole screen */
+    int skin = gwps ? skin_of(gwps) : -1;
+    bool whole = skin < 0 || unlifted[skin];
+
+    if (!whole && damage.x2 > damage.x1)
+        lcd_update_rect(damage.x1, damage.y1, damage.x2 - damage.x1,
+                        damage.y2 - damage.y1);
+    damage.x2 = damage.x1 = 0;
+    return !whole;
 }
 
 void skin_layer_compose(struct gui_wps *gwps)
@@ -367,11 +418,11 @@ void skin_layer_compose(struct gui_wps *gwps)
             continue;
         /* Moved or faded, not redrawn: only where it was and where it is
          * now look different. */
-        update_clipped(s->x + s->dx, s->y + s->dy, s->w, s->h);
+        damage_add(s->x + s->dx, s->y + s->dy, s->w, s->h);
         s->opacity = o;
         s->dx = dx;
         s->dy = dy;
-        update_clipped(s->x + dx, s->y + dy, s->w, s->h);
+        damage_add(s->x + dx, s->y + dy, s->w, s->h);
     }
     /* The frame rate %an gets, for as long as something is on its way. */
     if (easing)

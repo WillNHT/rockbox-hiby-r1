@@ -78,8 +78,16 @@ bool skin_layer_set_bg(struct skin_viewport *svp, unsigned colour);
 void skin_layer_compose_to(struct skin_viewport *svp, bool opacity,
                            int a, int b);
 /* Bring every layer of the skin to where it is now on the way there,
- * updating only the rectangles it left and entered. */
+ * damaging only the rectangles it left and entered. */
 void skin_layer_compose(struct gui_wps *gwps);
+/* A pass that is not a full one presents only what it changed. After a
+ * viewport has rendered: its rectangle is damaged if `all` (it was
+ * cleared and drawn afresh) or if what its surface holds is not what it
+ * held after the last pass. */
+void skin_layer_damage(struct skin_viewport *svp, bool all);
+/* Present the damage of this pass, if any. False if the skin's viewports
+ * are not all on surfaces, and the caller has to update the screen. */
+bool skin_layer_present(struct gui_wps *gwps);
 #else
 static inline void skin_layer_begin(struct gui_wps *g, bool f)
 { (void)g; (void)f; }
@@ -95,6 +103,8 @@ static inline void skin_layer_flatten(void) { }
 #define skin_layer_set_bg(svp, colour) false
 #define skin_layer_compose_to(svp, o, a, b) ((void)(svp))
 #define skin_layer_compose(gwps) ((void)(gwps))
+#define skin_layer_damage(svp, all) ((void)(svp))
+#define skin_layer_present(gwps) ((void)(gwps), false)
 #endif
 
 #endif /* _SKIN_LAYER_H_ */
