@@ -48,7 +48,7 @@ quit                shut the simulator down
 ```
 
 `NAME` is one of `power`, `next`, `play`, `volup`, `voldown` — the project's
-names for the five physical keys, not the SDL keys the simulator happens to
+names for the five physical keys (and `usb`, the cable going in or out), not the SDL keys the simulator happens to
 map them to, so a test keeps working if `uisimulator/buttonmap/hiby-r1.c` is
 rearranged.
 

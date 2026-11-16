@@ -15,7 +15,7 @@ Snappy-V2 * 362,20 434,80
 Snappy-Animated shot09 420,20 450,80
 Snappy-V2 shot09 420,20 450,80
 # Peak meter bar ends: the level of whatever audio has been played.
-Snappy-Animated * 178,610 210,683
+Snappy-Animated * 178,610 240,683
 Snappy-V2 * 179,568 207,649
 # Paused, the whole meter: it stops where the fade-out had brought it, and
 # the visualiser's window is narrow enough for that to show.
