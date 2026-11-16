@@ -113,10 +113,26 @@
 %Vi(main_p,30,104,-30,-338,-)
 %Vi(USB,30,152,2,2,-)
 #
-%Vl(USB,30,154,-30,-136,5)
-%Vs(invert)%acEJECT
-%acBEFORE
-%acDISCONNECTING
+# Plugged in: a clock for the desk, after SNAZZY's USB screen (Phil Graves,
+# CC-BY-SA) - what it is, the date, the time to the second, the battery,
+# and the warning blinking at the foot.
+%Vl(USB,30,170,-30,50,4)
+%Vs(invert)%acUSB CONNECTED
+#
+%Vl(USB,30,300,-30,40,3)
+%ac%s%?cu<Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday>, %cd %?cm<January|February|March|April|May|June|July|August|September|October|November|December>
+#
+%Vl(USB,30,350,-30,70,5)
+%ac%?cf<%cH:%cM:%cS|%cl:%cM:%cS %cP>
+#
+%Vl(USB,30,440,-30,40,3)
+%ac%?bp<CHARGING |>%bl%%
+#
+%Vl(USB,30,600,-30,2,-)
+%dr(0,0,-,2)
+#
+%Vl(USB,30,612,-30,40,3)
+%ac%t(1)EJECT BEFORE DISCONNECTING;%t(0.2)%ac
 #
 # ---------
 # Footer
