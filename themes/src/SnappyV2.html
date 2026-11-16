@@ -63,8 +63,6 @@
 #rxs1     { top: 580px; height: 30px; font-family: small; color: #D9E021 }
 #rxs2     { top: 612px; height: 36px; font-family: body }
 
-#plname   { top: 112px; height: 34px; font-family: body }
-
 /* The volume dial, armed: a rim round the volume bar and a segment
    marching clockwise round it, a frame every 60 ms. One segment for the
    top and bottom, one for the sides, each moved to where it is. */
@@ -97,6 +95,8 @@
 <img id="B" src="batt_wps.bmp" x="2" y="0" frames="2">
 <img id="O" src="off_on.bmp" x="48" y="0" frames="2">
 <img id="bt" src="bt.bmp" x="0" y="0" frames="4">
+<img id="wifi" src="wifi.bmp" x="0" y="0" frames="3">
+<img id="lock" src="lock.bmp" x="8" y="6" frames="2">
 <img id="wired" src="wired.bmp" x="0" y="0">
 <img id="rx" src="rx.bmp" x="0" y="0" frames="2">
 <img id="vb" src="vb.bmp">
@@ -135,9 +135,12 @@
  No id, so always drawn. The corner used to be shared with the sleep
  timer and the volume number, which meant the one thing it is for was the
  one thing it was often not showing.
+
+ Locked, a padlock stands left of the time, as the battery's icon stands
+ left of its number. It used to be a LOCKED banner across the playlist row.
 -->
 <div style="left: 30px; top: 48px; width: 144px; height: 34px; font-family: body">
-%Vs(invert)%ac%cH:%cM
+%Vs(invert)%ac%?mh<%xd(lock,2)|>%cH:%cM
 </div>
 <!-- Shuffle: 10 px clear of the clock box, which ends at x=174 -->
 <div style="left: 184px; top: 28px; width: 94px; height: 22px; font-family: small">
@@ -151,9 +154,10 @@ SHF%xd(O,%ps)
 <div style="left: 280px; top: 28px; width: 21px; height: 22px">
 %xd(bt,%BT)
 </div>
-<!-- The jack playing beside the headset, under the rune; else receiving -->
+<!-- Under the rune, Wi-Fi: grey off, white on, blue joined. The jack
+     playing beside the headset, or receiving, takes its place. -->
 <div style="left: 280px; top: 58px; width: 21px; height: 22px">
-%?Bw<%xd(wired)|%?Br<|%xd(rx,1)|%xd(rx,2)>>
+%?Bw<%xd(wired)|%?Br<%xd(wifi,%WF)|%xd(rx,1)|%xd(rx,2)>>
 </div>
 <!-- Battery bar -->
 <div style="right: 30px; width: 138px; top: 26px; height: 18px">
@@ -285,18 +289,10 @@ SHF%xd(O,%ps)
 </div>
 
 <!--
- Locked
- ======
--->
-<div class="row" style="top: 98px; height: 52px; font-family: title">
-%Vs(invert)%ac%?mh<LOCKED|>
-</div>
-
-<!--
  Playlist
  ========
 -->
-<div id="plname" class="row glass" when="!%mh">
+<div class="row glass" style="top: 112px; height: 34px; font-family: body">
 %s%al%?pn<%pn|>
 </div>
 </skin>

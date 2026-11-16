@@ -55,8 +55,11 @@ HEADER = """#
 # Unlabelled, so always drawn. The corner used to be shared with the sleep
 # timer and the volume number, which meant the one thing it is for was the
 # one thing it was often not showing.
+#
+# Locked, a padlock stands left of the time, as the battery's icon stands
+# left of its number. It used to be a LOCKED banner across the playlist row.
 %%V(%d,%d,%d,%d,3)
-%%Vs(invert)%%ac%%cH:%%cM
+%%Vs(invert)%%ac%%?mh<%%xd(lock,2)|>%%cH:%%cM
 #""" % (CLOCK_X, CLOCK_Y, CLOCK_W, CLOCK_H) + """
 # Shuffle
 # 10 px clear of the clock box, which ends at x=174
@@ -71,9 +74,10 @@ SHF%xd(O,%ps)
 %V(280,28,21,22,-)
 %xd(bt,%BT)
 #
-# The jack playing beside the headset, under the rune; else receiving
+# Under the rune, Wi-Fi: grey off, white on, blue joined. The jack playing
+# beside the headset, or receiving, takes its place while it lasts.
 %V(280,58,21,22,-)
-%?Bw<%xd(wired)|%?Br<|%xd(rx,1)|%xd(rx,2)>>
+%?Bw<%xd(wired)|%?Br<%xd(wifi,%WF)|%xd(rx,1)|%xd(rx,2)>>
 #
 # Battery bar
 %V(-168,26,-30,18,-)
@@ -95,35 +99,16 @@ SHF%xd(O,%ps)
 #
 """
 
-# The playlist row. Last of all, after even the LOCKED banner: declared in
-# HEADER the backdrop viewport painted it straight over, and ahead of the
-# banner the banner's own clear wiped it while the keys were free (#85). Its name comes from %pn - a saved playlist, the folder being
-# played, or the database view it was started from - and scrolls when it
-# is too long for the row.
+# The playlist row. Last of all: declared in HEADER the backdrop viewport
+# painted it straight over (#85). Its name comes from %pn - a saved
+# playlist, the folder being played, or the database view it was started
+# from - and scrolls when it is too long for the row.
 PLNAME = """#
 # Playlist
 # ========
 %Vl(plname,30,112,-30,34,3)
 %Vt(0)
 %s%al%?pn<%pn|>"""
-
-# Locked.
-#
-# Appended last by every skin here rather than declared up with the rest of
-# the header, because what the header declares the album art and the chrome
-# after it paint straight over - which is why locking the keys took the
-# volume bar away and put nothing in its place. The lock is in the text of
-# a plain viewport rather than in an enable line, so an empty conditional
-# draws no line and it costs nothing while the keys are free.
-#
-# 52 px rather than 44: the 44 px face is 48 px tall, and a line that does
-# not fit its viewport is not drawn either. It ends at y=150, where the
-# cover starts: one more pixel and its clear takes the cover's top edge.
-LOCKBAR = """#
-# Locked
-# ======
-%V(30,98,-30,52,4)
-%Vs(invert)%ac%?mh<LOCKED|>"""
 
 BATT_BAR = "%bl(0,0,138,18,bb,backdrop,bb_backdrop)"
 
@@ -192,6 +177,8 @@ PRELOAD = """%Fl(2,24-GeistMono-SemiBold.fnt)
 %xl(B,batt_wps.bmp,2,0,2)
 %xl(O,off_on.bmp,48,0,2)
 %xl(bt,bt.bmp,0,0,4)
+%xl(wifi,wifi.bmp,0,0,3)
+%xl(lock,lock.bmp,8,6,2)
 %xl(wired,wired.bmp,0,0)
 %xl(rx,rx.bmp,0,0,2)
 %xl(vb,vb.bmp)
@@ -467,7 +454,7 @@ def animated(radio=False):
     # transparent viewport in the skin language to put it in. %Vt(0) is
     # that viewport, so the special case is gone and the bar is one thing
     # in one place whether or not the track has artwork.
-    o.append("%Vd(volbar)" + ("" if radio else "%?mh<|%Vd(plname)>"))
+    o.append("%Vd(volbar)" + ("" if radio else "%Vd(plname)"))
     if radio:
         # The dot is a mono bitmap, not a drawn rectangle: a viewport whose
         # lines carry neither text nor a bitmap has no lines to render, and
@@ -681,7 +668,6 @@ def animated(radio=False):
     if rx:
         o.append(rx_views(BAND_Y))
 
-    o.append(LOCKBAR)
     o.append(PLNAME)
     return "\n".join(o) + "\n"
 
@@ -806,9 +792,64 @@ def db_bmp():
     return head + pix
 
 
+# wifi.bmp: the Wi-Fi indicator, %xd(wifi,%WF). Three 21x22 frames stacked,
+# a dot and three arcs over it: grey off, white on, the rune's blue once a
+# network is joined.
+def wifi_bmp():
+    fw, fh = 21, 22
+    rows = []
+    for colour in ((0x80, 0x80, 0x80), (0xef, 0xeb, 0xe7), (0x33, 0x99, 0xff)):
+        f = [[(0xff, 0x00, 0xff)] * fw for _ in range(fh)]
+        for y in range(fh):
+            for x in range(fw):
+                dx, dy = x - 10, 19 - y
+                d = math.hypot(dx, dy)
+                arc = any(abs(d - r) <= 1.3 for r in (7, 12, 17))
+                if d <= 2.2 or (arc and dy >= abs(dx) * 0.95):
+                    f[y][x] = colour
+        rows += f
+    pad = (4 - fw * 3 % 4) % 4
+    pix = b"".join(bytes(c for p in r for c in p[::-1]) + b"\0" * pad
+                   for r in reversed(rows))
+    head = b"BM" + struct.pack("<IHHI", 54 + len(pix), 0, 0, 54)
+    head += struct.pack("<IiiHHIIiiII", 40, fw, len(rows), 1, 24, 0,
+                        len(pix), 2835, 2835, 0, 0)
+    return head + pix
+
+
+# lock.bmp: %?mh, the touch lock. A padlock, 21x22 like the rune, twice:
+# in the ink for the status bar, in the ground for the WPS, where it sits
+# in the clock's inverted box.
+def lock_bmp():
+    fw, fh = 21, 22
+    rows = []
+    for colour in ((0xef, 0xeb, 0xe7), (0x0c, 0x0d, 0x0e)):
+        f = [[(0xff, 0x00, 0xff)] * fw for _ in range(fh)]
+        for y in range(2, 11):                      # the shackle
+            for x in range(fw):
+                d = math.hypot(x - 10, max(0, 8 - y))
+                if 3.5 <= d <= 6.2 and abs(x - 10) <= 6:
+                    f[y][x] = colour
+        for y in range(10, 21):                     # the body
+            for x in range(3, 18):
+                f[y][x] = colour
+        for y in range(13, 18):                     # the keyhole
+            f[y][10] = (0xff, 0x00, 0xff)
+        rows += f
+    pad = (4 - fw * 3 % 4) % 4
+    pix = b"".join(bytes(c for p in r for c in p[::-1]) + b"\0" * pad
+                   for r in reversed(rows))
+    head = b"BM" + struct.pack("<IHHI", 54 + len(pix), 0, 0, 54)
+    head += struct.pack("<IiiHHIIiiII", 40, fw, len(rows), 1, 24, 0,
+                        len(pix), 2835, 2835, 0, 0)
+    return head + pix
+
+
 for skin in ("SnappyV2", "SnappyAnimated", "SnappyRadio"):
     io.open("themes/wps/%s/bt.bmp" % skin, "wb").write(bt_bmp())
     io.open("themes/wps/%s/wired.bmp" % skin, "wb").write(wired_bmp())
     io.open("themes/wps/%s/rx.bmp" % skin, "wb").write(rx_bmp())
     io.open("themes/wps/%s/db.bmp" % skin, "wb").write(db_bmp())
-print("wrote bt.bmp, wired.bmp, rx.bmp, db.bmp")
+    io.open("themes/wps/%s/wifi.bmp" % skin, "wb").write(wifi_bmp())
+    io.open("themes/wps/%s/lock.bmp" % skin, "wb").write(lock_bmp())
+print("wrote bt.bmp, wired.bmp, rx.bmp, db.bmp, wifi.bmp, lock.bmp")

@@ -25,20 +25,27 @@
 %Fl(3,31-GeistMono-SemiBold.fnt)
 %Fl(4,44-GeistMono-SemiBold.fnt)
 %Fl(5,58-GeistMono-SemiBold.fnt)
-%xl(batt,batt_sbs.bmp,96,6,11)
-%xl(batt_chg,batt_sbs_chg.bmp,96,6)
-%xl(bt,bt.bmp,70,6,4)
-%xl(wired,wired.bmp,46,6)
-%xl(rx,rx.bmp,22,6,2)
-%xl(db,db.bmp,0,6,2)
+%xl(batt,batt_sbs.bmp,98,6,11)
+%xl(batt_chg,batt_sbs_chg.bmp,98,6)
+# The icons left of the battery, 24 px apart: the rune, Wi-Fi, then whatever
+# else is on, each in the first place free - so nothing stands off on its own.
+%xl(bt,bt.bmp,74,6,4)
+%xl(wifi,wifi.bmp,50,6,3)
+%xl(lock,lock.bmp,26,6,2)
+%xl(wired,wired.bmp,26,6)
+%xl(wired2,wired.bmp,2,6)
+%xl(rx,rx.bmp,26,6,2)
+%xl(rx2,rx.bmp,2,6,2)
+%xl(db,db.bmp,26,6,2)
+%xl(db2,db.bmp,2,6,2)
 %xl(p,paused.bmp,12,8)
 %xl(vb,vb.bmp)
 %xl(vb_backdrop,vb_backdrop.bmp)
 %xl(vb_too_loud,vb_too_loud.bmp)
 # With the plate up the title shares the status row instead of taking one of
-# its own (title_p; LOCKED has that place while the hold is on), and main_p
+# its own (title_p), and main_p
 # starts that much higher.
-%?mv(1.5)<%Vd(vol)|%?and(%if(%St(touchscreen mode),=,stick),%if(%St(stick overlay),=,on),%if(%St(stick overlay style),=,plate))<%?Lt<%?mh<%Vd(status)|%Vd(title_p)>%Vd(rule_p)|%Vd(status)%Vd(no_title)>|%Vd(status)%?Lt<%Vd(title)|%Vd(no_title)>>>
+%?mv(1.5)<%Vd(vol)|%?and(%if(%St(touchscreen mode),=,stick),%if(%St(stick overlay),=,on),%if(%St(stick overlay style),=,plate))<%?Lt<%Vd(title_p)%Vd(rule_p)|%Vd(status)%Vd(no_title)>|%Vd(status)%?Lt<%Vd(title)|%Vd(no_title)>>>
 # The bottom 338 px are the joystick plate's (PLATE_H in apps/stick_glue.c),
 # but only while the settings would draw one: main_p ends right above it and
 # there is no now-playing footer, the plain viewports use the whole panel.
@@ -62,14 +69,15 @@
 # Title Area
 # ---------
 #
-# Locked indicator / Time (on Quickscreen); the sleep timer is the WPS's alone
+# Time (on Quickscreen); the sleep timer is the WPS's alone
 %Vl(status,30,30,-240,34,3)
-%?mh<%Vs(invert)%acLOCKED|%?if(%cs,!=,10)<|%?cf<%cH:%cM|%cl:%cM %cP>>>
+%?if(%cs,!=,10)<|%?cf<%cH:%cM|%cl:%cM %cP>>
 #
-# Battery text and icon, and the Bluetooth rune beside the battery, and the
-# database drum while it builds or is not ready
+# Battery text and icon, and left of it the Bluetooth rune, Wi-Fi, and what
+# else is on: the padlock while the touch lock is, the jack or the receiver,
+# the database drum while it builds or is not ready
 %V(-240,30,-30,32,3)
-%ar%bl%%%?bp<%xd(batt_chg)|%xd(batt,%bl)>%?Br<|%xd(rx,1)|%xd(rx,2)>%?Bw<%xd(wired)|>%xd(bt,%BT)%?Dd<|%xd(db,1)|%xd(db,2)>
+%ar%bl%%%?bp<%xd(batt_chg)|%xd(batt,%bl)>%xd(bt,%BT)%xd(wifi,%WF)%?mh<%xd(lock,1)%?Bw<%xd(wired2)|%?Br<%?Dd<|%xd(db2,1)|%xd(db2,2)>|%xd(rx2,1)|%xd(rx2,2)>>|%?Bw<%xd(wired)%?Dd<|%xd(db2,1)|%xd(db2,2)>|%?Br<%?Dd<|%xd(db,1)|%xd(db,2)>|%xd(rx,1)%?Dd<|%xd(db2,1)|%xd(db2,2)>|%xd(rx,2)%?Dd<|%xd(db2,1)|%xd(db2,2)>>>>
 #
 # Title
 %Vl(title, 30,62,-30,60,5)
