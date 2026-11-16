@@ -215,6 +215,7 @@ enum skin_token_type {
     /* Bluetooth: 1 off or suspended, 2 on, 3 a device connected; 1 and 2
      * alternate while it is still coming up after boot */
     SKIN_TOKEN_BLUETOOTH,
+    SKIN_TOKEN_WIFI,
     /* "w" while the jack plays beside a Bluetooth headset, empty otherwise */
     SKIN_TOKEN_DUAL_OUTPUT,
     SKIN_TOKEN_DATABASE,

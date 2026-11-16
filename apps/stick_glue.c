@@ -1577,8 +1577,9 @@ static bool plate_at_rest(struct overlay_shape *s)
     if (!plate_has_room())
         return false;
 
-    /* Nothing to steer behind the lock or the USB screen. */
-    if (rpkeys_locked() || get_current_activity() == ACTIVITY_USBSCREEN)
+    /* Nothing to steer behind the lock, its countdown or the USB screen. */
+    if (rpkeys_locked() || rpkeys_countdown_active() ||
+        get_current_activity() == ACTIVITY_USBSCREEN)
         return false;
 
     memset(s, 0, sizeof(*s));

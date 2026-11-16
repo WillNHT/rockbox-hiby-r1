@@ -33,6 +33,8 @@
 %xl(B,batt_wps.bmp,2,0,2)
 %xl(O,off_on.bmp,48,0,2)
 %xl(bt,bt.bmp,0,0,4)
+%xl(wifi,wifi.bmp,0,0,3)
+%xl(lock,lock.bmp,8,6,2)
 %xl(wired,wired.bmp,0,0)
 %xl(rx,rx.bmp,0,0,2)
 %xl(vb,vb.bmp)
@@ -79,7 +81,6 @@
 %?if(%Bm,=,2)<%Vd(rxvol)>
 %?if(%Bm,=,3)<%Vd(rxs1)>
 %?if(%Bm,=,3)<%Vd(rxs2)>
-%?mh<|%Vd(plname)>
 %Vl(vdrim,27,23,144,24,-)
 %dr(0,0,-,2,D9E021,D9E021)
 %dr(0,22,-,2,D9E021,D9E021)
@@ -102,8 +103,11 @@
 # No id, so always drawn. The corner used to be shared with the sleep
 # timer and the volume number, which meant the one thing it is for was the
 # one thing it was often not showing.
+#
+# Locked, a padlock stands left of the time, as the battery's icon stands
+# left of its number. It used to be a LOCKED banner across the playlist row.
 %V(30,48,144,34,3)
-%Vs(invert)%ac%cH:%cM
+%Vs(invert)%ac%?mh<%xd(lock,2)|>%cH:%cM
 # Shuffle: 10 px clear of the clock box, which ends at x=174 
 %V(184,28,94,22,2)
 SHF%xd(O,%ps)
@@ -113,9 +117,10 @@ SHF%xd(O,%ps)
 # Bluetooth: grey off, white on, blue connected 
 %V(280,28,21,22,-)
 %xd(bt,%BT)
-# The jack playing beside the headset, under the rune; else receiving 
+# Under the rune, Wi-Fi: grey off, white on, blue joined. The jack
+#     playing beside the headset, or receiving, takes its place. 
 %V(280,58,21,22,-)
-%?Bw<%xd(wired)|%?Br<|%xd(rx,1)|%xd(rx,2)>>
+%?Bw<%xd(wired)|%?Br<%xd(wifi,%WF)|%xd(rx,1)|%xd(rx,2)>>
 # Battery bar 
 %V(-168,26,-30,18,-)
 %bl(0,0,138,18,bb,backdrop,bb_backdrop)
@@ -220,12 +225,8 @@ SHF%xd(O,%ps)
 %Vl(rxs2,30,612,-30,36,3)
 %Vt(0)
 %al%s%?Bt<%Bt%?Ba< - %Ba|>|receiving>
-# Locked
-# ======
-%V(30,98,-30,52,4)
-%Vs(invert)%ac%?mh<LOCKED|>
 # Playlist
 # ========
-%Vl(plname,30,112,-30,34,3)
+%V(30,112,-30,34,3)
 %Vt(0)
 %s%al%?pn<%pn|>

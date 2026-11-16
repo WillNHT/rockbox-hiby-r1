@@ -49,6 +49,7 @@
 #include "pradio.h"
 #ifdef HAVE_HIBY_BLUETOOTH
 #include "hiby_bluetooth.h"
+#include "hiby_wifi.h"
 #endif
 #include "playback.h"
 #include "skin_display.h"
@@ -1385,6 +1386,16 @@ const char *get_token_value(struct gui_wps *gwps,
                 numeric_ret = 3;
             else if (bt_is_enabled_fast())
                 numeric_ret = 2;
+#endif
+            itoa_buf(buf, buf_size, numeric_ret);
+            numeric_buf = buf;
+            goto gtv_ret_numeric_tag_info;
+
+        case SKIN_TOKEN_WIFI:
+            /* %?WF<off|on|joined> */
+            numeric_ret = 1;
+#if defined(HIBY_LINUX) && !defined(SIMULATOR)
+            numeric_ret += hiby_wifi_state_fast();
 #endif
             itoa_buf(buf, buf_size, numeric_ret);
             numeric_buf = buf;

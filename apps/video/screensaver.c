@@ -129,7 +129,7 @@ const char *screensaver_skin_name(void)
     return skin_name[0] ? skin_name : NULL;
 }
 
-char *screensaver_default_skin(int screen)
+char *screensaver_default_skin(enum screen_type screen)
 {
     (void)screen;
     /* A clock and what is playing, for when the chosen file is missing. */

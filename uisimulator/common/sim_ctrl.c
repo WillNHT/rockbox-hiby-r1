@@ -133,6 +133,8 @@ static SDL_Keycode key_by_name(const char *name)
     if (!strcmp(name, "voldown")) return SDLK_DOWN;
     if (!strcmp(name, "play"))    return SDLK_LEFT;
     if (!strcmp(name, "next"))    return SDLK_RIGHT;
+    /* not a key of the player: the cable, in and out (USB_KEY) */
+    if (!strcmp(name, "usb"))     return SDLK_c;
     return SDLK_UNKNOWN;
 }
 

@@ -72,6 +72,8 @@
 #include "screenshot.h"
 #include "settings.h"
 #include "skin_engine/skin_engine.h"
+#include "skin_engine/skin_layer.h"
+#include "screen_access.h"
 #include "sound.h"
 #include "system.h"
 #include "viewport.h"
@@ -342,92 +344,20 @@ void rpkeys_chirp_step(int step, int total, bool rising)
  * only every COUNTDOWN_FRAME_TICKS. */
 #define COUNTDOWN_FRAME_TICKS  (HZ / 30)
 
-/* The border is the countdown made spatial: a rectangle drawn round the
- * edge of the screen, clockwise from the top-left corner, closing exactly
- * as the hold fires. It costs almost nothing to push because it is only
- * ever *added* to - each frame inks the span since the last one and updates
- * that span's bounding box, never the whole frame. */
-#define BORDER_PX              8
-
 static long countdown_next_tick;
-static long border_done;        /* perimeter pixels already inked */
 /* What letting go does at this point in the hold. */
 enum countdown_stage { CD_LOCK, CD_SCREEN_OFF, CD_SHUTDOWN };
 static enum countdown_stage countdown_stage;
-
-/* Union a rectangle into an accumulating bounding box. */
-static void bbox_add(int *bx, int *by, int *bw, int *bh,
-                     int x, int y, int w, int h)
-{
-    if (w <= 0 || h <= 0)
-        return;
-    if (*bw == 0 || *bh == 0)
-    {
-        *bx = x; *by = y; *bw = w; *bh = h;
-        return;
-    }
-    if (x < *bx)          { *bw += *bx - x; *bx = x; }
-    if (y < *by)          { *bh += *by - y; *by = y; }
-    if (x + w > *bx + *bw) *bw = x + w - *bx;
-    if (y + h > *by + *bh) *bh = y + h - *by;
-}
-
-/* Ink the part of the perimeter between `from` and `to`, measured clockwise
- * from the top-left corner, and report what it touched. */
-static void border_span(int vw, int vh, long from, long to,
-                        int *bx, int *by, int *bw, int *bh)
-{
-    /* Side n runs [base, base + len). Lengths are the full edge, so the
-     * corners get inked twice - harmless, and it keeps the arithmetic to
-     * one expression per side. */
-    const long len[4] = { vw, vh, vw, vh };
-    long base = 0;
-    int i;
-
-    for (i = 0; i < 4; i++)
-    {
-        long a = from > base ? from - base : 0;
-        long b = to - base;
-        long n;
-
-        if (b > len[i])
-            b = len[i];
-        n = b - a;
-
-        if (n > 0)
-        {
-            int x, y, w, h;
-
-            switch (i)
-            {
-            case 0:  /* top, left to right */
-                x = (int)a; y = 0; w = (int)n; h = BORDER_PX; break;
-            case 1:  /* right, top to bottom */
-                x = vw - BORDER_PX; y = (int)a; w = BORDER_PX; h = (int)n; break;
-            case 2:  /* bottom, right to left */
-                x = vw - (int)b; y = vh - BORDER_PX; w = (int)n; h = BORDER_PX; break;
-            default: /* left, bottom to top */
-                x = 0; y = vh - (int)b; w = BORDER_PX; h = (int)n; break;
-            }
-
-            lcd_fillrect(x, y, w, h);
-            bbox_add(bx, by, bw, bh, x, y, w, h);
-        }
-
-        base += len[i];
-    }
-}
 
 static void countdown_draw(long held_ticks)
 {
     struct viewport vp;
     char line[32];
     const char *what, *next;
-    long target, start, perim, want;
+    long target, start;
     long left_ms;
     int w, h, y;
     int band_y, band_h;
-    int bx = 0, by = 0, bw = 0, bh = 0;
     enum countdown_stage stage;
     bool first;
 
@@ -458,12 +388,6 @@ static void countdown_draw(long held_ticks)
         stage = CD_LOCK;
     }
 
-    /* Crossing into the next stage restarts the border from nothing, so
-     * it has to restart the screen too - the last stage's rectangle is
-     * closed by then and would otherwise stay up behind this one. */
-    if (countdown_drawn && stage != countdown_stage)
-        countdown_drawn = false;
-
     first = !countdown_drawn;
 
     if (!first && !TIME_AFTER(current_tick, countdown_next_tick))
@@ -476,7 +400,10 @@ static void countdown_draw(long held_ticks)
     if (left_ms < 0)
         left_ms = 0;
 
-    viewport_set_defaults(&vp, SCREEN_MAIN);
+    /* the whole panel, status bar and all */
+    vp.buffer = NULL;
+    vp.flags = 0;
+    viewport_set_fullscreen(&vp, SCREEN_MAIN);
     lcd_set_viewport(&vp);
 
     h = font_get(vp.font)->height;
@@ -501,35 +428,21 @@ static void countdown_draw(long held_ticks)
          * kept reappearing across the middle of the lock screen - not a
          * repaint race, just a second writer nobody told. */
         lcd_scroll_stop();
+        /* A screen of its own, not a caption over the last one: a skin's
+         * viewports are surfaces composed over the framebuffer and its
+         * backdrop is what a clear restores, so both are taken down. The
+         * full updates countdown_clear() asks for bring them back. */
+        skin_layer_flatten();
+        screens[SCREEN_MAIN].backdrop_show(NULL);
         lcd_clear_viewport();
-        border_done = 0;
         countdown_drawn = true;
     }
     else
     {
         int mode = lcd_get_drawmode();
         lcd_set_drawmode(DRMODE_SOLID | DRMODE_INVERSEVID);
-        /* Inside the border: it is only ever added to, so whatever of it
-         * this clear took out would stay out - the gaps at either side. */
-        lcd_fillrect(BORDER_PX, band_y, vp.width - 2 * BORDER_PX, band_h);
+        lcd_fillrect(0, band_y, vp.width, band_h);
         lcd_set_drawmode(mode);
-    }
-
-    bbox_add(&bx, &by, &bw, &bh, 0, band_y, vp.width, band_h);
-
-    /* The border, as far as this frame has got. */
-    perim = 2L * (vp.width + vp.height);
-    want = (target > start)
-         ? perim * (held_ticks - start) / (target - start)
-         : perim;
-    if (want < 0)
-        want = 0;
-    if (want > perim)
-        want = perim;
-    if (want > border_done)
-    {
-        border_span(vp.width, vp.height, border_done, want, &bx, &by, &bw, &bh);
-        border_done = want;
     }
 
     lcd_getstringsize(what, &w, NULL);
@@ -566,8 +479,8 @@ static void countdown_draw(long held_ticks)
 
     if (first)
         lcd_update_viewport();
-    else if (bw > 0 && bh > 0)
-        lcd_update_viewport_rect(bx, by, bw, bh);
+    else
+        lcd_update_viewport_rect(0, band_y, vp.width, band_h);
 
     lcd_set_viewport(NULL);
 }
@@ -578,7 +491,6 @@ static void countdown_clear(void)
         return;
     countdown_drawn = false;
     countdown_next_tick = 0;
-    border_done = 0;
     /* Whatever was underneath owns the screen again. The lists redraw on
      * this event; the WPS does not listen to it and has to be told in its
      * own language, or the countdown stays on the skin until the track

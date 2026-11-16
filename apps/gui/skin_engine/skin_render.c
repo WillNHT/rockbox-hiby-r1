@@ -1127,6 +1127,9 @@ void skin_render(struct gui_wps *gwps, unsigned refresh_mode)
         if (viewport->children_count)
             skin_render_viewport(get_child(viewport->children, 0), gwps,
                                  skin_viewport, vp_refresh_mode);
+        if (vp_refresh_mode)
+            skin_layer_damage(skin_viewport,
+                (vp_refresh_mode&SKIN_REFRESH_ALL) == SKIN_REFRESH_ALL);
         skin_layer_exit(skin_viewport);
         refresh_mode = old_refresh_mode;
     }
@@ -1149,6 +1152,12 @@ void skin_render(struct gui_wps *gwps, unsigned refresh_mode)
     }
     /* Restore the default viewport */
     display->set_viewport_ex(NULL, VP_FLAG_VP_SET_CLEAN);
+    /* A full pass is the whole screen. Any other is what it changed,
+     * which is often nothing. */
+    if ((old_refresh_mode&SKIN_REFRESH_ALL) == SKIN_REFRESH_ALL)
+        skin_layer_present(NULL);
+    else if (defer_rendering || skin_layer_present(gwps))
+        return;
     if (!defer_rendering)
         display->update();
 }

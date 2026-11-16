@@ -126,6 +126,9 @@ void lcd_surface_put_tag(int tag);
 void lcd_surface_put_all(void);
 /* Back to transparent, veils and all. */
 void lcd_surface_clear(struct lcd_surface *s);
+/* A sum over what the surface holds: the same before and after a redraw
+ * means the redraw changed nothing, and nothing has to be presented. */
+unsigned lcd_surface_sum(const struct lcd_surface *s);
 void lcd_surface_veil(struct lcd_surface *s, int x, int y, int w, int h,
                       fb_data top, fb_data bottom, unsigned alpha,
                       const fb_data *src);

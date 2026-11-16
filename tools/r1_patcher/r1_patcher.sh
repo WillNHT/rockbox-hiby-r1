@@ -177,6 +177,15 @@ killall -9 $bootloader_file    &>/dev/null
 sleep 1s
 EOF
     chmod 0755 "$workingdir_in/rootfs/extracted/usr/bin/hiby_player.sh"
+
+    # The picture shown before the bootloader starts (S11jpeg_display_shell):
+    # logo.jpeg beside this script, a 480x800 baseline JPEG, takes the place
+    # of the base image's own. Replace the file to change it.
+    logo="$(dirname "$(realpath "$0")")/logo.jpeg"
+    if [[ -f "$logo" ]]; then
+        cp "$logo" "$workingdir_in/rootfs/extracted/etc/logo.jpeg"
+        cp "$logo" "$workingdir_in/rootfs/extracted/etc/logo1.jpeg"
+    fi
 fi
 
 ################################################################################

@@ -239,6 +239,28 @@ struct lcd_surface *lcd_surface_from_fb(const struct frame_buffer_t *fb)
     return (struct lcd_surface *)s;
 }
 
+unsigned lcd_surface_sum(const struct lcd_surface *s)
+{
+    unsigned sum = s->nveils;
+    int row, col, i;
+
+    for (row = 0; row < s->h; row++)
+    {
+        const fb_data *p = arena_row(s, row);
+        const unsigned char *cov = arena_cov + (p - arena_px);
+        for (col = 0; col < s->w; col++)
+            sum = sum * 31 + p[col] + (cov[col] << 16);
+    }
+    for (i = 0; i < s->nveils; i++)
+    {
+        const struct lcd_veil *v = &s->veil[i];
+        sum = sum * 31 + v->x + (v->y << 10) + (v->w << 20);
+        sum = sum * 31 + v->h + (v->alpha << 10);
+        sum = sum * 31 + v->top + (v->bottom << 16);
+    }
+    return sum;
+}
+
 void lcd_surface_clear(struct lcd_surface *s)
 {
     int row, col;
