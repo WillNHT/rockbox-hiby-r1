@@ -20,6 +20,7 @@
 
 #include <stdbool.h>
 #include "queue.h"
+#include "screen_access.h"
 
 /* Screensavers are skins: files in /.rockbox/wps with the .ss extension,
  * written like a WPS, their pictures in the folder of the same name. One
@@ -53,6 +54,6 @@ bool screensaver_active(void);
 /* The skin to load (a name in WPS_DIR, no extension), or NULL. */
 const char *screensaver_skin_name(void);
 /* The built-in one, for when the file is missing. */
-char *screensaver_default_skin(int screen);
+char *screensaver_default_skin(enum screen_type screen);
 
 #endif
