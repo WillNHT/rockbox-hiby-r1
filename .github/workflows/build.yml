@@ -98,7 +98,9 @@ jobs:
   simulator:
     needs: changes
     if: needs.changes.outputs.functional == 'true'
-    runs-on: ubuntu-latest
+    # Not ubuntu-latest: the fixture covers are made by ffmpeg, and the
+    # goldens hold the pixels the one in 24.04 makes.
+    runs-on: ubuntu-24.04
     name: Hiby R1 simulator
     env:
       SIM_SCRIPT: ${{ github.event.inputs.sim_script || 'tools/simctl/tests/smoke.txt' }}
