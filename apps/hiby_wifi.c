@@ -25,6 +25,7 @@
 
 #if defined(HIBY_LINUX) && !defined(SIMULATOR)
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,7 +47,8 @@
  * wlan0: up loads its firmware, down switches it off. A bootloader that
  * still unbinds the chip leaves no wlan0, and the driver cannot be bound
  * again. Off until switched on - the radio is the biggest battery cost the player
- * has - and nothing listens: Rockbox only ever talks out. Networks and
+ * has - and it comes back the way it was left: wifi_on.txt is kept while it
+ * is on. Nothing listens: Rockbox only ever talks out. Networks and
  * passwords are kept by wpa_supplicant itself, in wifi.conf. */
 #define WIFI_IF        "wlan0"
 #define WIFI_CONF      PIVOT_ROOT ROCKBOX_DIR "/wifi.conf"
@@ -57,6 +59,7 @@
 #define WIFI_OUT_OF_RANGE (-1000)
 #define WIFI_SDIO      "/sys/bus/sdio/drivers/bcmsdh_sdmmc/"
 #define WIFI_LOG       PIVOT_ROOT "/rockbox-wifi-debug.log"
+#define WIFI_BOOT_FILE PIVOT_ROOT ROCKBOX_DIR "/wifi_on.txt"
 
 /* Updates: the release the fork's GitHub page calls latest, or the zip
  * update.url names - a laptop serving a build on the same network. */
@@ -75,6 +78,10 @@ struct wifi_net
 
 static struct wifi_net wifi_nets[WIFI_MAX_NETS];
 static int wifi_net_count;
+/* For %WF: 0 off, 1 on, 2 joined. Kept by wifi_worker(). */
+static volatile int wifi_state;
+/* The menu and the worker both bring the radio up */
+static pthread_mutex_t wifi_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static bool wifi_is_on(void)
 {
@@ -147,29 +154,56 @@ static void wifi_dhcp(void)
            "udhcpc -b -i " WIFI_IF " -x hostname:rockbox >/dev/null 2>&1 &");
 }
 
-static bool wifi_on(void)
+/* No screen here: the worker calls it too, at boot, and it is not a
+ * Rockbox thread, so it cannot sleep() the way one does */
+static bool wifi_up(bool worker)
 {
     int i;
+
+    pthread_mutex_lock(&wifi_lock);
+    if (!wifi_is_on())
+    {
+        system("[ -f " WIFI_CONF " ] || printf 'ctrl_interface=/var/run/wpa_supplicant\\n"
+               "update_config=1\\n' > " WIFI_CONF);
+        system("ifconfig " WIFI_IF " up && wpa_supplicant -B -D nl80211 -i " WIFI_IF
+               " -c " WIFI_CONF " >/tmp/wifi.log 2>&1");
+        for (i = 0; i < 30 && !wifi_is_on(); i++)
+        {
+            if (worker)
+                usleep(100000);
+            else
+                sleep(HZ/10);
+        }
+        if (wifi_is_on())
+            /* a saved network is joined on its own, the last one joined
+             * first (wifi_connect() ranks them) */
+            wifi_dhcp();
+        else
+            /* why, for whoever reads the card */
+            system("{ cat /tmp/wifi.log; ls /sys/bus/sdio/devices " WIFI_SDIO "; ifconfig -a; "
+                   "rfkill list; dmesg | tail -n 40; } > " WIFI_LOG " 2>&1");
+    }
+    pthread_mutex_unlock(&wifi_lock);
+    return wifi_is_on();
+}
+
+static bool wifi_on(void)
+{
+    FILE *fp;
 
     if (wifi_is_on())
         return true;
     splash(0, ID2P(LANG_WAIT));
-    system("[ -f " WIFI_CONF " ] || printf 'ctrl_interface=/var/run/wpa_supplicant\\n"
-           "update_config=1\\n' > " WIFI_CONF);
-    system("ifconfig " WIFI_IF " up && wpa_supplicant -B -D nl80211 -i " WIFI_IF
-           " -c " WIFI_CONF " >/tmp/wifi.log 2>&1");
-    for (i = 0; i < 30 && !wifi_is_on(); i++)
-        sleep(HZ/10);
-    if (!wifi_is_on())
+    if (!wifi_up(false))
     {
-        /* why, for whoever reads the card */
-        system("{ cat /tmp/wifi.log; ls /sys/bus/sdio/devices " WIFI_SDIO "; ifconfig -a; "
-               "rfkill list; dmesg | tail -n 40; } > " WIFI_LOG " 2>&1");
         splash(HZ*2, ID2P(LANG_WIFI_UNAVAILABLE));
         return false;
     }
-    /* a saved network is joined on its own */
-    wifi_dhcp();
+    wifi_state = 1;
+    /* on again at the next boot */
+    fp = fopen(WIFI_BOOT_FILE, "a");
+    if (fp)
+        fclose(fp);
     return true;
 }
 
@@ -177,9 +211,13 @@ static void wifi_off(void)
 {
     int i;
 
+    unlink(WIFI_BOOT_FILE);
+    pthread_mutex_lock(&wifi_lock);
     system("killall udhcpc wpa_supplicant >/dev/null 2>&1; ifconfig " WIFI_IF " down");
     for (i = 0; i < 10 && wifi_is_on(); i++)
         sleep(HZ/10);
+    pthread_mutex_unlock(&wifi_lock);
+    wifi_state = 0;
 }
 
 static void wifi_add(const char *ssid, int signal, int id, bool secured)
@@ -324,9 +362,18 @@ static void wifi_connect(const struct wifi_net *net)
         splash(HZ*2, ID2P(LANG_WIFI_CONNECT_FAILED));
         return;
     }
-    /* select_network turned the others off: they may join again later */
+    /* select_network turned the others off: they may join again later,
+     * this one ahead of them - the last network joined is the first one
+     * tried when Wi-Fi next comes on */
     system(WIFI_CLI "enable_network all >/dev/null");
+    snprintf(cmd, sizeof(cmd), "p=0; for i in $(" WIFI_CLI "list_networks | "
+             "sed -n 's/^\\([0-9][0-9]*\\)\t.*/\\1/p'); do "
+             "q=$(" WIFI_CLI "get_network $i priority); "
+             "[ \"$q\" -gt $p ] 2>/dev/null && p=$q; done; "
+             WIFI_CLI "set_network %d priority $((p + 1)) >/dev/null", id);
+    system(cmd);
     system(WIFI_CLI "save_config >/dev/null");
+    wifi_state = 2;
 
     wifi_dhcp();
     for (i = 0; i < 20 && !ip[0]; i++)
@@ -482,6 +529,37 @@ static int wifi_ok_cancel(int action, struct gui_synclist *lists)
     if (action == ACTION_STD_OK)
         return ACTION_STD_CANCEL;
     return action;
+}
+
+/* Not a Rockbox thread: it blocks in system() and popen() */
+static void *wifi_worker(void *arg)
+{
+    char ssid[WIFI_SSID_LEN], ip[16];
+
+    (void)arg;
+    /* Wi-Fi comes back the way it was left */
+    if (access(WIFI_BOOT_FILE, F_OK) == 0)
+        wifi_up(true);
+    while (1)
+    {
+        /* off costs one access() a turn; on, one wpa_cli */
+        wifi_state = !wifi_is_on() ? 0 : wifi_status(ssid, ip) ? 2 : 1;
+        usleep(5000000);
+    }
+    return NULL;
+}
+
+void hiby_wifi_boot_init(void)
+{
+    pthread_t worker;
+
+    if (pthread_create(&worker, NULL, wifi_worker, NULL) == 0)
+        pthread_detach(worker);
+}
+
+int hiby_wifi_state_fast(void)
+{
+    return wifi_state;
 }
 
 int hiby_wifi_menu(void)

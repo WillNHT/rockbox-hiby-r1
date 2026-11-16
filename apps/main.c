@@ -148,6 +148,7 @@
 #endif
 #ifdef HAVE_HIBY_BLUETOOTH
 #include "hiby_bluetooth.h"
+#include "hiby_wifi.h"
 #endif
 
 #if (CONFIG_PLATFORM & PLATFORM_SDL)
@@ -488,6 +489,9 @@ static void init(void)
 #endif
 #ifdef HAVE_HIBY_BLUETOOTH
     bt_boot_init();
+#endif
+#if defined(HIBY_LINUX) && !defined(SIMULATOR)
+    hiby_wifi_boot_init();
 #endif
 
     audio_init();

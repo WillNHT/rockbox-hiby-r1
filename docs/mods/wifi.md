@@ -7,14 +7,19 @@ release): an older one takes the chip away from its driver before Rockbox starts
 and Wi-Fi then says it is unavailable. Nothing listens on the network - Rockbox only ever
 talks out.
 
-* **Wi-Fi: On/Off** - select to switch it. It starts off on every boot: the radio
-  is the biggest battery cost the player has, so leave it off when nothing needs it.
+* **Wi-Fi: On/Off** - select to switch it. It comes back the way it was left: on
+  when the player was switched off, it is brought up again at the next start and
+  joins a saved network that is in range, the last one joined first. The radio is
+  the biggest battery cost the player has, so leave it off when nothing needs it.
 * **Network** - select to scan. Pick a network to join; a secured one asks for its
   password on the keyboard. Saved networks are starred and are joined on their own
   next time Wi-Fi comes on. Long-press a saved one to forget it. A password that
   fails is not kept.
 * **IP Address** - what the network gave the player.
 * **Update Rockbox** - see below.
+
+The status bar and the playing screen show it beside the Bluetooth rune: grey off,
+white on, blue once a network is joined (`%WF` in a skin: off, on, joined).
 
 If the radio does not come up, the reason is written to `rockbox-wifi-debug.log` in
 the root of the card.
