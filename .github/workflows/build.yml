@@ -132,6 +132,7 @@ jobs:
       # harness is lying and no other shot from this run means anything.
       run: |
         diff=$(compare -metric AE shots/shot01.png shots/shot02.png null: 2>&1 || true)
+        diff=${diff%% *}   # newer ImageMagick appends " (fraction)"
         echo "shot01 vs shot02: $diff pixel(s)"
         [ "$diff" = 0 ]
 
