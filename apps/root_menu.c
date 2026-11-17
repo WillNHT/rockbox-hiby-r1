@@ -568,10 +568,11 @@ MENUITEM_RETURNVALUE(library_item, ID2P(LANG_LIBRARY), GO_TO_DBBROWSER,
                         NULL, Icon_Audio);
 #endif
 MAKE_MENU(music_menu, ID2P(LANG_MUSIC), NULL, Icon_Audio,
+          &foryou_item, &playlists, &pseudo_radio_item
 #ifdef HAVE_TAGCACHE
-          &library_item,
+          , &library_item
 #endif
-          &playlists, &foryou_item, &pseudo_radio_item);
+          );
 
 static int music(void* param)
 {
