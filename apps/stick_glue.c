@@ -1758,6 +1758,13 @@ void stick_draw_overlay(void)
     overlay_paint(&overlay.have_s);
 }
 
+/* The shutdown screen: nothing is left to steer, and it never polls for an
+ * action, so the plate would sit over it to the end. */
+void stick_hide_overlay(void)
+{
+    overlay_clear();
+}
+
 /* From a list that is about to draw. The plate's cap moves with every
  * frame of the list's own drag, and presented by itself it was a second
  * update a frame: this puts it in the layer now and lets the list's

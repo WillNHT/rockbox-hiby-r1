@@ -31,6 +31,8 @@ not the one installed, it offers it, downloads `rockbox-hibyr1-<version>-sdcard.
 (about 30 MB: firmware, fonts, themes), unpacks it over the card and restarts.
 Playback stops while it works. Settings, the database and music are not in the
 archive and stay as they are. A download that fails or is cut short changes nothing.
+When it says it failed, what it asked GitHub and what came back are in
+`rockbox-wifi-debug.log` in the root of the card.
 
 The player only needs a way out to the internet, so either of these works:
 

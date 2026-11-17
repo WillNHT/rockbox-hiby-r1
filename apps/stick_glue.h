@@ -85,6 +85,10 @@ void stick_redraw_overlay(int rx, int ry, int rw, int rh);
  * goes out with the list's update and not one of its own. */
 void stick_predraw_overlay(void);
 
+/* Takes the gesture overlay and the plate off the panel, for a screen that
+ * will not poll for an action again: the shutdown screen. */
+void stick_hide_overlay(void);
+
 /* True while the volume dial is armed - the thumb is down and turning it
  * changes the volume. What the %sd skin tag reports, so a skin can say so
  * on its own volume bar instead of the engine drawing a ring. */

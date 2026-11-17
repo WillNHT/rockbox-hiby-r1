@@ -100,6 +100,10 @@
 #include "hiby_bluetooth.h"
 #endif
 
+#ifdef HAVE_TOUCHSCREEN
+#include "stick_glue.h"
+#endif
+
 #ifdef BOOTFILE
 #if !defined(USB_NONE) && !defined(USB_HANDLED_BY_OF) \
         || defined(HAVE_HOTSWAP_STORAGE_AS_MAIN)
@@ -380,6 +384,9 @@ static bool clean_shutdown(enum shutdown_type sd_type,
         int audio_stat = audio_status();
 #endif
 
+#ifdef HAVE_TOUCHSCREEN
+        stick_hide_overlay();
+#endif
         FOR_NB_SCREENS(i)
         {
             screens[i].clear_display();

@@ -740,8 +740,16 @@ int main(int argc, char **argv)
         else if(mode == BOOT_ROCKBOX)
         {
 #if defined(HIBY_R3PROII) || defined(HIBY_R1)
+#ifdef HIBY_R1
+            /* Only take wlan0 down: that is enough to power the chip off.
+             * wifi_down can also tear the driver off the chip (dhd_detach
+             * in the boot log), and the driver cannot come back - Rockbox
+             * then finds no wlan0 until the next boot. */
+            system("killall udhcpc wpa_supplicant >/dev/null 2>&1; ifconfig wlan0 down");
+#else
             /* Suspend wifi*/
             system("/usr/bin/wifi_down");
+#endif
 #ifndef HIBY_R1
             /* the R1's driver cannot be bound again, and Rockbox there has
              * Wi-Fi: the chip stays powered off while wlan0 is down */

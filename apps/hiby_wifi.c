@@ -469,7 +469,7 @@ static void wifi_line(const char *cmd, char *out, size_t len)
 /* Fetch a release zip and unpack it over the card, then restart into it */
 static void wifi_update(void)
 {
-    char url[300], tag[40], sum[70], cmd[700];
+    char url[300], tag[40], sum[70], cmd[1000];
 
     tag[0] = sum[0] = '\0';
     splash(0, ID2P(LANG_WAIT));
@@ -479,9 +479,16 @@ static void wifi_update(void)
         wifi_line("sed -n 2p " UPDATE_URL, sum, sizeof(sum));
     else
     {
-        /* releases/latest redirects to releases/tag/<version> */
-        wifi_line("wget -q -S --spider -T 15 " UPDATE_RELEASES "/latest 2>&1 | "
-                  "sed -n 's|.*/releases/tag/||p' | head -n 1", tag, sizeof(tag));
+        /* releases/latest redirects to releases/tag/<version>. What was
+         * asked and answered goes to the card: a player that cannot reach
+         * GitHub says why there, not only "failed". curl where wget has no
+         * HTTPS. */
+        wifi_line("{ date; wget 2>&1 | head -n 1; which curl ssl_client openssl; "
+                  "cat /etc/resolv.conf; route -n; nslookup github.com; "
+                  "wget -S --spider -T 15 " UPDATE_RELEASES "/latest || "
+                  "curl -skIL -m 15 " UPDATE_RELEASES "/latest; } > " WIFI_LOG " 2>&1; "
+                  "sed -n 's|.*/releases/tag/||p' " WIFI_LOG " | head -n 1",
+                  tag, sizeof(tag));
         if (!tag[0])
         {
             splash(HZ*2, ID2P(LANG_WIFI_UPDATE_FAILED));
@@ -503,17 +510,18 @@ static void wifi_update(void)
     /* the codecs are about to be replaced */
     audio_stop();
     splash(0, ID2P(LANG_WIFI_DOWNLOADING));
-    snprintf(cmd, sizeof(cmd), "wget -q -T 30 -O " UPDATE_ZIP " '%s'%s%s%s", url,
+    snprintf(cmd, sizeof(cmd), "{ wget -T 30 -O " UPDATE_ZIP " '%s' || curl -skL -m 900 -o "
+             UPDATE_ZIP " '%s'; } >> " WIFI_LOG " 2>&1%s%s%s", url, url,
              sum[0] ? " && [ \"$(sha256sum < " UPDATE_ZIP " | cut -c1-64)\" = \"" : "",
              sum, sum[0] ? "\" ]" : "");
     /* unpacked beside the install and moved in file by file: a download cut
      * short changes nothing, and a library in use is replaced, not rewritten */
     if (system(cmd) ||
-        system("rm -rf " UPDATE_DIR "; mkdir " UPDATE_DIR
+        system("{ rm -rf " UPDATE_DIR "; mkdir " UPDATE_DIR
                " && unzip -o -q " UPDATE_ZIP " -d " UPDATE_DIR
                " && [ -f " UPDATE_DIR ROCKBOX_DIR "/" BOOTFILE " ] && cd " UPDATE_DIR
                " && find . -type d -exec mkdir -p " PIVOT_ROOT "/{} \\;"
-               " && find . -type f -exec mv -f {} " PIVOT_ROOT "/{} \\;"))
+               " && find . -type f -exec mv -f {} " PIVOT_ROOT "/{} \\;; } >> " WIFI_LOG " 2>&1"))
     {
         system("rm -rf " UPDATE_DIR " " UPDATE_ZIP);
         splash(HZ*2, ID2P(LANG_WIFI_UPDATE_FAILED));

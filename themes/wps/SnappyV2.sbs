@@ -25,18 +25,18 @@
 %Fl(3,31-GeistMono-SemiBold.fnt)
 %Fl(4,44-GeistMono-SemiBold.fnt)
 %Fl(5,58-GeistMono-SemiBold.fnt)
-%xl(batt,batt_sbs.bmp,98,6,11)
-%xl(batt_chg,batt_sbs_chg.bmp,98,6)
-# The icons left of the battery, 24 px apart: the rune, Wi-Fi, then whatever
+%xl(batt,batt_sbs.bmp,114,6,11)
+%xl(batt_chg,batt_sbs_chg.bmp,114,6)
+# The icons left of the battery, 28 px apart: the rune, Wi-Fi, then whatever
 # else is on, each in the first place free - so nothing stands off on its own.
-%xl(bt,bt.bmp,74,6,4)
-%xl(wifi,wifi.bmp,50,6,3)
-%xl(lock,lock.bmp,26,6,2)
-%xl(wired,wired.bmp,26,6)
+%xl(bt,bt.bmp,86,6,4)
+%xl(wifi,wifi.bmp,58,6,3)
+%xl(lock,lock.bmp,30,6,2)
+%xl(wired,wired.bmp,30,6)
 %xl(wired2,wired.bmp,2,6)
-%xl(rx,rx.bmp,26,6,2)
+%xl(rx,rx.bmp,30,6,2)
 %xl(rx2,rx.bmp,2,6,2)
-%xl(db,db.bmp,26,6,2)
+%xl(db,db.bmp,30,6,2)
 %xl(db2,db.bmp,2,6,2)
 %xl(p,paused.bmp,12,8)
 %xl(vb,vb.bmp)
@@ -70,13 +70,13 @@
 # ---------
 #
 # Time (on Quickscreen); the sleep timer is the WPS's alone
-%Vl(status,30,30,-240,34,3)
+%Vl(status,30,30,-256,34,3)
 %?if(%cs,!=,10)<|%?cf<%cH:%cM|%cl:%cM %cP>>
 #
 # Battery text and icon, and left of it the Bluetooth rune, Wi-Fi, and what
 # else is on: the padlock while the touch lock is, the jack or the receiver,
 # the database drum while it builds or is not ready
-%V(-240,30,-30,32,3)
+%V(-256,30,-30,32,3)
 %ar%bl%%%?bp<%xd(batt_chg)|%xd(batt,%bl)>%xd(bt,%BT)%xd(wifi,%WF)%?mh<%xd(lock,1)%?Bw<%xd(wired2)|%?Br<%?Dd<|%xd(db2,1)|%xd(db2,2)>|%xd(rx2,1)|%xd(rx2,2)>>|%?Bw<%xd(wired)%?Dd<|%xd(db2,1)|%xd(db2,2)>|%?Br<%?Dd<|%xd(db,1)|%xd(db,2)>|%xd(rx,1)%?Dd<|%xd(db2,1)|%xd(db2,2)>|%xd(rx,2)%?Dd<|%xd(db2,1)|%xd(db2,2)>>>>
 #
 # Title
@@ -88,7 +88,7 @@
 %dr(0,4,-,2)
 #
 # Title and its line with the joystick plate up: in the status row
-%Vl(title_p,30,14,-240,60,5)
+%Vl(title_p,30,14,-256,60,5)
 %s%al%Lt
 %Vl(rule_p,30,74,-30,30,-)
 %dr(0,4,-,2)
