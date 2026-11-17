@@ -3019,12 +3019,7 @@ char *playlist_title(char *buf, int buf_size)
     size_t len;
 
     if (playlist_name(playlist, buf, buf_size))
-    {
-        /* a mix is written to foryou.m3u8 (apps/foryou.c) */
-        if (!strcmp(playlist->filename, ROCKBOX_DIR "/foryou.m3u8"))
-            return str(LANG_FORYOU);
         return buf;
-    }
 
     strmemccpy(buf, playlist->filename, buf_size);
     len = strlen(buf);

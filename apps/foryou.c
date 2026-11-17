@@ -41,6 +41,7 @@
 #include "kernel.h"
 #include "audio.h"
 #include "file.h"
+#include "dir.h"
 #include "lang.h"
 #include "list.h"
 #include "menu.h"
@@ -496,17 +497,29 @@ static const char *text_name(int item, void *data, char *buf, size_t size)
 /* A mix is a playlist file, written whole and then played: the order it
  * is written in is the order it plays in. Written beside itself first -
  * Smart Shuffle reads the playlist it is about to replace. */
-#define MIX_FILE "foryou.m3u8"
-#define MIX_PATH ROCKBOX_DIR "/" MIX_FILE
+/* Each mix is its own file, named as it is in the menu: the file's name is
+ * what a skin shows for the playlist, and covers are cached by path. */
+#define MIX_DIR ROCKBOX_DIR "/foryou"
+static const char *mix_name;
+static char mix_path[MAX_PATH];
+static char mix_tmp[MAX_PATH];
 static int mix_fd;
 static int mix_count;
 
 static bool mix_open(void)
 {
+    char *p;
+
     if (!warn_on_pl_erase())
         return false;
     mix_count = 0;
-    mix_fd = creat(MIX_PATH ".tmp", 0666);
+    mkdir(MIX_DIR);
+    snprintf(mix_path, sizeof(mix_path), MIX_DIR "/%s.m3u8", mix_name);
+    for (p = mix_path + sizeof(MIX_DIR); *p; p++)
+        if (strchr("/\\:*?\"<>|", *p))
+            *p = '_';
+    snprintf(mix_tmp, sizeof(mix_tmp), "%s.tmp", mix_path);
+    mix_fd = creat(mix_tmp, 0666);
     return mix_fd >= 0;
 }
 
@@ -527,8 +540,10 @@ static int nothing(void)
 static int mix_play(int start)
 {
     close(mix_fd);
-    rename(MIX_PATH ".tmp", MIX_PATH);
-    if (mix_count == 0 || playlist_create(ROCKBOX_DIR, MIX_FILE) < 0)
+    remove(mix_path);
+    rename(mix_tmp, mix_path);
+    if (mix_count == 0 ||
+        playlist_create(MIX_DIR, mix_path + sizeof(MIX_DIR)) < 0)
         return nothing();
     playlist_start(start < mix_count ? start : 0, 0, 0);
     return GO_TO_WPS;
@@ -576,6 +591,7 @@ static int show(const char *title)
 
     if (ntext == 0)
         return nothing();
+    mix_name = title;
     while (1)
     {
         struct simplelist_info info;
@@ -809,8 +825,9 @@ static int mix_finish(void)
     return mix_play(0);
 }
 
-static void mix_begin(void)
+static void mix_begin(int lang)
 {
+    mix_name = str(lang);
     clock_now();
     seed_key = 0;
     npicks = nfound = 0;
@@ -818,9 +835,9 @@ static void mix_begin(void)
     tally_all_tracks();
 }
 
-static int mix_of(weight_fn weight)
+static int mix_of(weight_fn weight, int lang)
 {
-    mix_begin();
+    mix_begin(lang);
     pick(weight, global_settings.foryou_mix_size);
     return mix_finish();
 }
@@ -830,7 +847,7 @@ static int foryou_mix(void)
 {
     int n = global_settings.foryou_mix_size;
 
-    mix_begin();
+    mix_begin(LANG_FORYOU);
     db_sample(n / 5, want_unheard);
     pick(w_foryou, n - nfound);
     return mix_finish();
@@ -841,7 +858,7 @@ static int daily_mix(void)
 {
     int n = global_settings.foryou_mix_size;
 
-    mix_begin();
+    mix_begin(LANG_FORYOU_DAILY);
     db_sample(n / 10, want_unheard);
     pick(w_lesser, n / 5);
     pick(w_familiar, n - nfound - npicks);
@@ -851,12 +868,12 @@ static int daily_mix(void)
 
 static int rediscover_mix(void)
 {
-    return mix_of(w_rediscover);
+    return mix_of(w_rediscover, LANG_FORYOU_REDISCOVER);
 }
 
 static int forgotten_mix(void)
 {
-    return mix_of(w_forgotten);
+    return mix_of(w_forgotten, LANG_FORYOU_FORGOTTEN);
 }
 
 /* A mini-radio around what is playing, or around the last thing heard:
@@ -865,7 +882,7 @@ static int similar_mix(void)
 {
     struct mp3entry *id3 = audio_status() ? audio_current_track() : NULL;
 
-    mix_begin();
+    mix_begin(LANG_FORYOU_SIMILAR);
     if (id3 && id3->path[0])
     {
         seed_key = path_key(id3->path, BY_TRACK);
@@ -890,8 +907,14 @@ static int similar_mix(void)
 
 static int mood_mix(void *param)
 {
+    static const int mood_lang[] =
+    {
+        LANG_FORYOU_CHILL, LANG_FORYOU_ENERGETIC, LANG_FORYOU_DRIVING,
+        LANG_FORYOU_RELAXING,
+    };
+
     mood = (intptr_t)param;
-    mix_begin();
+    mix_begin(mood_lang[mood]);
     db_sample(global_settings.foryou_mix_size, want_mood);
     return mix_finish();
 }
@@ -925,6 +948,7 @@ static int smart_shuffle(void)
     }
     sequence(n);
 
+    mix_name = str(LANG_FORYOU_SHUFFLE);
     if (!mix_open())
         return 0;
     for (int i = 0; i < n; i++)

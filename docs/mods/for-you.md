@@ -14,7 +14,8 @@ and less. "Heard" is finished, or at least half played.
 
 ## Mixes
 
-Each one writes `/.rockbox/foryou.m3u8` and plays it. No artist comes twice
+Each one writes `/.rockbox/foryou/<name>.m3u8` and plays it, so the
+player shows that mix's name and cover. No artist comes twice
 in a row where the tracks allow it.
 
 | Entry | What plays |

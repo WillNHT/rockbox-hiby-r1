@@ -243,6 +243,31 @@ void hiby_wifi_resume(void)
     wifi_up(true);
 }
 
+/* On, by the socket wpa_supplicant leaves, but is anyone there? A chip
+ * reset under it takes wpa_supplicant away and leaves the socket: Wi-Fi
+ * then reads as on with no network and nothing in a scan. */
+static bool wifi_answers(void)
+{
+    char line[8];
+    FILE *fp = popen(WIFI_CLI "ping 2>/dev/null", "r");
+    if (!fp)
+        return true;
+    if (!fgets(line, sizeof(line), fp))
+        line[0] = '\0';
+    pclose(fp);
+    return !strncmp(line, "PONG", 4);
+}
+
+/* From scratch: the worker, when wifi_answers() says nobody is there */
+static void wifi_restart(void)
+{
+    pthread_mutex_lock(&wifi_lock);
+    system("killall udhcpc wpa_supplicant >/dev/null 2>&1; rm -f " WIFI_CTRL
+           "; ifconfig " WIFI_IF " down");
+    pthread_mutex_unlock(&wifi_lock);
+    wifi_up(true);
+}
+
 static void wifi_add(const char *ssid, int signal, int id, bool secured)
 {
     struct wifi_net *net = NULL;
@@ -489,6 +514,10 @@ static void wifi_line(const char *cmd, char *out, size_t len)
                     "0123456789.-_:/%~+=?&")] = '\0';
 }
 
+/* What wifi_update() came back with, said once the menu has drawn itself
+ * again: said straight away, it sat on what the wait left behind. */
+static int wifi_msg;
+
 /* Fetch a release zip and unpack it over the card, then restart into it */
 static void wifi_update(void)
 {
@@ -513,12 +542,12 @@ static void wifi_update(void)
                   tag, sizeof(tag));
         if (!tag[0])
         {
-            splash(HZ*2, ID2P(LANG_WIFI_UPDATE_FAILED));
+            wifi_msg = LANG_WIFI_UPDATE_FAILED;
             return;
         }
         if (!strcmp(tag, rbversion))
         {
-            splash(HZ*2, ID2P(LANG_WIFI_UP_TO_DATE));
+            wifi_msg = LANG_WIFI_UP_TO_DATE;
             return;
         }
         snprintf(url, sizeof(url), UPDATE_RELEASES "/download/%s/rockbox-hibyr1-%s-sdcard.zip",
@@ -546,7 +575,7 @@ static void wifi_update(void)
                " && find . -type f -exec mv -f {} " PIVOT_ROOT "/{} \\;; } >> " WIFI_LOG " 2>&1"))
     {
         system("rm -rf " UPDATE_DIR " " UPDATE_ZIP);
-        splash(HZ*2, ID2P(LANG_WIFI_UPDATE_FAILED));
+        wifi_msg = LANG_WIFI_UPDATE_FAILED;
         return;
     }
     system("rm -rf " UPDATE_DIR " " UPDATE_ZIP "; sync");
@@ -558,6 +587,12 @@ static int wifi_ok_cancel(int action, struct gui_synclist *lists)
     (void)lists;
     if (action == ACTION_STD_OK)
         return ACTION_STD_CANCEL;
+    if (action == ACTION_NONE && wifi_msg)
+    {
+        splash(HZ*2, ID2P(wifi_msg));
+        wifi_msg = 0;
+        return ACTION_REDRAW;
+    }
     return action;
 }
 
@@ -567,9 +602,16 @@ static void *wifi_worker(void *arg)
     char ssid[WIFI_SSID_LEN], ip[16];
 
     (void)arg;
-    /* Wi-Fi comes back the way it was left */
+    /* Wi-Fi comes back the way it was left - once HiBy's bt_init is done
+     * with the radio chip the two share: a network joined while it runs
+     * is dropped a little later, when it resets the chip */
     if (access(WIFI_BOOT_FILE, F_OK) == 0)
+    {
+        for (int i = 0; i < 30 &&
+             system("pgrep -f '[b]t_init' >/dev/null 2>&1") == 0; i++)
+            usleep(1000000);
         wifi_up(true);
+    }
     while (1)
     {
         int was = wifi_state;
@@ -579,6 +621,11 @@ static void *wifi_worker(void *arg)
             /* the network went: why, for whoever reads the card */
             system("{ date; " WIFI_CLI "status; " WIFI_CLI "scan_results; ifconfig " WIFI_IF
                    "; rfkill list; dmesg | tail -n 40; } >> " WIFI_LOG " 2>&1");
+        /* wanted on, and wpa_supplicant gone from under it: start again
+         * (a switch off unlinks the file before it kills anything) */
+        if (wifi_state == 1 && access(WIFI_BOOT_FILE, F_OK) == 0 &&
+            !wifi_answers())
+            wifi_restart();
         usleep(5000000);
     }
     return NULL;
