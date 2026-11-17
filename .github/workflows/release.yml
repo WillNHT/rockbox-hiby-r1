@@ -130,6 +130,12 @@ jobs:
           # would consider the target up to date and write nothing.
           make fontzip VERSION="$VERSION"
           make zip VERSION="$VERSION"
+          # curl for the updater (tools/rbcurl)
+          sudo chmod u-s /bin/tar
+          sh ../tools/rbcurl/build.sh r1 /tmp/rbcurl-out
+          mkdir -p /tmp/rbcurl-zip/.rockbox/lib
+          cp /tmp/rbcurl-out/curl /tmp/rbcurl-out/cacert.pem /tmp/rbcurl-zip/.rockbox/lib/
+          (cd /tmp/rbcurl-zip && zip -qr "$OLDPWD/rockbox.zip" .rockbox)
           cp rockbox.zip ../out/rockbox-hibyr1.zip
           cp rockbox-fonts.zip ../out/rockbox-hibyr1-fonts.zip
         fi

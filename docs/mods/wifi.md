@@ -32,7 +32,9 @@ not the one installed, it offers it, downloads `rockbox-hibyr1-<version>-sdcard.
 Playback stops while it works. Settings, the database and music are not in the
 archive and stay as they are. A download that fails or is cut short changes nothing.
 When it says it failed, what it asked GitHub and what came back are in
-`rockbox-wifi-debug.log` in the root of the card.
+`rockbox-wifi-debug.log` in the root of the card. It talks to GitHub with the
+curl in `.rockbox/lib/` (`tools/rbcurl`), since the player's own `wget` cannot:
+a card from before it was added needs one update by hand.
 
 The player only needs a way out to the internet, so either of these works:
 
