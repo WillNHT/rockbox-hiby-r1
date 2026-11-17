@@ -225,6 +225,24 @@ static void wifi_off(void)
     wifi_state = 0;
 }
 
+/* HiBy's bt_resume brings up the radio chip Wi-Fi shares with Bluetooth
+ * from scratch, and with Wi-Fi up on it no controller appeared. Wi-Fi
+ * steps aside while it runs and comes back after (hiby_bluetooth.c). */
+bool hiby_wifi_pause(void)
+{
+    if (!wifi_is_on())
+        return false;
+    pthread_mutex_lock(&wifi_lock);
+    system("killall udhcpc wpa_supplicant >/dev/null 2>&1; ifconfig " WIFI_IF " down");
+    pthread_mutex_unlock(&wifi_lock);
+    return true;
+}
+
+void hiby_wifi_resume(void)
+{
+    wifi_up(true);
+}
+
 static void wifi_add(const char *ssid, int signal, int id, bool secured)
 {
     struct wifi_net *net = NULL;
