@@ -476,6 +476,10 @@ void coverview_detach(struct gui_synclist *list)
     struct cv_state *st = list->draw_list_data;
     if (st)
         st->list = NULL;
+    /* the tiles' marquees would go on scrolling over whatever is next */
+    for (int i = 0; i < MAX_TILES; i++)
+        if (tile_vp[i].width > 0)
+            screens[SCREEN_MAIN].scroll_stop_viewport(&tile_vp[i]);
     list->callback_draw_list = NULL;
     list->draw_list_data = NULL;
 }

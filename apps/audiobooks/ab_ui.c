@@ -613,6 +613,7 @@ static int book_list_screen(const char *title, enum list_kind kind,
                 case ACTION_STD_OK:
                 case ACTION_STD_CONTEXT:
                 {
+                    coverview_detach(&lists);
                     int ret = book_page(book_order[selected]);
                     if (ret)
                         return ret;
@@ -626,8 +627,10 @@ static int book_list_screen(const char *title, enum list_kind kind,
                     break;
                 }
                 case ACTION_STD_CANCEL:
+                    coverview_detach(&lists);
                     return 0;
                 case ACTION_TREE_WPS:
+                    coverview_detach(&lists);
                     return GO_TO_PREVIOUS_MUSIC;
                 case ACTION_NONE:
                     break;
