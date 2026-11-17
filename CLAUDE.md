@@ -44,7 +44,7 @@ the two lists in step.
   handling come from the file you are editing, not from your own preferences.
 * **Smallest change that works.** No new abstraction, config option, helper
   layer or dependency unless the feature cannot land without it. When a stdlib
-  or existing Rockbox helper does the job, use it. See the `ponytail` skill.
+  or existing Rockbox helper does the job, use it.
 * **No speculative work.** No "while I was in here" edits, no unrequested
   refactors, no new settings nobody asked for.
 * **Never touch the boot path or physical keymap** unless the task is about
@@ -173,6 +173,8 @@ Subject under ~50 chars, imperative, no trailing period. A body only when the
 
 PR description: what changed, why, how it was tested, the screenshot, and
 `Closes #<n>`.
+A change under `bootloader/` or `tools/r1_patcher/` also says in the PR
+that `r1.upt` must be reflashed; `release.yml` flags it in the release notes.
 
 ## Being cost-effective
 
@@ -192,7 +194,7 @@ These are the rules that keep an agent session cheap without making it worse:
   or a design discussion.
 * **Say less.** Terse output, no restating the diff in prose, no summary tables
   of what you just did. Code and commit messages stay written normally.
-* **Keep caveman and ponytail on.** `caveman` keeps the prose terse, `ponytail`
-  keeps the diff to the laziest thing that works; both belong in every session
-  here. If either skill is not installed, ask the user to install it instead of
-  working without it.
+* **Keep caveman and ponytail on** in local sessions. `caveman` keeps the prose
+  terse, `ponytail` keeps the diff to the laziest thing that works. Cloud
+  sessions (claude.ai/code) skip them: follow the rules above without asking
+  for the skills.
