@@ -572,8 +572,13 @@ static void *wifi_worker(void *arg)
         wifi_up(true);
     while (1)
     {
+        int was = wifi_state;
         /* off costs one access() a turn; on, one wpa_cli */
         wifi_state = !wifi_is_on() ? 0 : wifi_status(ssid, ip) ? 2 : 1;
+        if (was == 2 && wifi_state != 2)
+            /* the network went: why, for whoever reads the card */
+            system("{ date; " WIFI_CLI "status; " WIFI_CLI "scan_results; ifconfig " WIFI_IF
+                   "; rfkill list; dmesg | tail -n 40; } >> " WIFI_LOG " 2>&1");
         usleep(5000000);
     }
     return NULL;
