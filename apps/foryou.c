@@ -41,6 +41,7 @@
 #include "kernel.h"
 #include "audio.h"
 #include "file.h"
+#include "dir.h"
 #include "lang.h"
 #include "list.h"
 #include "menu.h"
