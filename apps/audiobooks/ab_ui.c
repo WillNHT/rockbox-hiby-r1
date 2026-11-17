@@ -613,6 +613,7 @@ static int book_list_screen(const char *title, enum list_kind kind,
                 case ACTION_STD_OK:
                 case ACTION_STD_CONTEXT:
                 {
+                    coverview_detach(&lists);
                     int ret = book_page(book_order[selected]);
                     if (ret)
                         return ret;
@@ -626,8 +627,10 @@ static int book_list_screen(const char *title, enum list_kind kind,
                     break;
                 }
                 case ACTION_STD_CANCEL:
+                    coverview_detach(&lists);
                     return 0;
                 case ACTION_TREE_WPS:
+                    coverview_detach(&lists);
                     return GO_TO_PREVIOUS_MUSIC;
                 case ACTION_NONE:
                     break;
@@ -836,6 +839,7 @@ static int card_screen_run(struct card_screen *cs)
             cs->book = cs->current_book(cs->data);
 
         bool card = cs->book >= 0 && screens[SCREEN_MAIN].depth > 1;
+        struct viewport ui = parent[SCREEN_MAIN];
         card_vp = parent[SCREEN_MAIN];
         if (card)
         {
@@ -885,9 +889,15 @@ static int card_screen_run(struct card_screen *cs)
                 default:
                     if (default_event_handler(action) == SYS_USB_CONNECTED)
                         return GO_TO_ROOT;
-                    /* a theme or status bar change moves things */
+                    /* a theme or status bar change moves things; a drag
+                     * redraws too, and starting over would drop it */
                     if (action == ACTION_REDRAW)
-                        redo = true;
+                    {
+                        struct viewport vp;
+                        viewport_set_defaults(&vp, SCREEN_MAIN);
+                        redo = vp.x != ui.x || vp.y != ui.y ||
+                               vp.width != ui.width || vp.height != ui.height;
+                    }
                     break;
             }
         }
