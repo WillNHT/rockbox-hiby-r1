@@ -1577,8 +1577,10 @@ static bool plate_at_rest(struct overlay_shape *s)
     if (!plate_has_room())
         return false;
 
-    /* Nothing to steer behind the lock, its countdown or the USB screen. */
-    if (rpkeys_locked() || rpkeys_countdown_active() ||
+    /* Nothing to steer behind the lock's countdown or the USB screen. The
+     * lock itself keeps the plate: it shows where the stick is, and the
+     * touches it gets are dropped anyway (stick_handle_touch). */
+    if (rpkeys_countdown_active() ||
         get_current_activity() == ACTIVITY_USBSCREEN)
         return false;
 

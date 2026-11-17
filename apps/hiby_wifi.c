@@ -67,6 +67,11 @@
 #define UPDATE_URL     PIVOT_ROOT ROCKBOX_DIR "/update.url"
 #define UPDATE_ZIP     PIVOT_ROOT ROCKBOX_DIR "/update.zip"
 #define UPDATE_DIR     PIVOT_ROOT "/.rockbox-update"
+/* curl with TLS GitHub accepts, shipped in the zip (tools/rbcurl): the
+ * player's busybox wget fails the handshake. Run from /tmp, where it can
+ * be executable. */
+#define UPDATE_CURL    "/tmp/rbcurl"
+#define UPDATE_GET     UPDATE_CURL " -sSfL --cacert " PIVOT_ROOT ROCKBOX_DIR "/lib/cacert.pem "
 
 struct wifi_net
 {
@@ -218,6 +223,24 @@ static void wifi_off(void)
         sleep(HZ/10);
     pthread_mutex_unlock(&wifi_lock);
     wifi_state = 0;
+}
+
+/* HiBy's bt_resume brings up the radio chip Wi-Fi shares with Bluetooth
+ * from scratch, and with Wi-Fi up on it no controller appeared. Wi-Fi
+ * steps aside while it runs and comes back after (hiby_bluetooth.c). */
+bool hiby_wifi_pause(void)
+{
+    if (!wifi_is_on())
+        return false;
+    pthread_mutex_lock(&wifi_lock);
+    system("killall udhcpc wpa_supplicant >/dev/null 2>&1; ifconfig " WIFI_IF " down");
+    pthread_mutex_unlock(&wifi_lock);
+    return true;
+}
+
+void hiby_wifi_resume(void)
+{
+    wifi_up(true);
 }
 
 static void wifi_add(const char *ssid, int signal, int id, bool secured)
@@ -473,6 +496,7 @@ static void wifi_update(void)
 
     tag[0] = sum[0] = '\0';
     splash(0, ID2P(LANG_WAIT));
+    system("cp " PIVOT_ROOT ROCKBOX_DIR "/lib/curl " UPDATE_CURL " && chmod +x " UPDATE_CURL);
     wifi_line("head -n 1 " UPDATE_URL " 2>/dev/null", url, sizeof(url));
     if (url[0])
         /* its second line, if there is one: the sha256 the zip must have */
@@ -481,12 +505,10 @@ static void wifi_update(void)
     {
         /* releases/latest redirects to releases/tag/<version>. What was
          * asked and answered goes to the card: a player that cannot reach
-         * GitHub says why there, not only "failed". curl where wget has no
-         * HTTPS. */
-        wifi_line("{ date; wget 2>&1 | head -n 1; which curl ssl_client openssl; "
-                  "cat /etc/resolv.conf; route -n; nslookup github.com; "
-                  "wget -S --spider -T 15 " UPDATE_RELEASES "/latest || "
-                  "curl -skIL -m 15 " UPDATE_RELEASES "/latest; } > " WIFI_LOG " 2>&1; "
+         * GitHub says why there, not only "failed". */
+        wifi_line("{ date; " UPDATE_CURL " --version; cat /etc/resolv.conf; route -n; "
+                  UPDATE_GET "-I -m 15 " UPDATE_RELEASES "/latest || "
+                  "wget -S --spider -T 15 " UPDATE_RELEASES "/latest; } > " WIFI_LOG " 2>&1; "
                   "sed -n 's|.*/releases/tag/||p' " WIFI_LOG " | head -n 1",
                   tag, sizeof(tag));
         if (!tag[0])
@@ -510,7 +532,7 @@ static void wifi_update(void)
     /* the codecs are about to be replaced */
     audio_stop();
     splash(0, ID2P(LANG_WIFI_DOWNLOADING));
-    snprintf(cmd, sizeof(cmd), "{ wget -T 30 -O " UPDATE_ZIP " '%s' || curl -skL -m 900 -o "
+    snprintf(cmd, sizeof(cmd), "{ " UPDATE_GET "-m 900 -o " UPDATE_ZIP " '%s' || wget -T 30 -O "
              UPDATE_ZIP " '%s'; } >> " WIFI_LOG " 2>&1%s%s%s", url, url,
              sum[0] ? " && [ \"$(sha256sum < " UPDATE_ZIP " | cut -c1-64)\" = \"" : "",
              sum, sum[0] ? "\" ]" : "");
@@ -550,8 +572,13 @@ static void *wifi_worker(void *arg)
         wifi_up(true);
     while (1)
     {
+        int was = wifi_state;
         /* off costs one access() a turn; on, one wpa_cli */
         wifi_state = !wifi_is_on() ? 0 : wifi_status(ssid, ip) ? 2 : 1;
+        if (was == 2 && wifi_state != 2)
+            /* the network went: why, for whoever reads the card */
+            system("{ date; " WIFI_CLI "status; " WIFI_CLI "scan_results; ifconfig " WIFI_IF
+                   "; rfkill list; dmesg | tail -n 40; } >> " WIFI_LOG " 2>&1");
         usleep(5000000);
     }
     return NULL;

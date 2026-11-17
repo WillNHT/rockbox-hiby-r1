@@ -22,6 +22,7 @@
 #include "lang.h"
 #include "settings.h"
 #include "hiby_bluetooth.h"
+#include "hiby_wifi.h"
 
 #ifdef HAVE_HIBY_BLUETOOTH
 
@@ -1112,21 +1113,34 @@ static void bt_power_on(void)
 {
     FILE *fp;
     int i;
+    bool wifi = false;
 
     bt_power = BT_STARTING;
     bt_changed();
     /* the stock bootloader suspends the stack: services gone, driver out */
     if (access(BT_HCI, F_OK) != 0)
+    {
+#ifndef SIMULATOR
+        wifi = hiby_wifi_pause();
+#endif
         /* not into our pipe: the daemons it starts would hold it open */
         bt_cmd("/usr/bin/bt_resume >/dev/null 2>&1", NULL);
+    }
     /* HiBy's bt_init brings the stack up at boot and leaves it off */
     for (i = 0; i < 30 && bt_cmd("pgrep -f '[b]t_init'", NULL); i++)
         usleep(1000000);
     /* bluetoothd can still be settling: keep asking */
     for (i = 0; i < 30 && !bt_ctl("power", "on", "succeeded"); i++)
         usleep(1000000);
+#ifndef SIMULATOR
+    if (wifi)
+        hiby_wifi_resume();
+#endif
     if (i >= 30)
     {
+        /* why, in the log */
+        bt_cmd("{ rfkill list; hciconfig -a; ps | grep -E '[b]lue|[p]atchram|[d]bus'; "
+               "ls /sys/class/bluetooth; dmesg | tail -n 30; } 2>&1", NULL);
         bt_power = BT_OFF;
         bt_set_msg(LANG_BT_UNAVAILABLE);
         return;
