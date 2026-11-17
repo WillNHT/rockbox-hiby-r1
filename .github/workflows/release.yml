@@ -41,6 +41,7 @@ jobs:
     outputs:
       tag: ${{ steps.pick.outputs.tag }}
       bump: ${{ steps.pick.outputs.bump }}
+      reflash: ${{ steps.reflash.outputs.reflash }}
     steps:
     - uses: actions/checkout@v7
       with:
@@ -62,6 +63,17 @@ jobs:
           echo "tag=$next" >> $GITHUB_OUTPUT
           echo "bump=$bump" >> $GITHUB_OUTPUT
           echo "### $previous -> $next ($bump)" >> $GITHUB_STEP_SUMMARY
+        fi
+    # The bootloader only reaches the player through r1.upt, flashed by
+    # hand, so the notes must say when it changed since the last release.
+    - name: Bootloader changed?
+      id: reflash
+      run: |
+        prev=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' "$GITHUB_SHA^" 2>/dev/null || true)
+        if [ -z "$prev" ] || ! git diff --quiet "$prev" "$GITHUB_SHA" -- bootloader tools/r1_patcher; then
+          echo "reflash=yes" >> $GITHUB_OUTPUT
+        else
+          echo "reflash=no" >> $GITHUB_OUTPUT
         fi
 
   build:
@@ -275,7 +287,8 @@ jobs:
         curl -fL -o r1.upt "https://github.com/bidhata/Hiby-R1-Mod/releases/download/file-limit/r1.upt"
         chmod +x tools/r1_patcher/r1_patcher.sh
         sudo ./tools/r1_patcher/r1_patcher.sh r1.upt bootloader.r1
-        mkdir out && sudo cp r1_rb.upt out/r1_rb.upt && sudo chown -R "$USER" out
+        # r1.upt is the name the player's updater looks for.
+        mkdir out && sudo cp r1_rb.upt out/r1.upt && sudo chown -R "$USER" out
     - uses: actions/upload-artifact@v7
       with:
         name: patched-firmware
@@ -283,7 +296,7 @@ jobs:
 
   # Everything the card needs in one archive: unzip it over the root of
   # the SD card and the player has a complete, themed Rockbox with no
-  # other downloads. The separate zips stay for people who want less.
+  # other downloads. It is the only zip the release publishes.
   bundle:
     needs: [version, build, themes, emoji, video]
     runs-on: ubuntu-latest
@@ -318,10 +331,21 @@ jobs:
     runs-on: ubuntu-latest
     name: Publish release
     steps:
+    # Only the card bundle, the bootloader and r1.upt: the per-part zips
+    # are build intermediates already inside the bundle.
     - uses: actions/download-artifact@v7
       with:
+        name: rockbox-hibyr1-${{ needs.version.outputs.tag }}-sdcard
         path: dist
-        merge-multiple: true
+    - uses: actions/download-artifact@v7
+      with:
+        name: bootloader
+        path: dist
+    - uses: actions/download-artifact@v7
+      continue-on-error: true  # patched-firmware may have failed
+      with:
+        name: patched-firmware
+        path: dist
 
     - name: Checksums
       run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
@@ -329,22 +353,27 @@ jobs:
     - name: Write notes
       env:
         TAG: ${{ needs.version.outputs.tag }}
+        REFLASH: ${{ needs.version.outputs.reflash }}
       run: |
-        cat > notes.md <<EOF
+        if [ "$REFLASH" = yes ]; then
+          cat > notes.md <<EOF
+        > [!IMPORTANT]
+        > **The bootloader changed in this release.** Copy \`r1.upt\` to the card root and run the player's firmware update, as well as updating the SD card.
+
+        EOF
+        else
+          : > notes.md
+        fi
+        cat >> notes.md <<EOF
         Built from \`${GITHUB_SHA::10}\`.
 
-        **Install or upgrade:** unzip \`rockbox-hibyr1-${TAG}-sdcard.zip\` over the root of the SD card. It holds the firmware, fonts and this fork's themes; nothing else is needed on the card.
+        **Install or upgrade:** unzip \`rockbox-hibyr1-${TAG}-sdcard.zip\` over the root of the SD card. It holds the firmware, fonts, themes, emoji and the video decoder; nothing else is needed on the card.
 
-        | File | Put it where |
+        | File | Use |
         |---|---|
-        | \`rockbox-hibyr1-${TAG}-sdcard.zip\` | The zips below in one archive. Unzip to the card root. |
-        | \`rockbox-hibyr1.zip\` | Unzip to the root of the SD card (creates \`.rockbox/\`). |
-        | \`rockbox-hibyr1-fonts.zip\` | Optional. Unzip to the card root, over the above. |
-        | \`rockbox-hibyr1-themes.zip\` | Optional. This fork's themes; unzip to the card root, then pick one under Theme Settings. |
-        | \`rockbox-hibyr1-emoji.zip\` | Optional. Colour emoji (Noto Emoji); unzip to the card root. |
-        | \`rockbox-hibyr1-video.zip\` | Optional. The video decoder (FFmpeg, libwebp), needed by Settings > Video: animated covers, music videos, screensavers and the video player. Unzip to the card root. |
-        | \`bootloader.r1\` | Bootloader, for use with \`tools/r1_patcher\`. |
-        | \`r1_rb.upt\` | Stock HiBy firmware with the bootloader injected (if present). Copy to the card root and run the player's firmware update; only needed once. |
+        | \`rockbox-hibyr1-${TAG}-sdcard.zip\` | Unzip to the card root. |
+        | \`r1.upt\` | Stock HiBy firmware with this fork's bootloader (if present). Copy to the card root and run the player's firmware update. Needed on first install and when the notes above say the bootloader changed. |
+        | \`bootloader.r1\` | The bare bootloader, for \`tools/r1_patcher\`. |
 
         Check downloads against \`SHA256SUMS\`.
         EOF

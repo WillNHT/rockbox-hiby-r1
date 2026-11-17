@@ -14,10 +14,8 @@ everything needs the decoder installed.
 
 ## Install the decoder
 
-The decoder is a separate download because it is a few megabytes:
-**`rockbox-hibyr1-video.zip`** from the release (the `…-sdcard.zip`
-bundle already contains it). Unzip it over the root of the card; it puts
-`/.rockbox/lib/librbvideo.so` there. **Settings > Library > Video > Decoder** says
+The decoder ships in the release's `…-sdcard.zip`; unzipping that over the
+root of the card puts `/.rockbox/lib/librbvideo.so` there. **Settings > Library > Video > Decoder** says
 which version is installed, or that it is missing.
 
 It is FFmpeg and libwebp: H.264, HEVC, MPEG-4, MPEG-1/2, VP8, VP9,
