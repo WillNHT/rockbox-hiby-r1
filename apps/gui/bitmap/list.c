@@ -45,6 +45,7 @@
 #include "debug.h"
 #include "line.h"
 #include "stick_glue.h"
+#include "root_menu.h"
 #include "fixedpoint.h"
 //#define LOGF_ENABLE
 #include "logf.h"
@@ -1242,6 +1243,10 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
                 answer_dx = max_dx;
             else if (answer_dx < -max_dx)
                 answer_dx = -max_dx;
+            /* Left is back, and the main menu has nowhere to go back to:
+             * a row that moved would only be left there. */
+            if (answer_dx < 0 && list->data == &root_menu_)
+                answer_dx = 0;
             action = ACTION_REDRAW;
         }
         break;
@@ -1260,7 +1265,8 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
             list->scroll_stop_tick = current_tick;
             action_gesture_reset();
             action = dx >= min_dx ? ACTION_STD_OK :
-                     dx <= -min_dx ? ACTION_STD_CANCEL : ACTION_REDRAW;
+                     dx <= -min_dx && list->data != &root_menu_ ?
+                     ACTION_STD_CANCEL : ACTION_REDRAW;
             /* Yes and no are heard, like the stick's own actions. */
             if (action != ACTION_REDRAW &&
                 keyclick_enabled(KEYCLICK_SRC_STICK_ACTION))
