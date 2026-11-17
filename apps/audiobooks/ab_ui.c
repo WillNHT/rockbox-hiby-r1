@@ -836,6 +836,7 @@ static int card_screen_run(struct card_screen *cs)
             cs->book = cs->current_book(cs->data);
 
         bool card = cs->book >= 0 && screens[SCREEN_MAIN].depth > 1;
+        struct viewport ui = parent[SCREEN_MAIN];
         card_vp = parent[SCREEN_MAIN];
         if (card)
         {
@@ -885,9 +886,15 @@ static int card_screen_run(struct card_screen *cs)
                 default:
                     if (default_event_handler(action) == SYS_USB_CONNECTED)
                         return GO_TO_ROOT;
-                    /* a theme or status bar change moves things */
+                    /* a theme or status bar change moves things; a drag
+                     * redraws too, and starting over would drop it */
                     if (action == ACTION_REDRAW)
-                        redo = true;
+                    {
+                        struct viewport vp;
+                        viewport_set_defaults(&vp, SCREEN_MAIN);
+                        redo = vp.x != ui.x || vp.y != ui.y ||
+                               vp.width != ui.width || vp.height != ui.height;
+                    }
                     break;
             }
         }
