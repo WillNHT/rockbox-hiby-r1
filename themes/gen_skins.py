@@ -794,7 +794,8 @@ def db_bmp():
 
 # wifi.bmp: the Wi-Fi indicator, %xd(wifi,%WF). Three 21x22 frames stacked,
 # a dot and three arcs over it: grey off, white on, the rune's blue once a
-# network is joined.
+# network is joined. The widest arc is 45 degrees either side of straight
+# up and no wider than the frame: one cut off at the sides read as squashed.
 def wifi_bmp():
     fw, fh = 21, 22
     rows = []
@@ -804,7 +805,7 @@ def wifi_bmp():
             for x in range(fw):
                 dx, dy = x - 10, 19 - y
                 d = math.hypot(dx, dy)
-                arc = any(abs(d - r) <= 1.3 for r in (7, 12, 17))
+                arc = any(abs(d - r) <= 1.3 for r in (5, 9.5, 14))
                 if d <= 2.2 or (arc and dy >= abs(dx) * 0.95):
                     f[y][x] = colour
         rows += f
