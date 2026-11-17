@@ -489,6 +489,10 @@ static void wifi_line(const char *cmd, char *out, size_t len)
                     "0123456789.-_:/%~+=?&")] = '\0';
 }
 
+/* What wifi_update() came back with, said once the menu has drawn itself
+ * again: said straight away, it sat on what the wait left behind. */
+static int wifi_msg;
+
 /* Fetch a release zip and unpack it over the card, then restart into it */
 static void wifi_update(void)
 {
@@ -513,12 +517,12 @@ static void wifi_update(void)
                   tag, sizeof(tag));
         if (!tag[0])
         {
-            splash(HZ*2, ID2P(LANG_WIFI_UPDATE_FAILED));
+            wifi_msg = LANG_WIFI_UPDATE_FAILED;
             return;
         }
         if (!strcmp(tag, rbversion))
         {
-            splash(HZ*2, ID2P(LANG_WIFI_UP_TO_DATE));
+            wifi_msg = LANG_WIFI_UP_TO_DATE;
             return;
         }
         snprintf(url, sizeof(url), UPDATE_RELEASES "/download/%s/rockbox-hibyr1-%s-sdcard.zip",
@@ -546,7 +550,7 @@ static void wifi_update(void)
                " && find . -type f -exec mv -f {} " PIVOT_ROOT "/{} \\;; } >> " WIFI_LOG " 2>&1"))
     {
         system("rm -rf " UPDATE_DIR " " UPDATE_ZIP);
-        splash(HZ*2, ID2P(LANG_WIFI_UPDATE_FAILED));
+        wifi_msg = LANG_WIFI_UPDATE_FAILED;
         return;
     }
     system("rm -rf " UPDATE_DIR " " UPDATE_ZIP "; sync");
@@ -558,6 +562,12 @@ static int wifi_ok_cancel(int action, struct gui_synclist *lists)
     (void)lists;
     if (action == ACTION_STD_OK)
         return ACTION_STD_CANCEL;
+    if (action == ACTION_NONE && wifi_msg)
+    {
+        splash(HZ*2, ID2P(wifi_msg));
+        wifi_msg = 0;
+        return ACTION_REDRAW;
+    }
     return action;
 }
 
