@@ -28,6 +28,9 @@ Snappy-Animated shot08 31,324 449,377
 # The selected line scrolls on the scroll thread's own timer.
 Snappy-Animated shot05 184,200 443,249
 Snappy-V2 shot05 184,200 443,249
+# Elapsed time on the playing WPS: it follows audio, and lands a second
+# either side.
+Snappy-V2 shot06 30,772 70,792
 # The cover's sheen: its frame comes from the tick of the last render
 # before the shot, which the UI thread reaches at its own pace. shot06
 # still checks the cover.
