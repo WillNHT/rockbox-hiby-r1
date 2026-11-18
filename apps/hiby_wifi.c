@@ -41,6 +41,7 @@
 #include "splash.h"
 #include "yesno.h"
 #include "gui/list.h"
+#include "hiby_bluetooth.h"
 
 /* Wi-Fi brought up the way HiBy OS does it (wifi_on.sh): wpa_supplicant
  * joins a network, udhcpc gets an address. The driver powers the chip with
@@ -258,9 +259,27 @@ static bool wifi_answers(void)
     return !strncmp(line, "PONG", 4);
 }
 
-/* From scratch: the worker, when wifi_answers() says nobody is there */
+/* Each line a command prints, into rockbox-bt-debug.log beside what
+ * Bluetooth did to the chip, with the seconds since boot */
+static void wifi_debug(const char *cmd)
+{
+    char line[200];
+    FILE *fp = popen(cmd, "r");
+
+    while (fp && fgets(line, sizeof(line), fp))
+    {
+        line[strcspn(line, "\r\n")] = '\0';
+        hiby_debug_log("wifi %ld: %s", current_tick / HZ, line);
+    }
+    if (fp)
+        pclose(fp);
+}
+
+/* From scratch: the worker, when nobody is there or the chip sees nothing.
+ * wlan0 down and up loads the chip's firmware again. */
 static void wifi_restart(void)
 {
+    hiby_debug_log("wifi %ld: restart", current_tick / HZ);
     pthread_mutex_lock(&wifi_lock);
     system("killall udhcpc wpa_supplicant >/dev/null 2>&1; rm -f " WIFI_CTRL
            "; ifconfig " WIFI_IF " down");
@@ -599,17 +618,21 @@ static int wifi_ok_cancel(int action, struct gui_synclist *lists)
 /* Not a Rockbox thread: it blocks in system() and popen() */
 static void *wifi_worker(void *arg)
 {
-    char ssid[WIFI_SSID_LEN], ip[16];
+    char ssid[WIFI_SSID_LEN] = "", ip[16];
+    int unjoined = 0, patience = 6;
 
     (void)arg;
-    /* Wi-Fi comes back the way it was left - once HiBy's bt_init is done
-     * with the radio chip the two share: a network joined while it runs
+    /* Wi-Fi comes back the way it was left - once Bluetooth is done with
+     * the radio chip the two share (HiBy's bt_init, and bt_resume when
+     * Bluetooth comes back on at boot): a network joined while either runs
      * is dropped a little later, when it resets the chip */
     if (access(WIFI_BOOT_FILE, F_OK) == 0)
     {
-        for (int i = 0; i < 30 &&
-             system("pgrep -f '[b]t_init' >/dev/null 2>&1") == 0; i++)
+        for (int i = 0; i < 90 &&
+             (system("pgrep -f '[b]t_init' >/dev/null 2>&1") == 0 ||
+              bt_is_starting_fast()); i++)
             usleep(1000000);
+        hiby_debug_log("wifi %ld: up", current_tick / HZ);
         wifi_up(true);
     }
     while (1)
@@ -617,15 +640,30 @@ static void *wifi_worker(void *arg)
         int was = wifi_state;
         /* off costs one access() a turn; on, one wpa_cli */
         wifi_state = !wifi_is_on() ? 0 : wifi_status(ssid, ip) ? 2 : 1;
+        if (was != wifi_state)
+            hiby_debug_log("wifi %ld: state %d -> %d %s", current_tick / HZ,
+                           was, wifi_state, ssid);
         if (was == 2 && wifi_state != 2)
             /* the network went: why, for whoever reads the card */
-            system("{ date; " WIFI_CLI "status; " WIFI_CLI "scan_results; ifconfig " WIFI_IF
-                   "; rfkill list; dmesg | tail -n 40; } >> " WIFI_LOG " 2>&1");
-        /* wanted on, and wpa_supplicant gone from under it: start again
-         * (a switch off unlinks the file before it kills anything) */
+            wifi_debug("{ " WIFI_CLI "status; " WIFI_CLI "scan_results; ifconfig " WIFI_IF
+                       "; rfkill list; dmesg | tail -n 40; } 2>&1");
+        unjoined = wifi_state == 1 ? unjoined + 1 : 0;
+        if (wifi_state == 2)
+            patience = 6;
+        /* wanted on (a switch off unlinks the file before it kills
+         * anything), and wpa_supplicant gone from under it, or a chip that
+         * has seen no network at all for half a minute: start again, less
+         * often each time it does not help */
         if (wifi_state == 1 && access(WIFI_BOOT_FILE, F_OK) == 0 &&
-            !wifi_answers())
+            (!wifi_answers() ||
+             (unjoined >= patience &&
+              wifi_cli_int(WIFI_CLI "scan_results 2>/dev/null | grep -c :") <= 0)))
+        {
             wifi_restart();
+            unjoined = 0;
+            if (patience < 120)
+                patience *= 2;
+        }
         usleep(5000000);
     }
     return NULL;
