@@ -1,0 +1,46 @@
+name: Bug report
+description: Something on the R1 (or the simulator) does not work as it should.
+labels: ["type: bug", "needs: triage"]
+body:
+  - type: input
+    id: build
+    attributes:
+      label: Build
+      description: Release tag, or the PR / CI run you flashed. System > Rockbox Info shows the version.
+      placeholder: v1.4.0, or PR #123 @ abc1234
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered, starting from a known screen. Say which input you used (stick, touch, buttons).
+      placeholder: |
+        1. Open Audiobooks
+        2. Drag left on a book row
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: What happened instead. How often - every time, sometimes, once?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste only the relevant lines. Debug builds log to a file on the device.
+      render: text
+  - type: input
+    id: theme
+    attributes:
+      label: Theme
+      placeholder: Snappy-V2

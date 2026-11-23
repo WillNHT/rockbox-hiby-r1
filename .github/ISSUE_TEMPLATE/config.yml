@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Upstream Rockbox bug
+    url: https://forums.rockbox.org/
+    about: Bugs that also happen on stock Rockbox belong upstream.
