@@ -72,7 +72,10 @@ Every issue you pick up gets a PR, and every PR points back at its issue:
 
 * **One batch, one PR.** When a session is handed several issues, they all land
   in a single PR against `master`, one commit per issue, with a `Closes #<n>`
-  line per issue it finishes and `Refs #<n>` for one it only advances. One PR
+  line per issue it finishes and `Refs #<n>` for one it only advances. An
+  issue labelled `needs: device test` is never finished by an agent: it gets
+  `Refs` until the human has flashed the build and labelled the PR
+  `verified: device` (`device-gate.yml` fails the PR otherwise). One PR
   means one build for the human to flash and test, and no two branches fighting
   over the same file. Only open a second PR when a change genuinely cannot share
   a branch with the rest. A single issue handed over on its own still gets its
@@ -104,8 +107,9 @@ fixed:
   <!-- state -->
   **Hypothesis:** what we currently think is wrong, and why
   **Tried:** round 1: X - failed, saw Y. round 2: ...
-  **Build:** PR #n @ <sha>, CI run <link>
+  **Build:** PR #n, CI run <link>, device version `<from the run summary>`
   **Test this round:**
+  0. System > Rockbox Info shows `<device version>` - else stop, wrong build
   1. <action> - expect <result>
   2. ...
   ```
@@ -133,6 +137,28 @@ fixed:
   `gh run view <id> --log-failed | tail -80`, never the full log. Look at a
   screenshot once and record what it shows in the state comment instead of
   re-opening it.
+
+## Claims
+
+The human has been told "fixed" for things that were not fixed on the R1.
+Every status you report - PR description, issue comment, final message -
+names the strongest evidence it has, in these words and no stronger:
+
+| Word | Means | Evidence |
+| --- | --- | --- |
+| **built** | it compiles | CI `build` green |
+| **tested** | the logic does what it should | a test or repro you ran, output pasted |
+| **sim-checked** | the UI does it | simulator frames you looked at |
+| **device-verified** | it works on an R1 | the human said so for this device version |
+
+Only the human produces **device-verified**. Anything touching drivers,
+audio, Wi-Fi, Bluetooth, power, the bootloader, timing or the real touch
+panel is at best **sim-checked** until then, and the report says what is
+still unverified: "built and sim-checked; the drop-out itself is
+device-unverified, checklist items 2-3". Never "fixed", "works" or "done"
+without the qualifier. When a device round comes back failing, say so in the
+state comment before trying anything else, and keep the failed attempt in
+**Tried**.
 
 ## Proof
 

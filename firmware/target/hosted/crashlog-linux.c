@@ -42,6 +42,12 @@ void crashlog_init(const char *ospath)
         return;
     strncpy(crashlog_path, ospath, sizeof(crashlog_path) - 1);
     crashlog_path[sizeof(crashlog_path) - 1] = '\0';
+
+    /* glibc loads its unwinder on the first backtrace(), which calls
+       malloc(): from a handler for a fault inside malloc() that deadlocks
+       before the backtrace is written. Load it now. */
+    void *frame;
+    backtrace(&frame, 1);
 }
 
 static void put_str(int fd, const char *s)

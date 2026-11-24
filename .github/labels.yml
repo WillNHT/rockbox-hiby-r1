@@ -74,6 +74,9 @@
 - name: "blocked"
   color: b60205
   description: Waiting on something else
+- name: "verified: device"
+  color: 0e8a16
+  description: On a PR - the human flashed this build and it works on the R1
 
 # provenance
 - name: "upstream"

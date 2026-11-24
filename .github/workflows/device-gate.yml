@@ -1,0 +1,58 @@
+name: Device gate
+
+# A green build and a good simulator run say nothing about the touch panel,
+# audio, Wi-Fi, Bluetooth or the bootloader. So a PR may not close an issue
+# labelled "needs: device test" - and so mark it done on merge - until the
+# human has flashed the build and labelled the PR "verified: device".
+# Before that, the PR says "Refs #n" for such an issue, not "Closes #n".
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  issues: read
+  pull-requests: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    name: Device-test issues are only closed once verified
+    steps:
+    - name: Check
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        BODY: ${{ github.event.pull_request.body }}
+        PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+      run: |
+        # GitHub's closing keywords, as https://docs.github.com/articles/closing-issues-using-keywords
+        issues=$(printf '%s\n' "$BODY" |
+          grep -Eio '\b(close[sd]?|fix(e[sd])?|resolve[sd]?):? +#[0-9]+' |
+          grep -Eo '[0-9]+$' | sort -un)
+        if [ -z "$issues" ]; then
+          echo "Closes no issues."
+          exit 0
+        fi
+        case ",$PR_LABELS," in
+          *",verified: device,"*) verified=1 ;;
+          *) verified=0 ;;
+        esac
+        bad=""
+        for n in $issues; do
+          labels=$(gh issue view "$n" --json labels --jq '[.labels[].name] | join(",")' 2>/dev/null) || continue
+          case ",$labels," in
+            *",needs: device test,"*)
+              if [ $verified = 1 ]; then
+                echo "#$n needs a device test; the PR is labelled verified: device."
+              else
+                bad="$bad #$n"
+              fi ;;
+            *) echo "#$n: no device test needed." ;;
+          esac
+        done
+        if [ -n "$bad" ]; then
+          echo "::error::Closes$bad, labelled 'needs: device test', but nobody has confirmed it on an R1."
+          echo "Either write 'Refs' instead of 'Closes' for those issues, or - after flashing and"
+          echo "testing this build - label the PR 'verified: device'."
+          exit 1
+        fi

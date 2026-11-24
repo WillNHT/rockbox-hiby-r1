@@ -50,6 +50,12 @@ uintptr_t *stackend;
 /* forward-declare */
 bool os_file_exists(const char *ospath);
 
+/* The crash handler's own stack. On the faulting stack, a fault from a
+   stack overflow, or a handler that needs more than the thread has left,
+   faults again inside the handler and the kernel kills the process with
+   no crash.log and nothing on the screen. */
+static char crash_stack[64 * 1024];
+
 static void sig_handler(int sig, siginfo_t *siginfo, void *context)
 {
     /* safe guard variable - we call backtrace() only on first
@@ -179,10 +185,16 @@ void system_init(void)
     crashlog_init(handle_special_dirs(ROCKBOX_DIR "/crash.log", 0,
                                       crashlog_buf, sizeof(crashlog_buf)));
 
+    stack_t ss;
+    ss.ss_sp = crash_stack;
+    ss.ss_size = sizeof(crash_stack);
+    ss.ss_flags = 0;
+    sigaltstack(&ss, NULL);
+
    /* catch some signals for easier debugging */
     struct sigaction sa;
     sigfillset(&sa.sa_mask);
-    sa.sa_flags = SA_SIGINFO;
+    sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
     sa.sa_sigaction = &sig_handler;
     sigaction(SIGILL, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);
