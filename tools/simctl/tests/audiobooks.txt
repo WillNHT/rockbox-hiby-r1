@@ -1,0 +1,128 @@
+# Going back from an audiobook's page by dragging left (#179), from the
+# card as well as the rows, and with a thumb that eases back before it
+# lifts. Shot 1 is the Library; shots 3, 4 and 5 must match it, shot 2
+# (the book's page) must not. Checked by the simulator job.
+sleep 1000
+# open Audiobooks, then the Library
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 100
+sleep 300
+up
+sleep 1500
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 100
+sleep 300
+up
+sleep 1500
+dump
+# the first book's page
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 100
+sleep 300
+up
+sleep 1500
+dump
+# drag left on the card
+down 240 200
+sleep 100
+move 220 200
+sleep 100
+move 200 200
+sleep 100
+move 180 200
+sleep 100
+move 160 200
+sleep 100
+move 140 200
+sleep 100
+sleep 300
+up
+sleep 1500
+dump
+# the page again; past the stop, then 30 px back
+down 240 500
+sleep 100
+move 260 500
+sleep 100
+move 280 500
+sleep 100
+move 300 500
+sleep 100
+move 320 500
+sleep 100
+move 340 500
+sleep 100
+sleep 300
+up
+sleep 1500
+down 240 500
+sleep 100
+move 220 500
+sleep 100
+move 200 500
+sleep 100
+move 180 500
+sleep 100
+move 160 500
+sleep 100
+move 130 500
+sleep 100
+move 120 500
+sleep 100
+move 125 500
+sleep 100
+move 135 500
+sleep 100
+move 150 500
+sleep 100
+sleep 300
+up
+sleep 1500
+dump
+# 50 px: too short, stays
+down 240 500
+sleep 100
+move 230 500
+sleep 100
+move 220 500
+sleep 100
+move 210 500
+sleep 100
+move 200 500
+sleep 100
+move 190 500
+sleep 100
+sleep 300
+up
+sleep 1500
+dump

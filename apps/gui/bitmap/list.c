@@ -221,8 +221,24 @@ static bool draw_title(struct screen *display,
 
 #ifdef HAVE_TOUCHSCREEN
 /* How far a sideways drag has gone, for the row that goes with it. Only
- * read while the list is in SCROLL_ANSWER, so nothing has to clear it. */
+ * read while the list is in SCROLL_ANSWER; set to 0 on the way in. */
 static int answer_dx;
+
+/* The row stops at the distance the release acts on, and stays stopped
+ * while the thumb eases back a little before lifting, as thumbs do: the
+ * row standing at the stop is the answer, whatever the last pixel says. */
+static void answer_track(struct gui_synclist *list, int max_dx, int dx)
+{
+    if (abs(dx) >= max_dx)
+        answer_dx = dx > 0 ? max_dx : -max_dx;
+    else if (abs(answer_dx) < max_dx || abs(dx) < max_dx / 2 ||
+             (dx > 0) != (answer_dx > 0))
+        answer_dx = dx;
+    /* Left is back, and the main menu has nowhere to go back to:
+     * a row that moved would only be left there. */
+    if (answer_dx < 0 && list->data == &root_menu_)
+        answer_dx = 0;
+}
 
 /* SCROLL_DIAL: the last angle round the plate's stick, -1 for none, and
  * how far round the thumb has gone since the press, both in 1/64 degree. */
@@ -1201,9 +1217,13 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
                 dial_last = -1;
                 dial_turned = 0;
             }
-            else if ((click_loc & LIST) &&
-                     abs(gevent.x - gevent.ox) > abs(gevent.y - gevent.oy))
+            /* Sideways from anywhere off the scrollbar: a screen with a
+             * card over its rows (Audiobooks) is mostly card. */
+            else if (abs(gevent.x - gevent.ox) > abs(gevent.y - gevent.oy))
+            {
                 list->scroll_mode = SCROLL_ANSWER;
+                answer_dx = 0;
+            }
             /* Up and down are the dial's alone when there is one. */
             else if ((click_loc & LIST) &&
                      list_scroll_type() != STICK_SCROLL_DIAL)
@@ -1237,16 +1257,7 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
         {
             /* As far as the release needs and no further, so the row
              * stopping is the drag being long enough. */
-            const int max_dx = list_vp->width / 5;
-            answer_dx = gevent.x - gevent.ox;
-            if (answer_dx > max_dx)
-                answer_dx = max_dx;
-            else if (answer_dx < -max_dx)
-                answer_dx = -max_dx;
-            /* Left is back, and the main menu has nowhere to go back to:
-             * a row that moved would only be left there. */
-            if (answer_dx < 0 && list->data == &root_menu_)
-                answer_dx = 0;
+            answer_track(list, list_vp->width / 5, gevent.x - gevent.ox);
             action = ACTION_REDRAW;
         }
         break;
@@ -1257,16 +1268,15 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
               kinetic.cb_data.velocity);
         if (list->scroll_mode == SCROLL_ANSWER)
         {
-            const int dx = gevent.x - gevent.ox;
             const int min_dx = list_vp->width / 5;
+            answer_track(list, min_dx, gevent.x - gevent.ox);
             /* No snap timer here: a yes or a no usually closes the list,
              * and a timer left behind would write into a dead one. */
             list->scroll_mode = SCROLL_NONE;
             list->scroll_stop_tick = current_tick;
             action_gesture_reset();
-            action = dx >= min_dx ? ACTION_STD_OK :
-                     dx <= -min_dx && list->data != &root_menu_ ?
-                     ACTION_STD_CANCEL : ACTION_REDRAW;
+            action = answer_dx >= min_dx ? ACTION_STD_OK :
+                     answer_dx <= -min_dx ? ACTION_STD_CANCEL : ACTION_REDRAW;
             /* Yes and no are heard, like the stick's own actions. */
             if (action != ACTION_REDRAW &&
                 keyclick_enabled(KEYCLICK_SRC_STICK_ACTION))

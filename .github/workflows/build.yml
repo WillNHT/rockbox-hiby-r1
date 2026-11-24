@@ -175,6 +175,22 @@ jobs:
       run: |
         RBSIM_DIR=$PWD/sim xvfb-run -a bash tools/simctl/simctl.sh "$PWD/tools/simctl/tests/layering.txt" "$PWD/shots/layering"
 
+    # Drag left goes back from an audiobook's page (#179). Its setup
+    # replaces the config too. Within a few hundred pixels (the clock and
+    # battery) of the Library is back; the page itself is ~70000 away.
+    - name: Audiobooks drag back
+      if: env.SIM_SCRIPT == 'tools/simctl/tests/smoke.txt'
+      run: |
+        o=shots/audiobooks
+        RBSIM_DIR=$PWD/sim xvfb-run -a bash tools/simctl/simctl.sh "$PWD/tools/simctl/tests/audiobooks.txt" "$PWD/$o"
+        ae() { d=$(compare -metric AE -fuzz 10% "$o/$1.png" "$o/shot01.png" null: 2>&1 || true); echo "${d%% *}"; }
+        page=$(ae shot02); echo "book page vs Library: $page"
+        [ "$page" -gt 20000 ]
+        for s in shot03 shot04 shot05; do
+          d=$(ae $s); echo "$s vs Library: $d"
+          [ "$d" -lt 2000 ]
+        done
+
     - name: Simulator log
       if: always()
       run: tail -n 100 /tmp/sim.log
