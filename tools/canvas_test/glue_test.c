@@ -1,11 +1,10 @@
 /* Host tests for apps/canvas_glue.c - the Rockbox side of the Canvas.
  *
- * The framebuffer, buflib and lcd_update_rect() are all faked here, which
- * is enough to test the one thing that matters about this layer: an
- * overlay that moves puts back exactly what it covered, and asks the panel
- * for exactly the region that changed. That is the bug class ("sticky
- * styling", the smearing overlay) the compositor exists to close, and it
- * is otherwise only observable by looking at a device.
+ * Since the overlays moved into their own layer (lcd-layers.c) the glue is
+ * only the pool and the blur scratch, and that is what is tested here:
+ * the pool is capped, the scratch stays inside it and refuses what it
+ * cannot hold, and a pool that cannot be allocated degrades to "no
+ * compositor" rather than to a crash.
  *
  * The fake buflib moves the allocation on every call, because the real one
  * may: any pointer cached across a call would fail here loudly.
@@ -34,37 +33,16 @@ static const char *current;
 
 #define TEST(name) do { current = name; } while (0)
 
-/* ---- the fake framebuffer ---------------------------------------- */
-
-static fb_data fb[LCD_WIDTH * LCD_HEIGHT];
-
-struct frame_buffer_t lcd_framebuffer_default =
-{
-    { .fb_ptr = fb },
-    .get_address_fn = NULL,
-    .stride = LCD_WIDTH,
-    .elems = LCD_WIDTH * LCD_HEIGHT,
-};
-
-static struct { int x, y, w, h; int calls; } last_update;
-
-void lcd_update_rect(int x, int y, int width, int height)
-{
-    last_update.x = x;
-    last_update.y = y;
-    last_update.w = width;
-    last_update.h = height;
-    last_update.calls++;
-}
-
 /* ---- the fake buflib --------------------------------------------- */
 
 static char *block;
 static size_t block_size;
+static int alloc_fails, alloc_calls;
 
 int core_alloc(size_t size)
 {
-    if (block)
+    alloc_calls++;
+    if (block || alloc_fails)
         return -1;
     block = malloc(size);
     block_size = size;
@@ -93,139 +71,74 @@ void *core_get_data(int handle)
     return block;
 }
 
-/* ---- helpers ------------------------------------------------------ */
-
-static void fb_fill(canvas_px c)
+static int inside_pool(const canvas_px *p, size_t px)
 {
-    int i;
-    for (i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++)
-        fb[i] = c;
+    const char *c = (const char *)p;
+    return c >= block && c + px * sizeof(canvas_px) <= block + block_size;
 }
-
-static canvas_px at(int x, int y)
-{
-    return fb[(size_t)y * LCD_WIDTH + x];
-}
-
-static const canvas_px BG  = CANVAS_RGB(0, 0, 255);
-static const canvas_px INK = CANVAS_RGB(255, 0, 0);
 
 int main(void)
 {
-    struct canvas_overlay *ov;
-    struct canvas_surface *s;
-    struct canvas_rect all;
+    canvas_px *sc;
+    size_t n;
 
     printf("Rockpocket Canvas glue tests\n");
 
-    TEST("the pool allocates");
+    TEST("the pool allocates, capped");
     CHECK(canvas_glue_init(), "no pool");
     CHECK(canvas_available(), "pool not reported available");
     CHECK(canvas_pool_size() == CANVAS_POOL_MAX_KIB * 1024,
           "pool is %u bytes", (unsigned)canvas_pool_size());
+    CHECK(canvas_pool_used() == 0, "%u bytes used before any call",
+          (unsigned)canvas_pool_used());
 
-    TEST("an overlay can be claimed and drawn into");
-    ov = canvas_overlay_claim(64, 64);
-    CHECK(ov != NULL, "claim failed");
-    s = canvas_overlay_surface(ov);
-    CHECK(s != NULL, "no surface");
-    all = (struct canvas_rect){ 0, 0, 64, 64 };
-    canvas_fill_a(s, &all, INK, 255);
+    TEST("init is safe to call again and does not allocate twice");
+    alloc_calls = 0;
+    CHECK(canvas_glue_init(), "second init failed");
+    CHECK(alloc_calls == 0, "second init allocated %d times", alloc_calls);
 
-    TEST("showing the overlay paints it and nothing else");
-    fb_fill(BG);
-    CHECK(canvas_overlay_show(ov, 100, 100, 64, 64, 255), "show refused");
-    CHECK(at(100, 100) == INK, "overlay not painted");
-    CHECK(at(163, 163) == INK, "overlay not painted to its far corner");
-    CHECK(at(164, 164) == BG, "overlay painted past its rectangle");
-    CHECK(at(99, 99) == BG, "overlay painted before its rectangle");
+    TEST("blur scratch comes out of the pool, big enough");
+    n = 0;
+    sc = canvas_scratch(240, 240, &n);
+    CHECK(sc != NULL, "no scratch");
+    CHECK(n >= canvas_blur_scratch_px(240, 240), "scratch too small (%u)",
+          (unsigned)n);
+    CHECK(sc && inside_pool(sc, n), "scratch is outside the pool");
 
-    TEST("presenting asks for exactly the rectangle that changed");
-    last_update.calls = 0;
-    CHECK(canvas_present(), "nothing to present");
-    CHECK(last_update.calls == 1, "%d update calls", last_update.calls);
-    CHECK(last_update.x == 100 && last_update.y == 100 &&
-          last_update.w == 64 && last_update.h == 64,
-          "updated %d,%d %dx%d", last_update.x, last_update.y,
-          last_update.w, last_update.h);
-
-    TEST("nothing left to present the second time");
-    CHECK(!canvas_present(), "presented twice");
-
-    TEST("moving the overlay leaves no trail - the whole point");
-    CHECK(canvas_overlay_show(ov, 200, 300, 64, 64, 255), "show refused");
-    CHECK(at(100, 100) == BG, "old position still inked");
-    CHECK(at(163, 163) == BG, "old position still inked");
-    CHECK(at(200, 300) == INK, "new position not inked");
-
-    TEST("the present after a move covers both rectangles");
-    CHECK(canvas_present(), "nothing to present");
-    CHECK(last_update.x <= 100 && last_update.y <= 100, "update starts at %d,%d",
-          last_update.x, last_update.y);
-    CHECK(last_update.x + last_update.w >= 264 &&
-          last_update.y + last_update.h >= 364,
-          "update ends at %d,%d",
-          last_update.x + last_update.w, last_update.y + last_update.h);
-
-    TEST("restoring puts the screen back and forgets the position");
-    CHECK(canvas_overlay_restore(ov), "restore did nothing");
-    CHECK(at(200, 300) == BG, "restore left ink behind");
-    CHECK(!canvas_overlay_restore(ov), "restored twice");
-
-    TEST("an overlay clipped by the screen edge still restores cleanly");
-    fb_fill(BG);
-    CHECK(canvas_overlay_show(ov, LCD_WIDTH - 10, LCD_HEIGHT - 10, 64, 64, 255),
-          "show refused at the corner");
-    CHECK(at(LCD_WIDTH - 1, LCD_HEIGHT - 1) == INK, "corner not painted");
-    canvas_overlay_restore(ov);
-    CHECK(at(LCD_WIDTH - 1, LCD_HEIGHT - 1) == BG, "corner not restored");
-
-    TEST("a wholly off-screen position is refused rather than drawn");
-    CHECK(!canvas_overlay_show(ov, LCD_WIDTH + 5, 0, 64, 64, 255),
-          "accepted an off-screen position");
-
-    TEST("a partly transparent overlay blends rather than replaces");
-    fb_fill(BG);
-    canvas_fill_a(s, &all, INK, 128);
-    canvas_overlay_show(ov, 10, 10, 64, 64, 255);
+    TEST("the scratch is the tail of the pool, reused every call");
     {
-        canvas_px p = at(20, 20);
-        CHECK(p != BG && p != INK, "half-alpha overlay did not blend (%04x)", p);
-    }
-    canvas_overlay_restore(ov);
-    CHECK(at(20, 20) == BG, "blended overlay did not restore exactly");
-
-    TEST("invalidate drops the saved backdrop without restoring it");
-    canvas_fill_a(s, &all, INK, 255);
-    canvas_overlay_show(ov, 10, 10, 64, 64, 255);
-    canvas_overlay_invalidate(ov);
-    CHECK(!canvas_overlay_restore(ov), "restored after invalidate");
-    CHECK(at(20, 20) == INK, "invalidate repainted the backdrop");
-
-    TEST("blur scratch comes out of the pool");
-    {
-        size_t n = 0;
-        canvas_px *sc = canvas_scratch(240, 240, &n);
-        CHECK(sc != NULL, "no scratch");
-        CHECK(n >= canvas_blur_scratch_px(240, 240), "scratch too small (%u)",
-              (unsigned)n);
+        canvas_px *again = canvas_scratch(240, 240, &n);
+        const char *base = block;
+        CHECK(again && (const char *)again + ((n * sizeof(canvas_px) + 3u) & ~3u)
+                       == base + block_size,
+              "scratch does not end at the pool's end");
     }
 
-    TEST("an overlay larger than the pool is refused, not half-allocated");
-    {
-        struct canvas_overlay *big = canvas_overlay_claim(LCD_WIDTH, LCD_HEIGHT);
-        CHECK(big == NULL, "claimed an overlay the pool cannot hold");
-    }
+    TEST("a scratch larger than the pool is refused, not half-handed out");
+    n = 12345;
+    CHECK(canvas_scratch(8192, 8192, &n) == NULL,
+          "handed out a scratch the pool cannot hold");
+    CHECK(n == 12345, "px_out written on refusal");
 
-    TEST("releasing and shutting down is clean");
-    canvas_overlay_release(ov);
+    TEST("shutting down is clean");
     canvas_glue_shutdown();
     CHECK(!canvas_available(), "still available after shutdown");
-    CHECK(!canvas_present(), "presented with no pool");
+    CHECK(block == NULL, "pool not freed");
+    CHECK(canvas_pool_size() == 0, "size kept after shutdown");
+    CHECK(canvas_scratch(16, 16, NULL) == NULL, "scratch with no pool");
 
-    TEST("a claim after shutdown brings the pool back by itself");
-    CHECK(canvas_overlay_claim(8, 8) != NULL, "claim did not re-init");
-    CHECK(canvas_available(), "pool not available after a lazy claim");
+    TEST("no memory means no compositor, not a crash");
+    alloc_fails = 1;
+    CHECK(!canvas_glue_init(), "init claimed success with no memory");
+    CHECK(!canvas_available(), "available with no pool");
+    CHECK(canvas_pool_size() == 0, "size reported with no pool");
+    CHECK(canvas_scratch(16, 16, NULL) == NULL, "scratch with no pool");
+
+    TEST("the pool comes back once memory does");
+    alloc_fails = 0;
+    CHECK(canvas_glue_init(), "init failed after memory returned");
+    CHECK(canvas_scratch(16, 16, NULL) != NULL, "no scratch after recovery");
+    canvas_glue_shutdown();
 
     printf("\n%d checks, %d failed\n", tests_run, tests_failed);
     return tests_failed ? 1 : 0;
