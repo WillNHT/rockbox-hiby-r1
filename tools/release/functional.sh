@@ -19,10 +19,12 @@
 #   .github/, .claude/       pipelines and agent settings
 #   tools/release/           these scripts
 #   tools/stick_test/        the stick tests, which build.yml runs anyway
+#   tools/canvas_test/       the Canvas tests, likewise
+#   tools/jpeg_test/         the JPEG decoder tests, likewise
 #   .gitignore, .gitattributes, LICENSE
 
 set -eu
 
 git diff --name-only "$@" |
-    grep -Ev '(\.md$|^docs/|^\.github/|^\.claude/|^tools/release/|^tools/stick_test/|^\.gitignore$|^\.gitattributes$|^LICENSE)' ||
+    grep -Ev '(\.md$|^docs/|^\.github/|^\.claude/|^tools/release/|^tools/stick_test/|^tools/canvas_test/|^tools/jpeg_test/|^\.gitignore$|^\.gitattributes$|^LICENSE)' ||
     true

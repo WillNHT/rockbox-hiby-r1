@@ -13,6 +13,8 @@ are free.
 | --- | --- | --- |
 | Write code | any Claude Code session (desktop, web, or `@claude` on an issue) | needs `git` and `gh`, nothing else |
 | Stick engine tests | `stick-tests` job | `make -C tools/stick_test test`, seconds |
+| Canvas engine tests | `stick-tests` job | `make -C tools/canvas_test test`, seconds |
+| JPEG decoder fuzz | `stick-tests` job | `make -C tools/jpeg_test test`, under a minute |
 | Device build | `build` job | cached toolchain, `rockbox.zip` as an artifact |
 | Look at the UI | `simulator` job | native build, driven by `tools/simctl`, screenshots as an artifact |
 | Review | `claude-code-review.yml` | runs on every PR |

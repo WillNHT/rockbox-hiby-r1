@@ -37,6 +37,6 @@ dump: $(BIN)
 	./$(BIN) --dump
 
 clean:
-	rm -f $(BIN) $(BIN).exe $(GBIN) $(GBIN).exe *.ppm *.png
+	rm -f $(BIN) $(BIN).exe $(GBIN) $(GBIN).exe *.ppm
 
 .PHONY: all test dump clean

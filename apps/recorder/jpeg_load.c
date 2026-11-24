@@ -109,6 +109,7 @@ struct jpeg
     int mcu_row; /* current row relative to first row of this row of MCUs */
     unsigned char *out_ptr; /* pointer to current row to output */
     int cur_row; /* current row relative to top of image */
+    int eof_rows; /* rows of MCUs started with the data used up */
     int set_rows;
 #ifdef HAVE_LCD_COLOR
     int last_dc_val[3];
@@ -987,6 +988,23 @@ do {\
     c; \
 })
 
+/* A table that holds more codes of some length than that length has room
+ * for (Figure C.2) would run fix_huff_tbl() past its lookahead tables. */
+static bool huff_counts_ok(const int *counts)
+{
+    int l;
+    unsigned int code = 0;
+
+    for (l = 1; l <= 16; l++)
+    {
+        code += counts[l-1];
+        if (code > (1u << l))
+            return false;
+        code <<= 1;
+    }
+    return true;
+}
+
 /* Preprocess the JPEG JFIF file */
 static int process_markers(struct jpeg* p_jpeg)
 {
@@ -1048,8 +1066,22 @@ static int process_markers(struct jpeg* p_jpeg)
                     p_jpeg->frameheader[i].vertical_sampling = c & 0x0F;
                     p_jpeg->frameheader[i].quanttable_select =
                         e_getc(p_jpeg, -1);
+                    /* 0 is not a legal factor, and would divide by zero.
+                       The MCU is laid out from luma with one chroma scale,
+                       so chroma may not outsample luma or differ between
+                       Cb and Cr. */
                     if (p_jpeg->frameheader[i].horizontal_sampling > 2
-                     || p_jpeg->frameheader[i].vertical_sampling > 2)
+                     || p_jpeg->frameheader[i].vertical_sampling > 2
+                     || p_jpeg->frameheader[i].horizontal_sampling == 0
+                     || p_jpeg->frameheader[i].vertical_sampling == 0
+                     || (i > 0 && (p_jpeg->frameheader[i].horizontal_sampling
+                                   > p_jpeg->frameheader[0].horizontal_sampling
+                                || p_jpeg->frameheader[i].vertical_sampling
+                                   > p_jpeg->frameheader[0].vertical_sampling))
+                     || (i > 1 && (p_jpeg->frameheader[i].horizontal_sampling
+                                   != p_jpeg->frameheader[1].horizontal_sampling
+                                || p_jpeg->frameheader[i].vertical_sampling
+                                   != p_jpeg->frameheader[1].vertical_sampling)))
                     return -3; /* Unsupported SOF0 subsampling */
                 }
                 p_jpeg->blocks = n;
@@ -1100,7 +1132,8 @@ static int process_markers(struct jpeg* p_jpeg)
                                 sum += c;
                                 marker_size -= 1;
                             }
-                            if(16 + sum > AC_LEN)
+                            if(16 + sum > AC_LEN ||
+                               !huff_counts_ok(p_jpeg->hufftable[i].huffmancodes_ac))
                                 return -10; /* longer than allowed */
 
                             for (; j < 16 + sum; j++)
@@ -1119,7 +1152,8 @@ static int process_markers(struct jpeg* p_jpeg)
                                 sum += c;
                                 marker_size--;
                             }
-                            if(16 + sum > DC_LEN)
+                            if(16 + sum > DC_LEN ||
+                               !huff_counts_ok(p_jpeg->hufftable[i].huffmancodes_dc))
                                 return -11; /* longer than allowed */
 
                             for (; j < 16 + sum; j++)
@@ -1127,6 +1161,10 @@ static int process_markers(struct jpeg* p_jpeg)
                                 p_jpeg->hufftable[i].huffmancodes_dc[j] =
                                     e_getc(p_jpeg, -1);
                                 marker_size--;
+                                /* a DC symbol is a bit count; more than the
+                                   bit buffer refills would underrun it */
+                                if (p_jpeg->hufftable[i].huffmancodes_dc[j] > 15)
+                                    return -11;
                             }
                         }
                     }
@@ -1780,6 +1818,19 @@ static struct img_part *store_row_jpeg(void *jpeg_args)
     int x;
     if (!p_jpeg->mcu_row) /* Need to decode a new row of MCUs */
     {
+        /* A file whose header claims more rows than its data holds would
+           be decoded from nothing to the end, one empty read per byte -
+           minutes for a damaged 10000x10000 cover. The bit buffer holds at
+           most 31 bits and a row takes at least 2, so a valid file starts
+           no more than 16 rows with nothing left to read. */
+#ifdef JPEG_FROM_MEM
+        if (p_jpeg->len == 0 && ++p_jpeg->eof_rows > 16)
+#else
+        if (p_jpeg->buf_left < 1)
+            fill_buf(p_jpeg); /* len is not exact here: skips seek past it */
+        if (p_jpeg->buf_left < 1 && ++p_jpeg->eof_rows > 16)
+#endif
+            return NULL;
         p_jpeg->out_ptr = (unsigned char *)p_jpeg->img_buf;
 #ifdef HAVE_LCD_COLOR
         unsigned mcu_width = BIT_N(mcu_hscale);
@@ -2211,7 +2262,9 @@ int clip_jpeg_fd(int fd, int flags,
     ALIGN_BUFFER(buf_start, maxsize, sizeof(long));
     if (!return_size)
     {
-        if (maxsize < (int)sizeof(struct jpeg))
+        /* what is left after the bitmap, which the file sized: an image
+           bigger than the buffer would put buf_start past its end */
+        if (buf_end - buf_start < (int)sizeof(struct jpeg))
             return -1;
         memmove(buf_start, p_jpeg, sizeof(struct jpeg));
         p_jpeg = (struct jpeg *)buf_start;

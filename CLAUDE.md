@@ -11,7 +11,7 @@ Almost every change is in one of these:
 | Area | Files |
 | --- | --- |
 | Stick / touch input | `apps/stick*.c`, `tools/stick_test/` |
-| Compositor, layers | `apps/canvas.c`, `firmware/drivers/lcd-layers.c` |
+| Compositor, layers | `apps/canvas*.c`, `firmware/drivers/lcd-layers.c`, `tools/canvas_test/` |
 | Skin engine | `apps/gui/skin_engine/`, `apps/gui/wps*.c` |
 | Library views | `apps/gui/`, `apps/tagtree.c` |
 | Audiobooks | `apps/audiobooks/` |
@@ -59,6 +59,8 @@ the two lists in step.
 
 ```sh
 make -C tools/stick_test test          # stick engine, seconds, no toolchain
+make -C tools/canvas_test test         # Canvas engine and pool glue, likewise
+make -C tools/jpeg_test test           # cover decoder vs damaged files, sanitizers
 mkdir -p build && cd build && ../tools/configure   # full build needs the toolchain
 ```
 
