@@ -2114,6 +2114,10 @@ int clip_jpeg_fd(int fd, int flags,
         JDEBUGF("Aborting resize of image > 32767 pixels\n");
         return -1;
     }
+    /* a height of 0 means "defined later by DNL", which we do not support;
+       either 0 would also divide by zero in recalc_dimension() */
+    if (p_jpeg->x_size == 0 || p_jpeg->y_size == 0)
+        return -12;
 
     src_dim.width = p_jpeg->x_size;
     src_dim.height = p_jpeg->y_size;

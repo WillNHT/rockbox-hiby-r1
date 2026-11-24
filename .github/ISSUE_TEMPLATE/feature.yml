@@ -1,0 +1,30 @@
+name: Feature request
+description: Something new, or a change to how something works.
+labels: ["type: feature", "needs: triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is hard or missing today? Describe the situation, not the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What you would like to happen. Sketches and screenshots of other players welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Done when
+      description: One line per check that proves it works on the device.
+      placeholder: |
+        - Pressing X on screen Y does Z
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or prior art
+      description: Other ways round it, or a related project that already does it (see the list in CLAUDE.md).
