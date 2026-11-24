@@ -60,6 +60,7 @@ the two lists in step.
 ```sh
 make -C tools/stick_test test          # stick engine, seconds, no toolchain
 make -C tools/canvas_test test         # Canvas engine and pool glue, likewise
+make -C tools/jpeg_test test           # cover decoder vs damaged files, sanitizers
 mkdir -p build && cd build && ../tools/configure   # full build needs the toolchain
 ```
 
