@@ -267,6 +267,16 @@ jobs:
         make -j
         make zip
 
+    # What the R1 shows under System > Rockbox Info for this build. On a
+    # pull_request run that is GitHub's merge commit, not the PR head, so a
+    # device checklist quotes this line rather than a SHA from git log.
+    - name: Version
+      if: matrix.type != 'B'
+      run: |
+        v=$(sed -n 's/^Version: //p' build/rockbox-info.txt)
+        echo "Device version: $v"
+        echo "**Device version** (System > Rockbox Info): \`$v\` - ${GITHUB_EVENT_NAME} run" >> "$GITHUB_STEP_SUMMARY"
+
     - name: Add curl for the updater
       if: matrix.type != 'B'
       # tools/rbcurl; tar loses its setuid bit for the build, as for the

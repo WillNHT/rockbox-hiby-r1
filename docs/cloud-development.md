@@ -86,3 +86,8 @@ that a job cannot fill.
 Anything labelled `needs: device test`: the real touch panel, audio out,
 battery, Bluetooth, the bootloader. The simulator shares the UI code, not the
 drivers.
+
+So a PR never closes one of those on its own: `device-gate.yml` fails until
+the human labels the PR `verified: device`. The device version to check for
+is in the `build` job's run summary, and it is the merge commit on a
+pull-request run, not the PR head.

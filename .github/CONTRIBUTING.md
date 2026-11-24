@@ -24,3 +24,8 @@ The template asks for what changed, how it was tested and the issue it
 closes. The PR title is checked by `pr-title.yml` and becomes the release
 note, so make it read well on its own. Every CI check must be green before
 review.
+
+`device-gate.yml` keeps a PR from closing an issue labelled
+`needs: device test` until someone has flashed the build: write `Refs #n`,
+and once the build works on an R1, label the PR `verified: device` (and
+switch to `Closes #n` if you like).
