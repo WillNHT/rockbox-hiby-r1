@@ -1173,6 +1173,7 @@ void keyclick_click(bool rawbutton, int action)
     int button = action;
     static long last_button = BUTTON_NONE;
     bool do_beep = false;
+    bool vol_step = false;
 
     if (!rawbutton)
         get_action_statuscode(&button);
@@ -1206,6 +1207,24 @@ void keyclick_click(bool rawbutton, int action)
         }
 #endif
     }
+    /* A volume step is an interaction like any other and clicks every
+     * time. It arrives as a release (locked WPS) or a repeat (holding the
+     * key), both of which the filters above drop. */
+    switch (rawbutton ? ACTION_NONE : action)
+    {
+        case ACTION_WPS_VOLUP:
+        case ACTION_WPS_VOLDOWN:
+#ifdef HAVE_VOLUME_IN_LIST
+        case ACTION_LIST_VOLUP:
+        case ACTION_LIST_VOLDOWN:
+#endif
+            vol_step = global_settings.keyclick;
+            do_beep |= vol_step;
+            break;
+        default:
+            break;
+    }
+
     if (button&BUTTON_REPEAT)
         last_button = button;
     else
@@ -1213,7 +1232,7 @@ void keyclick_click(bool rawbutton, int action)
 
     if (do_beep)
     {
-        enum keyclick_source src = (button & BUTTON_REPEAT)
+        enum keyclick_source src = (button & BUTTON_REPEAT) && !vol_step
             ? KEYCLICK_SRC_BUTTON_REPEAT : KEYCLICK_SRC_BUTTON;
 #ifdef HAVE_TOUCHSCREEN
         if (button & BUTTON_TOUCHSCREEN)
