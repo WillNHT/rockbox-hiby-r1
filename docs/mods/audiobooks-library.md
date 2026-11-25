@@ -18,7 +18,11 @@ progress; neither is the music database.
 - **Book page:** a card with the cover, author, narrator, length and
   progress, then *Resume*/*Play*, *Start Over*, *Chapters*, *Bookmarks*
   (when the folder has a `.bmark`), *Playback Speed*, *Mark as Finished*,
-  *Sleep Timer* and *Description*.
+  *Sleep Timer* and *Description*. *Resume* says where it picks up: the
+  chapter (`Resume · 3/12`) or, for a single file, the time.
+- **Cards** size themselves to the theme's font: the title (on two lines
+  when there is room), the author, then whatever else fits, each cut with
+  "..." rather than clipped, and the time left with its bar at the bottom.
 
 ## What counts as a book
 
