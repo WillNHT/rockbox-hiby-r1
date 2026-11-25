@@ -306,6 +306,7 @@ struct overlay_shape
     int  avail;       /* 1 << direction: up, down, left, right          */
     int  scroll;      /* a STICK_SCROLL_*                               */
     bool turning;     /* the thumb is going round the stick             */
+    bool linger;      /* the plate's last label is still up, see below  */
 };
 
 /* How often a moving overlay may ask the screen underneath to repaint. */
@@ -581,6 +582,8 @@ static inline void bd_gesture_reset(void) { }
 #define PLATE_GAP  8
 /* How long the cap takes to settle after the thumb lets go. */
 #define PLATE_BOUNCE (HZ / 4)
+/* How long the word for what the thumb did stays up once it has done it. */
+#define PLATE_LINGER HZ
 
 /* What the lists tell the plate. They run their own drag (see
  * gui_synclist_do_touchscreen) and the engine never sees it, so the cap
@@ -597,7 +600,9 @@ static struct
     bool bouncing;      /* let go, and the cap is on its way back */
     long bounce_tick;   /* when */
     int  bx, by;        /* where the cap was let go, in travel units */
-} plate;
+    int  last_lit;      /* the label the thumb was last on, or -1 */
+    long lit_tick;      /* when it was last on it */
+} plate = { .last_lit = -1 };
 
 static bool plate_has_room(void)
 {
@@ -735,6 +740,15 @@ static void paint_plate(const struct overlay_shape *s)
         lit = 2 + (dx > 0);
     if (lit >= 0 && !(s->avail & (1 << lit)))
         lit = -1;
+    /* The thumb back in the middle, or gone: the word for what it did
+     * stays up a moment, or it was gone before the eye got to it. */
+    if (lit >= 0)
+    {
+        plate.last_lit = lit;
+        plate.lit_tick = current_tick;
+    }
+    else if (s->linger)
+        lit = plate.last_lit;
     labels = (lit + 1) | s->scroll << 8;
 
     /* The cap goes as far as the thumb has pushed, until a third of it is
@@ -1609,6 +1623,8 @@ static bool plate_at_rest(struct overlay_shape *s)
         s->x = plate.bx * f / 16;
         s->y = plate.by * f / 16;
     }
+    s->linger = plate.last_lit >= 0 &&
+                TIME_BEFORE(current_tick, plate.lit_tick + PLATE_LINGER);
 
     /* What the list can do from where it is. It is only there to ask
      * while its own loop is polling; a theme change asks from outside. */
@@ -1653,20 +1669,33 @@ static void plate_let_go(long dx, long dy, int reach)
     plate.bouncing = dx || dy;
 }
 
-bool stick_plate_settle(void)
+int stick_plate_settle(void)
 {
-    if (!plate.bouncing)
-        return false;
-    plate.bouncing = TIME_BEFORE(current_tick,
-                                 plate.bounce_tick + PLATE_BOUNCE);
+    if (plate.bouncing)
+    {
+        plate.bouncing = TIME_BEFORE(current_tick,
+                                     plate.bounce_tick + PLATE_BOUNCE);
+        stick_draw_overlay();
+        if (plate.bouncing)
+            return 1;
+    }
+    if (plate.last_lit < 0)
+        return 0;
+    if (TIME_BEFORE(current_tick, plate.lit_tick + PLATE_LINGER))
+        return plate.lit_tick + PLATE_LINGER - current_tick;
+    /* The label's moment is over: take it down. */
+    plate.last_lit = -1;
     stick_draw_overlay();
-    return plate.bouncing;
+    return 0;
 }
 
 void stick_plate_thumb(bool down, int dx, int dy)
 {
     if (plate.down && !down)
+    {
         plate_let_go(plate.dx, plate.dy, STICK_DEF_TRAVEL_PX);
+        plate.lit_tick = current_tick;      /* the linger runs from here */
+    }
     plate.down = down;
     plate.dx = dx;
     plate.dy = dy;
