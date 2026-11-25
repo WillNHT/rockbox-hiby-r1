@@ -332,6 +332,24 @@ static int bt_acl_count(void)
  * only calls dup2(), fcntl(), execl() and _exit(). */
 static pid_t spawn_pid[1024];   /* by the fd hiby_popen() hands out */
 
+/* Debug toggle while Wi-Fi and Bluetooth are broken in v0.39.5, the first
+ * build with these: an empty rockbox-spawn-fork on the card puts back
+ * libc's popen() and system(), so one flash tells the two apart. Read
+ * once, at the first command. Remove before the PR is ready. */
+#define SPAWN_FORK_FILE PIVOT_ROOT "/rockbox-spawn-fork"
+
+static bool spawn_forks(void)
+{
+    static int forks = -1;
+
+    if (forks < 0)
+    {
+        forks = access(SPAWN_FORK_FILE, F_OK) == 0;
+        hiby_debug_log("spawn: %s", forks ? "fork (libc)" : "vfork");
+    }
+    return forks;
+}
+
 static pid_t hiby_spawn(const char *cmd, int fd, int to)
 {
     pid_t pid = vfork();
@@ -356,13 +374,23 @@ static int hiby_wait(pid_t pid)
 
     while (waitpid(pid, &status, 0) < 0)
         if (errno != EINTR)
+        {
+            hiby_debug_log("spawn: wait %d failed (%s)", (int)pid,
+                           strerror(errno));
             return -1;
+        }
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
+        hiby_debug_log("spawn: %d exited 127 (no shell?)", (int)pid);
     return status;
 }
 
 int hiby_system(const char *cmd)
 {
-    pid_t pid = hiby_spawn(cmd, -1, -1);
+    pid_t pid;
+
+    if (spawn_forks())
+        return system(cmd);
+    pid = hiby_spawn(cmd, -1, -1);
     return pid < 0 ? -1 : hiby_wait(pid);
 }
 
@@ -373,6 +401,8 @@ FILE *hiby_popen(const char *cmd, const char *mode)
     pid_t pid;
     FILE *fp;
 
+    if (spawn_forks())
+        return popen(cmd, mode);
     if (pipe(p) < 0)
         return NULL;
     mine = rd ? p[0] : p[1];
@@ -402,7 +432,11 @@ FILE *hiby_popen(const char *cmd, const char *mode)
 
 int hiby_pclose(FILE *fp)
 {
-    pid_t pid = spawn_pid[fileno(fp)];
+    pid_t pid;
+
+    if (spawn_forks())
+        return pclose(fp);
+    pid = spawn_pid[fileno(fp)];
 
     fclose(fp);
     return hiby_wait(pid);

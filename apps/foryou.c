@@ -352,7 +352,10 @@ typedef long (*weight_fn)(const struct tally *t);
  * to 1 - still there, rarely picked - and comes back if that changes. */
 static long like(const struct tally *t)
 {
-    long w = 10 + 10 * HEARD(t) - 6 * t->skips;
+    /* Heard through past eight times counts no more: a handful of old
+     * favourites outweighed the rest of the log and came up in every
+     * mix. */
+    long w = 10 + 10 * MIN(HEARD(t), 8) - 6 * MIN(t->skips, 8);
     return w < 1 ? 1 : w;
 }
 
@@ -506,18 +509,23 @@ static char mix_tmp[MAX_PATH];
 static int mix_fd;
 static int mix_count;
 
-static bool mix_open(void)
+static void mix_file(char *buf, size_t size, const char *name)
 {
     char *p;
 
+    snprintf(buf, size, MIX_DIR "/%s.m3u8", name);
+    for (p = buf + sizeof(MIX_DIR); *p; p++)
+        if (strchr("/\\:*?\"<>|", *p))
+            *p = '_';
+}
+
+static bool mix_open(void)
+{
     if (!warn_on_pl_erase())
         return false;
     mix_count = 0;
     mkdir(MIX_DIR);
-    snprintf(mix_path, sizeof(mix_path), MIX_DIR "/%s.m3u8", mix_name);
-    for (p = mix_path + sizeof(MIX_DIR); *p; p++)
-        if (strchr("/\\:*?\"<>|", *p))
-            *p = '_';
+    mix_file(mix_path, sizeof(mix_path), mix_name);
     snprintf(mix_tmp, sizeof(mix_tmp), "%s.tmp", mix_path);
     mix_fd = creat(mix_tmp, 0666);
     return mix_fd >= 0;
@@ -746,6 +754,27 @@ static int want_mood(struct tagcache_search *tcs, const char *path)
     return 0;
 }
 
+/* "Because you played", past what the log has: the seed's album and
+ * artist folders, and its genre, from the database. */
+static char seed_genre[64];
+
+static int want_similar(struct tagcache_search *tcs, const char *path)
+{
+    char genre[64];
+    struct tally *t = tally_find(path_key(path, BY_TRACK), false);
+
+    if ((t && (t->picked || t->key == seed_key)) ||
+        pradio_is_station_track(path) || audiobooks_is_book(path))
+        return 0;
+    if (path_key(path, BY_ARTIST) == seed_artist)
+        return 3;
+    if (seed_genre[0] &&
+        tagcache_retrieve(tcs, tcs->idx_id, tag_genre, genre, sizeof(genre)) &&
+        !strcasecmp(genre, seed_genre))
+        return 1;
+    return 0;
+}
+
 /* --- the mixes --------------------------------------------------------- */
 
 static struct tally *picks[FOUND_MAX];
@@ -835,6 +864,35 @@ static void mix_begin(int lang)
     tally_all_tracks();
 }
 
+/* Keeps the tracks of another mix's last playlist out of this one, so the
+ * mixes are not the same favourites over again. */
+static void mix_avoid(int lang)
+{
+    char path[MAX_PATH];
+    int fd;
+
+    mix_file(path, sizeof(path), str(lang));
+    fd = open(path, O_RDONLY);
+    if (fd < 0)
+        return;
+    while (read_line(fd, path, sizeof(path)) > 0)
+    {
+        struct tally *t = tally_find(path_key(path, BY_TRACK), false);
+        if (t && !t->picked)
+            t->picked = 2;
+    }
+    close(fd);
+}
+
+/* Lets the avoided tracks back in, for when there were not enough
+ * without them. */
+static void mix_allow(void)
+{
+    for (int i = 0; i < TALLY_SIZE; i++)
+        if (tally[i].picked == 2)
+            tally[i].picked = 0;
+}
+
 static int mix_of(weight_fn weight, int lang)
 {
     mix_begin(lang);
@@ -848,22 +906,33 @@ static int foryou_mix(void)
     int n = global_settings.foryou_mix_size;
 
     mix_begin(LANG_FORYOU);
+    mix_avoid(LANG_FORYOU_DAILY);
     db_sample(n / 5, want_unheard);
     pick(w_foryou, n - nfound);
+    mix_allow();
+    pick(w_foryou, n - nfound - npicks);
     return mix_finish();
 }
 
-/* 70% familiar, 20% barely played, 10% never played */
+/* 70% familiar, 20% barely played, 10% never played. The same all day
+ * and a new one tomorrow: the draw is seeded with the date. */
 static int daily_mix(void)
 {
     int n = global_settings.foryou_mix_size;
+    int ret;
 
     mix_begin(LANG_FORYOU_DAILY);
+    srand(now / DAYSEC);
+    mix_avoid(LANG_FORYOU);
     db_sample(n / 10, want_unheard);
     pick(w_lesser, n / 5);
     pick(w_familiar, n - nfound - npicks);
     pick(w_foryou, n - nfound - npicks);    /* not enough of either yet */
-    return mix_finish();
+    mix_allow();
+    pick(w_foryou, n - nfound - npicks);
+    ret = mix_finish();
+    srand(current_tick);
+    return ret;
 }
 
 static int rediscover_mix(void)
@@ -880,17 +949,23 @@ static int forgotten_mix(void)
  * the same artist, and whatever tends to be played next to it. */
 static int similar_mix(void)
 {
+    static struct mp3entry seed_id3;
     struct mp3entry *id3 = audio_status() ? audio_current_track() : NULL;
+    int n = global_settings.foryou_mix_size;
 
     mix_begin(LANG_FORYOU_SIMILAR);
+    seed_genre[0] = '\0';
     if (id3 && id3->path[0])
     {
         seed_key = path_key(id3->path, BY_TRACK);
         seed_artist = path_key(id3->path, BY_ARTIST);
+        if (id3->genre_string)
+            strmemccpy(seed_genre, id3->genre_string, sizeof(seed_genre));
     }
     else
     {
         struct tally *last = NULL;
+        char path[MAX_PATH];
 
         for (int i = 0; i < TALLY_SIZE; i++)
             if (tally[i].key && (!last || tally[i].last > last->last))
@@ -899,9 +974,15 @@ static int similar_mix(void)
             return nothing();
         seed_key = last->key;
         seed_artist = last->artist;
+        if (row_path(last->where, path, sizeof(path)) &&
+            get_metadata(&seed_id3, -1, path) && seed_id3.genre_string)
+            strmemccpy(seed_genre, seed_id3.genre_string, sizeof(seed_genre));
     }
     tally_all_tracks();         /* again, now that there is a seed */
-    pick(w_similar, global_settings.foryou_mix_size);
+    pick(w_similar, n);
+    /* The log alone was one or two tracks when the seed is new or its
+     * neighbours few: the rest from its artist and genre on the card. */
+    db_sample(n - npicks, want_similar);
     return mix_finish();
 }
 

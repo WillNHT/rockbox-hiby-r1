@@ -353,14 +353,23 @@ static inline bool action_poll_button(action_last_t *last, action_cur_t *cur)
     int *button = &cur->button;
 
 #ifdef HAVE_TOUCHSCREEN
-    /* Nothing else is polling while the plate's cap springs back. */
-    while (cur->timeout != TIMEOUT_NOBLOCK && stick_plate_settle())
+    /* Nothing else is polling while the plate's cap springs back, or while
+     * its last label waits to come down. The caller's own timeout still
+     * ends the wait. */
+    int wait;
+    bool timed_out = false;
+    while (cur->timeout != TIMEOUT_NOBLOCK && (wait = stick_plate_settle()))
     {
-        *button = button_get_w_tmo(1);
-        if (*button != BUTTON_NONE)
+        if (cur->timeout != TIMEOUT_BLOCK && wait >= cur->timeout)
+        {
+            wait = cur->timeout;
+            timed_out = true;
+        }
+        *button = button_get_w_tmo(wait);
+        if (*button != BUTTON_NONE || timed_out)
             break;
     }
-    if (*button == BUTTON_NONE)
+    if (*button == BUTTON_NONE && !timed_out)
 #endif
     *button = button_get_w_tmo(cur->timeout);
 

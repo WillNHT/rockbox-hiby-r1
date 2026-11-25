@@ -31,6 +31,9 @@ Snappy-V2 shot05 184,200 443,249
 # Elapsed time on the playing WPS: it follows audio, and lands a second
 # either side.
 Snappy-V2 shot06 30,772 70,792
+# Playing, the meter's bar ends reach further right than the paused
+# shots': a louder moment at the dump went to x=219.
+Snappy-V2 shot06 207,568 240,649
 # The cover's sheen: its frame comes from the tick of the last render
 # before the shot, which the UI thread reaches at its own pace. shot06
 # still checks the cover.

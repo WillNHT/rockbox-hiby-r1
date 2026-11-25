@@ -741,11 +741,69 @@ struct card_screen
     void *data;
 };
 
+/* Room for the title, the author and the time left with its bar, in the
+ * theme's font, but never so much that the list under it has fewer than
+ * two rows. A fixed share of the screen put the lines of a big font on
+ * top of each other. */
 static int card_height(const struct viewport *ui)
 {
-    int h = ui->height * 2 / 5;
-    int w = ui->width / 2;
-    return MIN(h, w);
+    int lh = font_get(ui->font)->height;
+    int h = MIN(ui->height * 2 / 5, ui->width / 2);
+    int need = 3 * lh + MAX(4, lh / 5) + 16;
+    if (h < need)
+        h = need;
+    return MIN(h, ui->height - 2 * lh);
+}
+
+/* Cuts s to what fits in w pixels, with "..." when it had to. UTF-8 safe. */
+static void fit_text(struct screen *d, char *s, int w)
+{
+    int tw, th;
+    size_t n = strlen(s);
+
+    d->getstringsize(s, &tw, &th);
+    if (tw <= w)
+        return;
+    while (n > 0)
+    {
+        do
+            n--;
+        while (n > 0 && ((unsigned char)s[n] & 0xc0) == 0x80);
+        while (n > 0 && s[n - 1] == ' ')
+            n--;
+        strcpy(s + n, "...");
+        d->getstringsize(s, &tw, &th);
+        if (tw <= w)
+            return;
+    }
+}
+
+/* Splits s into a first line that fits in w at a space, and the rest in
+ * rest (fitted). False when it is one line already. */
+static bool wrap_text(struct screen *d, char *s, char *rest, size_t size,
+                      int w)
+{
+    int tw, th;
+    char *cut = NULL, *sp;
+
+    d->getstringsize(s, &tw, &th);
+    if (tw <= w)
+        return false;
+    for (sp = strchr(s, ' '); sp; sp = strchr(sp + 1, ' '))
+    {
+        *sp = '\0';
+        d->getstringsize(s, &tw, &th);
+        *sp = ' ';
+        if (tw > w)
+            break;
+        cut = sp;
+    }
+    if (!cut)
+        return false;
+    *cut = '\0';
+    strmemccpy(rest, cut + 1, size);
+    fit_text(d, rest, w);
+    return true;
 }
 
 static void draw_card(const struct card_screen *cs, struct viewport *vp)
@@ -762,54 +820,64 @@ static void draw_card(const struct card_screen *cs, struct viewport *vp)
     }
 
     int pad = 6;
-    int size = MIN(vp->height - 2 * pad, MAX_CARD_COVER);
+    int size = MIN(MIN(vp->height - 2 * pad, MAX_CARD_COVER), vp->width / 3);
     draw_cover(d, b, pad, pad, size, true);
 
     int x = size + 2 * pad;
     int lh = font_get(vp->font)->height;
-    int y = pad;
-    char buf[MAX_PATH];
+    int barh = MAX(4, lh / 5);
+    int by = vp->height - pad - barh;
+    /* lines above the time left */
+    int room = (by - 2 - lh - pad) / lh;
+    char buf[MAX_PATH], rest[MAX_PATH], line[MAX_PATH];
+    const char *lines[5];
+    int n = 0;
 
     struct viewport text = *vp;
     text.x += x;
     text.width -= x + pad;
     d->set_viewport(&text);
 
-    if (cs->root)
-    {
-        d->putsxy(0, y, str(LANG_AB_CONTINUE));
-        y += lh + lh / 3;
-    }
+    /* The title first, the author next, the title's second line only if
+     * there is still room, then the rest. */
     title_text(b, buf, sizeof buf);
-    d->putsxy(0, y, buf);
-    y += lh;
-    d->putsxy(0, y, or_unknown(ab_db_str(b, AB_S_AUTHOR)));
-    y += lh;
+    bool wrapped = room >= 3 && wrap_text(d, buf, rest, sizeof rest,
+                                          text.width);
+    if (cs->root && room >= 3 + wrapped)
+        lines[n++] = str(LANG_AB_CONTINUE);
+    fit_text(d, buf, text.width);
+    lines[n++] = buf;
+    if (wrapped)
+        lines[n++] = rest;
+    strmemccpy(line, or_unknown(ab_db_str(b, AB_S_AUTHOR)), sizeof line);
+    fit_text(d, line, text.width);
+    if (n < room)
+        lines[n++] = line;
 
-    if (!cs->root)
+    char nar[MAX_PATH], len[64];
+    if (!cs->root && n < room && ab_db_str(b, AB_S_NARRATOR)[0])
     {
-        const char *nar = ab_db_str(b, AB_S_NARRATOR);
-        if (nar[0] && y + 3 * lh < vp->height)
-        {
-            snprintf(buf, sizeof buf, "%s: %s", str(LANG_AB_NARRATOR), nar);
-            d->putsxy(0, y, buf);
-            y += lh;
-        }
+        snprintf(nar, sizeof nar, "%s: %s", str(LANG_AB_NARRATOR),
+                 ab_db_str(b, AB_S_NARRATOR));
+        fit_text(d, nar, text.width);
+        lines[n++] = nar;
+    }
+    if (!cs->root && n < room)
+    {
         char dur[24];
         format_duration(dur, sizeof dur, b->length);
-        if (y + 3 * lh < vp->height)
-        {
-            snprintf(buf, sizeof buf, "%s: %s \xc2\xb7 %s: %d",
-                     str(LANG_AB_LENGTH), dur, str(LANG_AB_FILES), b->nfiles);
-            d->putsxy(0, y, buf);
-        }
+        snprintf(len, sizeof len, "%s: %s \xc2\xb7 %s: %d",
+                 str(LANG_AB_LENGTH), dur, str(LANG_AB_FILES), b->nfiles);
+        fit_text(d, len, text.width);
+        lines[n++] = len;
     }
+    for (int i = 0; i < n; i++)
+        d->putsxy(0, pad + i * lh, lines[i]);
 
     /* the bottom: time left and the bar */
-    int barh = MAX(4, lh / 5);
-    int by = vp->height - pad - barh;
-    progress_text(b, buf, sizeof buf);
-    d->putsxy(0, by - lh - 2, buf);
+    progress_text(b, line, sizeof line);
+    fit_text(d, line, text.width);
+    d->putsxy(0, by - lh - 2, line);
     draw_progress_bar(d, 0, by, text.width, barh, b);
 
     d->set_viewport(vp);
@@ -1152,8 +1220,20 @@ static const char *page_name(int item, void *data, char *buf, size_t size)
     switch (pg->items[item])
     {
         case PAGE_RESUME:
-            return str(p && p->position > 0 && !p->finished ?
-                       LANG_AB_RESUME : LANG_AB_PLAY);
+            if (!p || p->position == 0 || p->finished)
+                return str(LANG_AB_PLAY);
+            /* where it picks up: the chapter of a folder, the time of a
+             * single file */
+            if (b->nfiles > 1)
+                snprintf(buf, size, "%s \xc2\xb7 %d/%d", str(LANG_AB_RESUME),
+                         p->file + 1, b->nfiles);
+            else
+            {
+                char at[24];
+                format_duration(at, sizeof at, p->position);
+                snprintf(buf, size, "%s \xc2\xb7 %s", str(LANG_AB_RESUME), at);
+            }
+            return buf;
         case PAGE_START_OVER:  return str(LANG_AB_START_OVER);
         case PAGE_CHAPTERS:    return str(LANG_AB_CHAPTERS);
         case PAGE_BOOKMARKS:   return str(LANG_AB_BOOKMARKS);
