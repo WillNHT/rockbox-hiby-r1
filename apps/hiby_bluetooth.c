@@ -27,6 +27,7 @@
 #ifdef HAVE_HIBY_BLUETOOTH
 
 #include <ctype.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <poll.h>
@@ -324,10 +325,93 @@ static int bt_acl_count(void)
 #define bt_scan_open() fopen("/dev/null", "w")
 #define bt_scan_close fclose
 #else
-#define bt_popen(cmd) popen(cmd, "r")
-#define bt_pclose pclose
-#define bt_scan_open() popen("bluetoothctl >/dev/null 2>&1", "w")
-#define bt_scan_close pclose
+/* popen() and system() without fork(). The player's glibc forks all of
+ * Rockbox for them, and once the audio buffer has filled the kernel can
+ * refuse that (ENOMEM): Wi-Fi and Bluetooth then run nothing at all until
+ * a restart. A vfork() child borrows our memory until it execs. The child
+ * only calls dup2(), fcntl(), execl() and _exit(). */
+static pid_t spawn_pid[1024];   /* by the fd hiby_popen() hands out */
+
+static pid_t hiby_spawn(const char *cmd, int fd, int to)
+{
+    pid_t pid = vfork();
+
+    if (pid == 0)
+    {
+        if (fd >= 0 && fd == to)
+            fcntl(fd, F_SETFD, 0);
+        else if (fd >= 0)
+            dup2(fd, to);
+        execl("/bin/sh", "sh", "-c", cmd, (char *)NULL);
+        _exit(127);
+    }
+    if (pid < 0)
+        hiby_debug_log("spawn failed (%s): %s", strerror(errno), cmd);
+    return pid;
+}
+
+static int hiby_wait(pid_t pid)
+{
+    int status;
+
+    while (waitpid(pid, &status, 0) < 0)
+        if (errno != EINTR)
+            return -1;
+    return status;
+}
+
+int hiby_system(const char *cmd)
+{
+    pid_t pid = hiby_spawn(cmd, -1, -1);
+    return pid < 0 ? -1 : hiby_wait(pid);
+}
+
+FILE *hiby_popen(const char *cmd, const char *mode)
+{
+    int p[2], mine, theirs;
+    bool rd = mode[0] == 'r';
+    pid_t pid;
+    FILE *fp;
+
+    if (pipe(p) < 0)
+        return NULL;
+    mine = rd ? p[0] : p[1];
+    theirs = rd ? p[1] : p[0];
+    /* neither end into other children: daemons started later would hold
+       the pipe open */
+    fcntl(mine, F_SETFD, FD_CLOEXEC);
+    fcntl(theirs, F_SETFD, FD_CLOEXEC);
+    if (mine >= (int)ARRAYLEN(spawn_pid)
+        || (pid = hiby_spawn(cmd, theirs, rd ? 1 : 0)) < 0)
+    {
+        close(p[0]);
+        close(p[1]);
+        return NULL;
+    }
+    close(theirs);
+    fp = fdopen(mine, mode);
+    if (!fp)
+    {
+        close(mine);
+        hiby_wait(pid);
+        return NULL;
+    }
+    spawn_pid[mine] = pid;
+    return fp;
+}
+
+int hiby_pclose(FILE *fp)
+{
+    pid_t pid = spawn_pid[fileno(fp)];
+
+    fclose(fp);
+    return hiby_wait(pid);
+}
+
+#define bt_popen(cmd) hiby_popen(cmd, "r")
+#define bt_pclose hiby_pclose
+#define bt_scan_open() hiby_popen("bluetoothctl >/dev/null 2>&1", "w")
+#define bt_scan_close hiby_pclose
 
 /* One /sys/class/bluetooth/hci0:<handle> per link, audio or not: no fork.
  * Listed by hand: glob() needs glibc 2.27, newer than the player's, and
@@ -1154,14 +1238,14 @@ static void bt_power_on(void)
      * the CPU. Stopped (as it was for a while) the radio found and paired
      * nothing, so it runs, but only when nothing else wants the CPU. */
 #ifndef SIMULATOR
-    if ((fp = popen("pidof brcm_patchram_plus", "r")))
+    if ((fp = hiby_popen("pidof brcm_patchram_plus", "r")))
     {
         while (fscanf(fp, "%d", &i) == 1)
         {
             kill(i, SIGCONT);
             setpriority(PRIO_PROCESS, i, 19);
         }
-        pclose(fp);
+        hiby_pclose(fp);
     }
 #endif
     if (bt_rx_on)

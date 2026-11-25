@@ -43,6 +43,11 @@
 #include "gui/list.h"
 #include "hiby_bluetooth.h"
 
+/* every command here runs while Rockbox is at its largest: see hiby_spawn() */
+#define popen  hiby_popen
+#define pclose hiby_pclose
+#define system hiby_system
+
 /* Wi-Fi brought up the way HiBy OS does it (wifi_on.sh): wpa_supplicant
  * joins a network, udhcpc gets an address. The driver powers the chip with
  * wlan0: up loads its firmware, down switches it off. A bootloader that
@@ -619,9 +624,13 @@ static int wifi_ok_cancel(int action, struct gui_synclist *lists)
 static void *wifi_worker(void *arg)
 {
     char ssid[WIFI_SSID_LEN] = "", ip[16];
-    int unjoined = 0, patience = 6;
+    int unjoined = 0, patience = 6, turns = 0;
 
     (void)arg;
+    /* the Rockbox before this one may have been killed for memory: the
+       kernel log outlives it */
+    wifi_debug("dmesg | grep -iE 'out of memory|killed process' | tail -n 4; "
+               "grep -E '^(MemTotal|MemFree|Cached|Shmem):' /proc/meminfo");
     /* Wi-Fi comes back the way it was left - once Bluetooth is done with
      * the radio chip the two share (HiBy's bt_init, and bt_resume when
      * Bluetooth comes back on at boot): a network joined while either runs
@@ -664,6 +673,10 @@ static void *wifi_worker(void *arg)
             if (patience < 120)
                 patience *= 2;
         }
+        /* memory every 5 minutes, to see what led up to a restart */
+        if (++turns % 60 == 0)
+            wifi_debug("grep -E '^(MemFree|Cached):' /proc/meminfo; "
+                       "grep -E '^(VmRSS|Threads):' /proc/$PPID/status");
         usleep(5000000);
     }
     return NULL;

@@ -3,9 +3,14 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 
 int hiby_bluetooth_menu(void);
 void hiby_debug_log(const char *format, ...);
+/* popen(), pclose() and system() that do not fork all of Rockbox */
+FILE *hiby_popen(const char *cmd, const char *mode);
+int hiby_pclose(FILE *fp);
+int hiby_system(const char *cmd);
 
 void bt_boot_init(void);
 bool bt_is_enabled_fast(void);
