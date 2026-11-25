@@ -1233,7 +1233,20 @@ unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
         if (list->scroll_mode == SCROLL_BAR)
             action = scrollbar_scroll(list, gevent.y);
         else if (list->scroll_mode == SCROLL_SWIPE)
+        {
+            const int sel = list->selected_item, y_pos = list->y_pos;
+
             action = swipe_scroll(list, list_drag_dy(&gevent));
+            /* Neither the selection nor the page moved: the plate's cap
+             * is all there is to draw. A whole list for every touch event
+             * left a quick drag a frame behind the thumb, and the
+             * selection jumped rows instead of passing them one by one. */
+            if (list->selected_item == sel && list->y_pos == y_pos)
+            {
+                stick_draw_overlay();
+                action = ACTION_NONE;
+            }
+        }
         else if (list->scroll_mode == SCROLL_DIAL)
         {
             /* Clockwise is down the list, a row a detent. An angle too
