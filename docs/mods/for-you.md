@@ -6,7 +6,8 @@ screen reads the log when it is opened, and nothing runs while music plays.
 
 There are no ratings. A track heard through counts for it, a track skipped
 counts against it, and a track skipped more than it is heard is picked less
-and less. "Heard" is finished, or at least half played.
+and less. Past eight listens a favourite counts no more, so a few of them
+do not fill every mix. "Heard" is finished, or at least half played.
 
 | The menu | Charts | Year Wrapped | Time of Day |
 | --- | --- | --- | --- |
@@ -20,9 +21,9 @@ in a row where the tracks allow it.
 
 | Entry | What plays |
 | --- | --- |
-| For You | What you like, weighted against what you heard today and towards what you have not heard for two weeks. A fifth of it is tracks never played. |
-| Daily Mix | 70% familiar, 20% played once or twice, 10% never played. |
-| Because You Played... | Around the track that is playing, or the last one heard: the same artist, and tracks you tend to play within half an hour of it. |
+| For You | What you like, weighted against what you heard today and towards what you have not heard for two weeks. A fifth of it is tracks never played. Tracks in the last Daily Mix are left out while there are enough others. |
+| Daily Mix | 70% familiar, 20% played once or twice, 10% never played. The same all day, a new one each day, and the last For You left out while there are enough others. |
+| Because You Played... | Around the track that is playing, or the last one heard: the same artist, and tracks you tend to play within half an hour of it. Topped up from the database with the same artist folder and the same genre tag. |
 | Rediscover | Tracks not heard for *Rediscover After* days. |
 | Forgotten Favorites | The same, of tracks heard through at least five times. |
 | Smart Shuffle | The playlist that is on, reshuffled: no artist twice in a row, and the tracks you keep skipping at the end. Up to 2000 tracks. |
